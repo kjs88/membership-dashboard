@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영업일지 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ══════ FIREBASE SETUP ══════ -->
+<div id="fb-setup-screen" style="display:none">
+  <div class="fb-setup-overlay">
+    <div class="fb-setup-card">
+      <div class="fb-setup-title">🔥 Firebase 연동 설정</div>
+      <div class="fb-setup-sub">실시간 공유를 위해 Firebase Realtime Database URL을 입력하세요.<br>한 번만 설정하면 이후에는 자동으로 연결됩니다.</div>
+      <div class="fb-setup-steps">
+        <strong>1.</strong> console.firebase.google.com → 프로젝트 생성<br>
+        <strong>2.</strong> Realtime Database → 데이터베이스 만들기 → 테스트 모드<br>
+        <strong>3.</strong> 아래와 같은 URL을 복사해서 붙여넣기<br>
+        <code style="background:var(--green-light);padding:2px 6px;border-radius:4px;color:var(--green-dark)">https://your-project-default-rtdb.firebaseio.com</code>
+      </div>
+      <input class="fb-setup-input" id="fb-url-input" placeholder="https://your-project-default-rtdb.firebaseio.com" />
+      <div class="fb-setup-err" id="fb-setup-err">올바른 Firebase URL을 입력해주세요.</div>
+      <button class="fb-setup-btn" onclick="saveFbConfig()">연결하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ LOGIN ══════ -->
+<div id="login-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="login-card">
+      <!-- LOGIN MODE -->
+      <div id="login-mode">
+        <div class="login-logo">
+          <div class="login-logo-badge">SALES HQ</div>
+          <div class="login-logo-title">영업일지 대시보드</div>
+          <div class="login-logo-sub">멤버십사업팀 · 도매영업</div>
+        </div>
+        <div class="login-group">
+          <label class="login-label">아이디</label>
+          <input class="login-input" id="li-id" placeholder="아이디를 입력하세요" onkeydown="if(event.key==='Enter')document.getElementById('li-pw').focus()" />
+        </div>
+        <div class="login-group">
+          <label class="login-label">비밀번호</label>
+          <input class="login-input" id="li-pw" type="password" placeholder="비밀번호를 입력하세요" onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <button class="login-btn" onclick="doLogin()">로그인</button>
+        <div class="login-err" id="login-err">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+        <div class="login-hint">
+          계정이 없으신가요? <a href="javascript:void(0)" onclick="switchAuthMode('signup')" style="color:var(--green);font-weight:700;text-decoration:none">회원가입 신청</a>
+        </div>
+      </div>
+      <!-- SIGNUP MODE -->
+      <div id="signup-mode" style="display:none">
+        <div class="login-logo">
+          <div class="login-logo-badge">SIGN UP</div>
+          <div class="login-logo-title">회원가입 신청</div>
+          <div class="login-logo-sub">관리자 승인 후 사용 가능</div>
+        </div>
+        <div class="login-group">
+          <label class="login-label">이름</label>
+          <input class="login-input" id="su-name" placeholder="이름" />
+        </div>
+        <div class="login-group">
+          <label class="login-label">아이디</label>
+          <input class="login-input" id="su-id" placeholder="아이디" />
+        </div>
+        <div class="login-group">
+          <label class="login-label">비밀번호</label>
+          <input class="login-input" id="su-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')submitSignup()" />
+        </div>
+        <div class="login-group">
+          <label class="login-label">비밀번호 확인</label>
+          <input class="login-input" id="su-pw-confirm" type="password" placeholder="비밀번호 확인" onkeydown="if(event.key==='Enter')submitSignup()" />
+        </div>
+        <div class="login-group">
+          <label class="login-label">직군</label>
+          <select class="login-input" id="su-role">
+            <option value="user">영업사원</option>
+            <option value="manager">영업관리</option>
+            <option value="planner">기획</option>
+            <option value="admin">관리자</option>
+          </select>
+        </div>
+        <button class="login-btn" onclick="submitSignup()">신청하기</button>
+        <div class="login-err" id="signup-err"></div>
+        <div class="login-hint">
+          이미 계정이 있으신가요? <a href="javascript:void(0)" onclick="switchAuthMode('login')" style="color:var(--green);font-weight:700;text-decoration:none">로그인</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ APP ══════ -->
+<div id="app-screen" style="display:none">
+<div class="app">
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">멤버십사업팀</div>
+    <div class="logo-sub">도매</div>
+  </div>
+  <div class="user-pill">
+    <div class="user-avatar" id="sb-avatar"></div>
+    <div class="user-info">
+      <div class="user-name" id="sb-name"></div>
+      <div class="user-role" id="sb-role"></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="basis-toggle" id="order-basis-toggle">
+      <button type="button" id="basis-order-btn" onclick="setOrderBasis('order')">주문기준</button>
+      <button type="button" id="basis-ship-btn" onclick="setOrderBasis('ship')">출고기준</button>
+    </div>
+    <div class="nav-label">매출관리</div>
+    <div class="nav-item active" onclick="showPage('sales',this)" id="nav-sales"><span class="nav-icon">💰</span>대시보드</div>
+    <div class="nav-item" onclick="showPage('stats',this)" id="nav-stats"><span class="nav-icon">📈</span>실적 분석</div>
+    <div class="nav-item" onclick="showPage('products',this)" id="nav-products"><span class="nav-icon">📦</span>제품별 현황</div>
+    <div class="nav-item" onclick="showPage('dash',this)" id="nav-dash"><span class="nav-icon">📋</span>영업현황</div>
+    <div class="nav-label" data-roles="admin,user" id="nav-journal-label">영업 일지</div>
+    <div class="nav-group" data-roles="admin,user" id="nav-journal-group">
+      <div class="nav-group-toggle open" onclick="toggleNavGroup(this)"><span class="nav-icon">✎</span>일지 입력<span class="nav-group-arrow">▶</span></div>
+      <div class="nav-sub open">
+        <div class="nav-item" onclick="showPage('input',this)" id="nav-input"><span class="nav-icon">📋</span>일간일지</div>
+        <div class="nav-item" onclick="showPage('weekly',this)" id="nav-weekly"><span class="nav-icon">📊</span>주간일지</div>
+        <div class="nav-item" onclick="showPage('mo-plan',this)" id="nav-mo-plan"><span class="nav-icon">📋</span>영업계획</div>
+        <div class="nav-item" onclick="showPage('mo-settle',this)" id="nav-mo-settle"><span class="nav-icon">📊</span>월간결산</div>
+      </div>
+    </div>
+    <div class="nav-label" data-roles="admin,manager,planner" id="nav-clients-label">거래처 관리</div>
+    <div class="nav-item" data-roles="admin,manager,planner" onclick="showPage('grade',this)" id="nav-grade"><span class="nav-icon">⭐</span>거래처 등급</div>
+    <div class="nav-item" data-roles="admin,manager,planner" onclick="showPage('clients',this)" id="nav-clients" style="display:none"><span class="nav-icon">🏢</span>거래처 DB<span class="nav-badge" id="client-badge">0</span></div>
+    <div class="nav-label" data-roles="admin,planner" style="display:none">관리/설정</div>
+    <div class="nav-item admin-only" onclick="showPage('users',this)" id="nav-users" style="display:none"><span class="nav-icon">👥</span>계정 관리</div>
+    <div class="nav-item" data-roles="admin,planner" onclick="showPage('targets',this)" id="nav-targets" style="display:none"><span class="nav-icon">◎</span>목표 설정</div>
+    <div class="nav-item" data-roles="admin,planner" onclick="openModal('modal-erp-upload')" style="display:none"><span class="nav-icon">⬆</span>ERP 자료 업로드</div>
+    <div class="nav-label">계정</div>
+    <div class="nav-item" onclick="openModal('modal-change-pw')"><span class="nav-icon">🔑</span>비밀번호 변경</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="status-line"><span class="online-dot"></span>실시간 공유 활성화</div>
+    <button class="logout-btn" onclick="doLogout()" style="margin-bottom:6px">로그아웃</button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="mob-overlay" id="mob-overlay" onclick="closeMobMenu()"></div>
+  <div class="topbar">
+    <button class="mob-menu-btn" onclick="toggleMobMenu()">☰</button>
+    <div class="topbar-title" id="topbar-title">대시보드</div>
+    <div class="topbar-notice">
+      <button class="btn-sm btn-ghost" onclick="showPage('notice')">공지사항</button>
+      <span class="topbar-notice-title" id="topbar-latest-notice" title="" role="button" tabindex="0" onclick="openTopbarLatestNotice()" onkeydown="if(event.key==='Enter'||event.key===' ')openTopbarLatestNotice()"></span>
+    </div>
+    <div id="fb-status-badge" class="fb-conn-badge fb-disconnected" style="display:none">● 미연결</div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="page-sales" class="page active">
+    <!-- ══ 매출현황 ══ -->
+    <div class="dash-section">
+      <div class="dash-section-title"><span>💰</span>매출현황</div>
+      <div class="sales-hero" style="margin-bottom:0">
+      <div class="sales-kpi-row">
+        <div class="sales-kpi primary">
+          <div class="sales-kpi-label">이번달 누적 매출</div>
+          <div class="sales-kpi-value" id="sh-month"><span id="sh-month-val">0</span><span class="sales-kpi-unit">원</span></div>
+          <div style="display:flex;align-items:center;gap:6px;margin:8px 0 4px">
+            <div style="flex:1;height:5px;background:rgba(255,255,255,.25);border-radius:3px;overflow:hidden"><div id="sh-sales-target-bar" style="width:0%;height:100%;background:#fff;border-radius:3px;transition:width .6s"></div></div>
+            <span id="sh-sales-target-pct" style="font-size:11px;font-weight:700;font-family:var(--mono);color:#fff;min-width:32px;text-align:right">-</span>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:2px" id="sh-sales-target-label"></div>
+          <div class="sales-kpi-sub" id="sh-month-sub" style="color:rgba(255,255,255,.6)">데이터 연동 대기</div>
+        </div>
+        <div class="sales-kpi">
+          <div class="kpi-accent" style="background:var(--blue)"></div>
+          <div class="sales-kpi-label">오늘 매출</div>
+          <div class="sales-kpi-value" style="color:var(--blue)"><span id="sh-today-val">0</span><span class="sales-kpi-unit">원</span></div>
+          <div class="sales-kpi-sub" id="sh-today-sub">-</div>
+        </div>
+        <div class="sales-kpi">
+          <div class="kpi-accent" style="background:var(--purple)"></div>
+          <div class="sales-kpi-label">어제 매출</div>
+          <div class="sales-kpi-value" style="color:var(--purple)"><span id="sh-yesterday-val">0</span><span class="sales-kpi-unit">원</span></div>
+          <div class="sales-kpi-sub" id="sh-yesterday-sub">-</div>
+        </div>
+      </div>
+      <div class="chart-card" style="padding:16px 20px">
+        <div class="chart-card-title" style="margin-bottom:10px">📈 일별 매출 추이 <span style="font-weight:600;color:var(--text2);font-size:15px" id="sh-chart-label">이번달</span> <span style="font-weight:400;color:var(--text3);font-size:12px" id="sh-workdays-label"></span></div>
+        <div style="position:relative;height:200px"><canvas id="chart-sales-daily"></canvas></div>
+      </div>
+      </div>
+    </div>
+
+    <!-- ══ 사업소 매출 순위 ══ -->
+    <div class="dash-section">
+      <div class="dash-section-title"><span>🏆</span>이번달 사업소 매출 순위</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-card-title">사업소별 매출 순위</div>
+          <div class="chart-card-sub" id="sh-rank-sub">당사 구매액 기준 (원)</div>
+          <div id="sh-rank-list" style="padding-top:4px"></div>
+          <div id="sh-rank-pager" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 0;font-size:12px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">사업소 매출 분포</div>
+          <div class="chart-card-sub">상위 사업소 비중</div>
+          <div style="position:relative;height:260px"><canvas id="chart-sales-rank"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ 영업자별 매출 ══ -->
+    <div class="dash-section">
+      <div class="dash-section-title"><span>👤</span>영업자별 매출</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-card-title">영업사원별 매출 현황</div>
+          <div class="chart-card-sub" id="sh-person-sub">이번달 당사 구매액 기준 (원)</div>
+          <div id="sh-person-list" style="padding-top:4px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">영업사원 매출 비중</div>
+          <div class="chart-card-sub">이번달 기준</div>
+          <div style="position:relative;height:260px"><canvas id="chart-person-sales"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-sales -->
+
+  <div id="page-dash" class="page">
+    <!-- ══ 영업현황 ══ -->
+    <div class="dash-section">
+      <div class="dash-section-title"><span>📋</span>영업현황</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="kpi-card main-card">
+        <div class="kpi-label">이번 달 누적 방문 수</div>
+        <div class="kpi-value" id="kpi-total">0</div>
+        <div style="display:flex;align-items:center;gap:6px;margin:8px 0 4px">
+          <div class="target-bar-wrap"><div class="target-bar-fill" id="kpi-visit-bar" style="width:0%;background:rgba(255,255,255,.9)"></div></div>
+          <span id="kpi-visit-pct" style="font-size:11px;font-weight:700;font-family:var(--mono);color:#fff;min-width:32px;text-align:right">-</span>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:2px" id="kpi-visit-target-label"></div>
+        <div class="kpi-sub" id="kpi-total-sub">오늘 0건 포함</div>
+      </div>
+      <div class="kpi-card" style="border-top:3px solid var(--green)">
+        <div class="kpi-label" style="margin-bottom:10px;color:var(--green-dark)">유형별 방문 사업소</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:4px 6px 6px 0;color:var(--text3);font-weight:600"></th>
+            <th style="text-align:center;padding:4px 4px 6px;color:var(--text3);font-weight:600">목표</th>
+            <th style="text-align:center;padding:4px 4px 6px;color:var(--text3);font-weight:600">실행</th>
+            <th style="text-align:center;padding:4px 0 6px;color:var(--text3);font-weight:600">달성률</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 6px 6px 0;font-weight:600;color:var(--blue)">신규</td>
+              <td style="text-align:center;padding:6px 4px;font-family:var(--mono);color:var(--text2)" id="kpi-type-new-tgt">0</td>
+              <td style="text-align:center;padding:6px 4px;font-family:var(--mono);font-weight:700;color:var(--blue)" id="kpi-type-new">0</td>
+              <td style="text-align:center;padding:6px 0;font-family:var(--mono);font-size:11px;color:var(--text3)" id="kpi-type-new-rate">0%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 6px 6px 0;font-weight:600;color:var(--amber)">휴면</td>
+              <td style="text-align:center;padding:6px 4px;font-family:var(--mono);color:var(--text2)" id="kpi-type-dormant-tgt">0</td>
+              <td style="text-align:center;padding:6px 4px;font-family:var(--mono);font-weight:700;color:var(--amber)" id="kpi-type-dormant">0</td>
+              <td style="text-align:center;padding:6px 0;font-family:var(--mono);font-size:11px;color:var(--text3)" id="kpi-type-dormant-rate">0%</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 6px 0 0;font-weight:600;color:var(--green-dark)">기존</td>
+              <td style="text-align:center;padding:6px 4px 0;font-family:var(--mono);color:var(--text2)" id="kpi-type-existing-tgt">0</td>
+              <td style="text-align:center;padding:6px 4px 0;font-family:var(--mono);font-weight:700;color:var(--green-dark)" id="kpi-type-existing">0</td>
+              <td style="text-align:center;padding:6px 0 0;font-family:var(--mono);font-size:11px;color:var(--text3)" id="kpi-type-existing-rate">0%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="kpi-card" style="border-top:3px solid var(--blue)">
+        <div class="kpi-label" style="margin-bottom:12px;color:var(--blue)">신규 사업소</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;width:16px;text-align:center">○</span><span style="font-size:12px;color:var(--text2);font-weight:500;flex:1">긍정</span><span id="kpi-new-pos" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--green-dark)">0</span><span style="font-size:11px;color:var(--text3)">처</span></div>
+          <div style="height:1px;background:var(--border)"></div>
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;width:16px;text-align:center">△</span><span style="font-size:12px;color:var(--text2);font-weight:500;flex:1">보통</span><span id="kpi-new-mid" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--amber)">0</span><span style="font-size:11px;color:var(--text3)">처</span></div>
+          <div style="height:1px;background:var(--border)"></div>
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;width:16px;text-align:center">×</span><span style="font-size:12px;color:var(--text2);font-weight:500;flex:1">어려움</span><span id="kpi-new-neg" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--red)">0</span><span style="font-size:11px;color:var(--text3)">처</span></div>
+        </div>
+      </div>
+      <div class="kpi-card" style="border-top:3px solid var(--amber)">
+        <div class="kpi-label" style="margin-bottom:12px;color:var(--amber)">휴면 사업소</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;width:16px;text-align:center">○</span><span style="font-size:12px;color:var(--text2);font-weight:500;flex:1">긍정</span><span id="kpi-dormant-pos" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--green-dark)">0</span><span style="font-size:11px;color:var(--text3)">처</span></div>
+          <div style="height:1px;background:var(--border)"></div>
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;width:16px;text-align:center">△</span><span style="font-size:12px;color:var(--text2);font-weight:500;flex:1">보통</span><span id="kpi-dormant-mid" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--amber)">0</span><span style="font-size:11px;color:var(--text3)">처</span></div>
+          <div style="height:1px;background:var(--border)"></div>
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;width:16px;text-align:center">×</span><span style="font-size:12px;color:var(--text2);font-weight:500;flex:1">어려움</span><span id="kpi-dormant-neg" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--red)">0</span><span style="font-size:11px;color:var(--text3)">처</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">일별 방문 추이</div>
+        <div class="chart-card-sub">최근 14일간 방문 건수</div>
+        <div style="position:relative;height:210px"><canvas id="chart-daily"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">거래처 유형 분포</div>
+        <div class="chart-card-sub">방문 건수 기준</div>
+        <div style="position:relative;height:210px"><canvas id="chart-type"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid-3">
+      <div class="chart-card">
+        <div class="chart-card-title">영업사원별 방문 랭킹</div>
+        <div class="chart-card-sub">누적 방문 건수</div>
+        <div id="leaderboard" style="padding-top:4px"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">지역별 방문 분포</div>
+        <div class="chart-card-sub">방문 건수 기준</div>
+        <div style="position:relative;height:180px"><canvas id="chart-region"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">거래 가능성 비율</div>
+        <div class="chart-card-sub">전체 방문 대비</div>
+        <div style="position:relative;height:180px"><canvas id="chart-deal"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid" style="margin-bottom:20px">
+      <div class="chart-card">
+        <div class="chart-card-title">월별 방문 추이</div>
+        <div class="chart-card-sub">최근 6개월 방문 건수</div>
+        <div style="position:relative;height:200px"><canvas id="chart-monthly"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">거래처별 방문 TOP 10</div>
+        <div class="chart-card-sub">누적 방문 횟수 기준</div>
+        <div id="top10-list" style="padding-top:4px"></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-header-title">최근 방문 기록</div>
+        <span style="font-size:11px;color:var(--text3)">최신 10건</span>
+      </div>
+      <div id="recent-table-wrap"></div>
+    </div>
+
+    <div class="table-card" id="dash-pending-card" style="margin-top:16px;display:none">
+      <div class="table-header">
+        <div class="table-header-title">⏸ 보류 이슈 목록</div>
+        <span style="font-size:11px;color:var(--text3)" id="dash-pending-count"></span>
+      </div>
+      <div id="dash-pending-list" style="padding:0 20px 12px"></div>
+    </div>
+  </div>
+
+  <!-- ── INPUT ── -->
+  <div id="page-input" class="page">
+
+    <!-- 캘린더 뷰 -->
+    <div id="dly-cal-view">
+      <div class="section-header" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn-sm btn-ghost" onclick="dlyCalMove(-1)" style="padding:4px 10px">‹</button>
+          <div id="dly-cal-title" style="font-size:14px;font-weight:700;color:var(--text);min-width:90px;text-align:center"></div>
+          <button class="btn-sm btn-ghost" onclick="dlyCalMove(1)" style="padding:4px 10px">›</button>
+          <button class="btn-sm btn-ghost" onclick="dlyCalToday()" style="margin-left:2px;padding:4px 10px">오늘</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:12px">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px"></span>일지 있음</span>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden">
+        <!-- 요일 헤더 -->
+        <div id="dly-cal-dow" style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">
+          <div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:var(--red)">일</div>
+          <div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:var(--text2)">월</div>
+          <div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:var(--text2)">화</div>
+          <div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:var(--text2)">수</div>
+          <div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:var(--text2)">목</div>
+          <div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:var(--text2)">금</div>
+          <div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:var(--blue)">토</div>
+        </div>
+        <!-- 날짜 그리드 -->
+        <div id="dly-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr)"></div>
+      </div>
+    </div>
+
+    <!-- 일간일지 입력 팝업 (날짜 클릭 시 표시) -->
+    <div id="dly-input-view" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;overflow-y:auto;padding:20px">
+     <div style="background:var(--surface);border-radius:var(--r);box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:780px;margin:20px auto;padding:22px 24px">
+      <div class="section-header" style="margin-bottom:14px">
+        <div>
+          <div class="section-title-lg">✎ 일간 영업일지</div>
+          <div id="dly-input-date-label" style="font-size:13px;font-weight:600;color:var(--green);margin-top:3px"></div>
+          <div id="cw-count-label" style="font-size:12px;color:var(--text3);margin-top:2px">등록된 거래처 0건</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-sm btn-ghost" onclick="dlyBackToCal()" style="padding:8px 18px;font-size:13px">← 캘린더로</button>
+          <button class="submit-btn" onclick="cwFinish()" style="padding:8px 18px;width:auto;font-size:13px">✓ 일지 등록 완료</button>
+        </div>
+      </div>
+
+      <!-- 저장된 거래처 리스트 -->
+      <div id="cw-saved-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+
+      <!-- 신규 입력 카드 -->
+      <div id="cw-edit-card" style="background:var(--surface);border:1.5px solid var(--green);border-radius:var(--r);padding:18px 20px">
+        <div id="cw-edit-title" style="font-size:13px;font-weight:700;color:var(--green-dark);margin-bottom:14px">+ 새 거래처 입력</div>
+        <input type="hidden" id="cw-editing-id" value="" />
+        <input type="hidden" id="cw-date" value="" />
+        <input type="hidden" id="cw-clientCode" />
+        <input type="hidden" id="cw-contact" />
+        <input type="hidden" id="cw-sideBusiness" />
+        <input type="hidden" id="cw-region" />
+        <input type="hidden" id="cw-gender" />
+        <input type="hidden" id="cw-age" />
+        <input type="hidden" id="cw-floor" />
+        <input type="hidden" id="cw-area" />
+        <input type="hidden" id="cw-experience" />
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div style="position:relative">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">기관명 <span style="color:var(--red)">*</span></div>
+            <input id="cw-institution" class="form-input" type="text" placeholder="기관명 입력 (자동완성)" autocomplete="off" style="width:100%" oninput="cwAcSearch()" onfocus="cwAcSearch()" onblur="setTimeout(()=>{cwAcClose();cwCheckClient()},250)" onkeydown="cwAcKeydown(event)" />
+            <div class="ss-ac-list" id="cw-ac-list"></div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">거래처유형 <span style="color:var(--red)">*</span></div>
+            <select id="cw-clientType" class="form-select" style="width:100%"><option value="">- 선택 -</option><option>기존 거래처</option><option>신규거래처</option><option>휴면거래처</option></select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">참석자 <span style="color:var(--red)">*</span></div>
+            <input id="cw-attendee" class="form-input" type="text" style="width:100%" />
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">거래가능성</div>
+            <div style="display:flex;gap:6px">
+              <button type="button" class="cw-deal-btn" data-v="○" onclick="cwSetDeal('○')" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">○</button>
+              <button type="button" class="cw-deal-btn" data-v="△" onclick="cwSetDeal('△')" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">△</button>
+              <button type="button" class="cw-deal-btn" data-v="×" onclick="cwSetDeal('×')" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">×</button>
+            </div>
+            <input type="hidden" id="cw-dealPossibility" />
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">미팅내용 <span style="color:var(--red)">*</span></div>
+          <textarea id="cw-meeting" class="form-textarea" rows="3" style="width:100%;box-sizing:border-box"></textarea>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">이슈사항</div>
+          <textarea id="cw-issues" class="form-textarea" rows="2" style="width:100%;box-sizing:border-box"></textarea>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn-sm btn-ghost" onclick="cwCancelEdit()" style="padding:8px 20px;font-size:13px" id="cw-cancel-btn">초기화</button>
+          <button class="btn-sm btn-primary" onclick="cwSaveCard()" style="padding:8px 20px;font-size:13px" id="cw-save-btn">이 거래처 저장</button>
+        </div>
+      </div>
+     </div>
+    </div>
+
+    <!-- 기존 폼 유지 (히든) - 수정 모달 등에서 사용 -->
+    <div id="old-form-wrap" style="display:none">
+      <input id="f-date" /><input id="f-institution" /><input id="f-clientcode" /><select id="f-clienttype"></select>
+      <select id="f-sidebiz-sel"></select><input id="f-sidebiz" /><input id="f-revisit-date" />
+      <textarea id="f-meeting"></textarea><textarea id="f-issues"></textarea>
+      <input id="f-our-purchase" /><input id="f-other-purchase" /><input id="f-contact" />
+      <select id="f-region"></select><select id="f-gender"></select><select id="f-age"></select>
+      <select id="f-floor"></select><select id="f-exp"></select>
+      <span id="draft-indicator"></span>
+    </div>
+  </div>
+
+  <!-- ── WEEKLY ── -->
+  <div id="page-weekly" class="page">
+
+    <!-- 목록 뷰 (기본) -->
+    <div id="wk-list-view">
+      <div class="section-header" style="margin-bottom:14px">
+        <div>
+          <div class="section-title-lg">📊 주간 영업일지</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">주간 업무 요약 보고서 목록</div>
+        </div>
+        <button class="submit-btn" style="padding:8px 22px;width:auto" onclick="wkOpenForm()">+ 주간일지 작성</button>
+      </div>
+      <div class="bbs-wrap">
+        <div class="bbs-toolbar bbs-filter">
+          <select id="wk-filter-year" onchange="wkRenderList()"></select>
+          <span id="wk-board-count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+        </div>
+        <table class="bbs-table">
+          <thead>
+            <tr>
+              <th style="width:52px">번호</th>
+              <th class="bbs-th-title">제목</th>
+              <th style="width:130px">주차</th>
+              <th style="width:70px">방문건수</th>
+              <th style="width:70px">신규</th>
+              <th style="width:70px">달성률</th>
+              <th style="width:80px">작성자</th>
+              <th style="width:90px">작성일</th>
+              <th style="width:90px"></th>
+            </tr>
+          </thead>
+          <tbody id="wk-board"></tbody>
+        </table>
+        <div id="wk-empty" class="bbs-empty" style="display:none">
+          <div style="font-size:32px;margin-bottom:10px">📋</div>
+          <div style="font-weight:600">작성된 주간일지가 없습니다</div>
+          <div style="font-size:12px;margin-top:5px">위의 버튼을 눌러 첫 보고서를 작성하세요</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 입력 폼 뷰 -->
+    <div id="wk-form-view" style="display:none">
+      <div class="section-header" style="margin-bottom:14px">
+        <div>
+          <div class="section-title-lg">📝 주간일지 작성</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px" id="wk-form-subtitle"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-sm btn-ghost" onclick="wkFormPrev()">← 이전 주</button>
+          <span id="wk-form-period" style="font-size:13px;font-weight:600;color:var(--text);padding:7px 12px;background:var(--bg2);border-radius:8px"></span>
+          <button class="btn-sm btn-ghost" onclick="wkFormNext()">다음 주 →</button>
+          <button class="btn-sm btn-ghost" onclick="wkCloseForm()" style="margin-left:4px">✕ 목록</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:stretch;margin-bottom:10px">
+        <div style="flex:1;min-width:0">
+      <div class="form-card" style="padding:10px 14px;margin-bottom:0;height:100%;box-sizing:border-box;display:flex;align-items:center">
+        <div style="display:flex;align-items:center;gap:8px;width:100%">
+          <label class="form-label" style="white-space:nowrap;margin:0;font-size:11px">📝 제목</label>
+          <input class="form-input" id="wk-title" placeholder="예: 2026년 3월 1주차 주간업무보고" style="flex:1;padding:7px 11px;font-size:13px" />
+        </div>
+      </div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex">
+      <div class="form-card" style="padding:10px 14px;margin-bottom:0;display:flex;align-items:center;width:100%">
+        <div style="display:flex;align-items:center;width:100%;gap:0">
+          <div style="white-space:nowrap;font-size:13px;font-weight:700;color:var(--text);margin-right:50px">🎯 차주 목표 설정</div>
+          <div style="display:flex;align-items:center;flex:1;gap:0">
+            <span style="color:var(--text2);font-weight:700;font-size:14px;margin-right:30px">합계</span>
+            <span id="wk-next-target-total" style="color:var(--green-dark);font-weight:800;font-size:16px;margin-right:12px">0</span>
+            <span style="color:var(--border2);margin-right:12px">|</span>
+            <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">신규</span>
+            <input class="ss-input" id="wk-next-new" type="number" min="0" placeholder="0" oninput="wkCalcNextTarget()" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <span style="color:var(--border2);margin-right:12px">|</span>
+            <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">휴면</span>
+            <input class="ss-input" id="wk-next-dormant" type="number" min="0" placeholder="0" oninput="wkCalcNextTarget()" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <span style="color:var(--border2);margin-right:12px">|</span>
+            <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">기존</span>
+            <input class="ss-input" id="wk-next-existing" type="number" min="0" placeholder="0" oninput="wkCalcNextTarget()" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <span style="font-size:10px;color:var(--text3);white-space:nowrap;margin-left:auto">* 차주 주간일지 작성 시 방문 목표로 자동 반영</span>
+          </div>
+        </div>
+      </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <!-- 행1 좌: 금주활동 -->
+        <div class="form-card">
+          <div class="form-card-title">💬 금주 주요 활동 및 결산</div>
+          <div class="form-group"><textarea class="form-textarea" id="wk-schedule" placeholder="금주 수행한 주요 일정을 작성하세요..." style="min-height:52px;max-height:52px;resize:none;overflow:hidden"></textarea></div>
+        </div>
+        <!-- 행1 우: 시장동향 -->
+        <div class="form-card">
+          <div class="form-card-title">📊 시장 &amp; 경쟁사 동향</div>
+          <div class="form-group"><textarea class="form-textarea" id="wk-market" placeholder="시장 동향, 경쟁사 정보, 업계 이슈 등..." style="min-height:52px;max-height:52px;resize:none;overflow:hidden"></textarea></div>
+        </div>
+        <!-- 행2 좌: 사업소별 이슈 -->
+        <div class="form-card">
+          <div class="form-card-title">⚠ 사업소별 이슈 및 요청사항</div>
+          <div style="margin-bottom:10px;position:relative;display:inline-flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="wk-hl-search" class="ss-input" placeholder="사업소 검색..." autocomplete="off"
+                style="width:320px;padding:5px 8px;font-size:13px"
+                oninput="wkHlSearch(this.value)" onkeydown="if(event.key==='Escape')wkHlCloseDrop()"/>
+              <button class="btn-sm btn-ghost" onclick="wkHlAddRow(document.getElementById('wk-hl-search').value.trim());document.getElementById('wk-hl-search').value='';wkHlCloseDrop()">+ 추가</button>
+            </div>
+            <div id="wk-hl-drop" style="display:none;position:absolute;top:32px;left:0;width:320px;z-index:200;background:#fff;border:1px solid var(--border);border-radius:6px;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:1"></div>
+          </div>
+          <div id="wk-hl-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+          <input type="hidden" id="wk-highlights" />
+          <div id="wk-issues-list" style="display:none"></div>
+        </div>
+        <!-- 행2 우: 첨부사진 -->
+        <div id="wk-photo-panel" style="position:relative">
+          <div class="form-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div class="form-card-title" style="margin:0">📷 첨부 사진</div>
+              <span id="wk-photo-pager" style="font-size:11px;color:var(--text3)"></span>
+            </div>
+            <div id="wk-photo-grid" style="display:flex;flex-direction:column;gap:12px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-sm btn-ghost" onclick="wkCloseForm()" style="padding:10px 18px">← 목록으로</button>
+        <button class="submit-btn" onclick="wkSaveReport()" style="flex:1">✓ 주간일지 저장</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── MONTHLY ── -->
+<!-- ── MO-PLAN ── -->
+<div id="page-mo-plan" class="page">
+  <!-- 목록 뷰 -->
+  <div id="mop-list-view">
+    <div class="section-header" style="margin-bottom:14px">
+      <div>
+        <div class="section-title-lg">📋 영업계획</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">월별 영업계획 목록</div>
+      </div>
+      <button class="submit-btn" style="padding:8px 22px;width:auto" onclick="moPlanOpenForm()">+ 영업계획 작성</button>
+    </div>
+    <div class="bbs-wrap">
+      <div class="bbs-toolbar bbs-filter">
+        <select id="mop-filter-year" onchange="moPlanRenderList()"></select>
+        <span id="mop-board-count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+      </div>
+      <table class="bbs-table">
+        <thead>
+          <tr>
+            <th style="width:52px">번호</th>
+            <th class="bbs-th-title">제목</th>
+            <th style="width:90px">연월</th>
+            <th style="width:80px">목표방문</th>
+            <th style="width:80px">목표매출</th>
+            <th style="width:80px">작성자</th>
+            <th style="width:90px">저장일</th>
+            <th style="width:90px"></th>
+          </tr>
+        </thead>
+        <tbody id="mop-board"></tbody>
+      </table>
+      <div id="mop-empty" class="bbs-empty" style="display:none">
+        <div style="font-size:32px;margin-bottom:10px">📋</div>
+        <div style="font-weight:600">작성된 영업계획이 없습니다</div>
+        <div style="font-size:12px;margin-top:5px">위의 버튼을 눌러 첫 계획을 작성하세요</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 폼 뷰 -->
+  <div id="mop-form-view" style="display:none">
+    <div class="section-header" style="margin-bottom:14px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-sm btn-ghost" onclick="moChange(-1)">← 이전 월</button>
+        <span id="mo-period" style="font-size:13px;font-weight:600;color:var(--text);padding:7px 12px;background:var(--bg2);border-radius:8px"></span>
+        <button class="btn-sm btn-ghost" onclick="moChange(1)">다음 월 →</button>
+      </div>
+      <button class="btn-sm btn-ghost" onclick="moPlanCloseForm()" style="padding:9px 18px">← 목록</button>
+    </div>
+    <div class="form-card">
+      <div class="form-card-title">📋 월간 영업계획</div>
+      <div class="form-card" style="padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;width:100%">
+        <div style="display:flex;align-items:center;width:100%;gap:0">
+          <div style="white-space:nowrap;font-size:13px;font-weight:700;color:var(--text);margin-right:50px">🎯 월간 목표 방문수</div>
+          <div style="display:flex;align-items:center;flex:1;gap:0">
+            <span style="color:var(--text2);font-weight:700;font-size:14px;margin-right:30px">합계</span>
+            <span id="mo-target-visit-total" style="color:var(--green-dark);font-weight:800;font-size:16px;margin-right:12px">0</span>
+            <span style="color:var(--border2);margin-right:12px">|</span>
+            <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">신규</span>
+            <input class="ss-input" id="mo-target-new" type="number" min="0" placeholder="0" oninput="moCalcTargetVisit()" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <span style="color:var(--border2);margin-right:12px">|</span>
+            <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">휴면</span>
+            <input class="ss-input" id="mo-target-dormant" type="number" min="0" placeholder="0" oninput="moCalcTargetVisit()" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <span style="color:var(--border2);margin-right:12px">|</span>
+            <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">기존</span>
+            <input class="ss-input" id="mo-target-existing" type="number" min="0" placeholder="0" oninput="moCalcTargetVisit()" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <span style="color:var(--border2);margin:0 16px 0 12px">|</span>
+            <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:6px;white-space:nowrap">목표 매출</span>
+            <input class="ss-input" id="mo-target-sales" type="number" min="0" placeholder="0" style="display:inline-block;text-align:right;width:90px;padding:2px 6px;font-size:13px;margin-right:4px" />
+            <span style="color:var(--text3);font-size:12px">원</span>
+            <input type="hidden" id="mo-target-visit" />
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">방문 계획 (기관별 주차 체크)</div>
+      <div class="ss-wrap">
+        <table class="ss-table" id="mo-plan-table" style="min-width:900px">
+          <thead><tr>
+            <th>#</th><th style="min-width:180px">기관명</th><th style="min-width:50px">계획횟수</th>
+            <th style="min-width:50px">1주차</th><th style="min-width:50px">2주차</th><th style="min-width:50px">3주차</th><th style="min-width:50px">4주차</th><th style="min-width:50px">5주차</th>
+            <th style="min-width:90px">예상매출(원)</th><th style="min-width:140px">방문 목적</th><th style="min-width:36px"></th>
+          </tr></thead>
+          <tbody id="mo-plan-body"></tbody>
+        </table>
+        <div class="ss-toolbar">
+          <button class="btn-sm btn-ghost" onclick="moAddPlanRow()">+ 행 추가</button>
+          <button class="btn-sm btn-ghost" onclick="moAddPlanRows(5)">+5행</button>
+          <span class="ss-status" id="mo-plan-status">0건</span>
+        </div>
+      </div>
+      <button class="submit-btn" onclick="moSavePlan()" style="margin-top:14px">✓ 영업계획 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MO-SETTLE ── -->
+<div id="page-mo-settle" class="page">
+  <!-- 목록 뷰 -->
+  <div id="mos-list-view">
+    <div class="section-header" style="margin-bottom:14px">
+      <div>
+        <div class="section-title-lg">📊 월간결산</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">월별 결산 보고서 목록</div>
+      </div>
+      <button class="submit-btn" style="padding:8px 22px;width:auto" onclick="moSettleOpenForm()">+ 월간결산 작성</button>
+    </div>
+    <div class="bbs-wrap">
+      <div class="bbs-toolbar bbs-filter">
+        <select id="mos-filter-year" onchange="moSettleRenderList()"></select>
+        <span id="mos-board-count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+      </div>
+      <table class="bbs-table">
+        <thead>
+          <tr>
+            <th style="width:52px">번호</th>
+            <th class="bbs-th-title">제목</th>
+            <th style="width:90px">연월</th>
+            <th style="width:80px">목표방문</th>
+            <th style="width:80px">실적방문</th>
+            <th style="width:70px">달성률</th>
+            <th style="width:80px">작성자</th>
+            <th style="width:90px">저장일</th>
+            <th style="width:90px"></th>
+          </tr>
+        </thead>
+        <tbody id="mos-board"></tbody>
+      </table>
+      <div id="mos-empty" class="bbs-empty" style="display:none">
+        <div style="font-size:32px;margin-bottom:10px">📊</div>
+        <div style="font-weight:600">작성된 월간결산이 없습니다</div>
+        <div style="font-size:12px;margin-top:5px">위의 버튼을 눌러 첫 결산을 작성하세요</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 폼 뷰 -->
+  <div id="mos-form-view" style="display:none">
+    <div class="section-header" style="margin-bottom:14px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-sm btn-ghost" onclick="moChange(-1)">← 이전 월</button>
+        <span id="mos-period" style="font-size:13px;font-weight:600;color:var(--text);padding:7px 12px;background:var(--bg2);border-radius:8px"></span>
+        <button class="btn-sm btn-ghost" onclick="moChange(1)">다음 월 →</button>
+      </div>
+      <button class="btn-sm btn-ghost" onclick="moSettleCloseForm()" style="padding:9px 18px">← 목록</button>
+    </div>
+    <div class="form-card">
+      <div class="form-card-title">📊 월간 결산 보고서</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">일간일지 데이터 기반 자동 집계 + 수동 입력</div>
+      <table class="client-table" style="font-size:12px;margin-bottom:20px">
+        <thead><tr><th>KPI 지표</th><th>목표</th><th>실적</th><th>달성률</th><th>전월대비</th></tr></thead>
+        <tbody>
+          <tr><td>총 방문 건수</td><td id="mo-s-visit-target">-</td><td id="mo-s-visit-actual" style="font-family:var(--mono)">-</td><td id="mo-s-visit-rate" style="font-family:var(--mono)">-</td><td id="mo-s-visit-prev">-</td></tr>
+          <tr><td>신규 고객 수</td><td><input class="ss-input" id="mo-s-new-target" type="number" placeholder="0" /></td><td id="mo-s-new-actual" style="font-family:var(--mono)">-</td><td id="mo-s-new-rate" style="font-family:var(--mono)">-</td><td>-</td></tr>
+          <tr><td>총 매출 (원)</td><td id="mo-s-sales-target">-</td><td id="mo-s-sales-actual" style="font-family:var(--mono)">-</td><td id="mo-s-sales-rate" style="font-family:var(--mono)">-</td><td id="mo-s-sales-prev">-</td></tr>
+          <tr><td>계약 건수</td><td><input class="ss-input" id="mo-s-contract-target" type="number" placeholder="0" /></td><td><input class="ss-input" id="mo-s-contract-actual" type="number" placeholder="0" /></td><td id="mo-s-contract-rate" style="font-family:var(--mono)">-</td><td>-</td></tr>
+          <tr><td>수금액 (원)</td><td><input class="ss-input" id="mo-s-collect-target" type="number" placeholder="0" /></td><td><input class="ss-input" id="mo-s-collect-actual" type="number" placeholder="0" /></td><td id="mo-s-collect-rate" style="font-family:var(--mono)">-</td><td>-</td></tr>
+        </tbody>
+      </table>
+      <div class="form-group"><label class="form-label">월간 총평 / 결과</label><textarea class="form-textarea" id="mo-s-summary" placeholder="이번 달 영업 총평, 성과, 개선점..." style="min-height:100px"></textarea></div>
+      <button class="submit-btn" onclick="moSaveSettle()" style="margin-top:14px">✓ 월간결산 저장</button>
+    </div>
+  </div>
+</div>
+
+  <!-- ── RECORDS ── -->
+  <div id="page-records" class="page">
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-header-title">방문 기록</div>
+        <input class="search-input" id="search-input" placeholder="기관명 검색..." oninput="renderRecords()" />
+        <select class="filter-select" id="filter-person" onchange="renderRecords()"><option value="">전체 영업사원</option></select>
+        <select class="filter-select" id="filter-deal" onchange="renderRecords()"><option value="">거래가능성 전체</option><option value="○">○ 긍정적</option><option value="△">△ 보통</option><option value="×">× 어려움</option></select>
+        <select class="filter-select" id="filter-region" onchange="renderRecords()"><option value="">전체 지역</option><option>서울</option><option>경기</option><option>강원</option><option>세종</option><option>대전</option><option>충북</option><option>충남</option><option>인천</option><option>부산</option><option>경남</option><option>전남</option><option>전북</option></select>
+        <div class="drp-wrap" id="drp-records">
+          <div class="drp-trigger" onclick="drpOpen('records')">
+            <span class="drp-trigger-icon">📅</span>
+            <span class="drp-trigger-text" id="drp-records-label">기간 선택</span>
+          </div>
+          <div class="drp-dropdown" id="drp-records-dropdown"></div>
+        </div>
+        <input type="hidden" id="filter-date-from" /><input type="hidden" id="filter-date-to" />
+      </div>
+      <div id="records-table-wrap"></div>
+    </div>
+  </div>
+
+  <!-- ── ADMIN: USERS ── -->
+  <div id="page-users" class="page">
+    <div class="section-header">
+      <div class="section-title-lg">계정 관리</div>
+      <button class="btn-sm btn-primary" onclick="openAddUserModal()">+ 계정 추가</button>
+    </div>
+    <div id="pending-signups-wrap" style="margin-bottom:20px"></div>
+    <div id="users-list"></div>
+  </div>
+
+  <!-- ── ADMIN: TARGETS ── -->
+  <div id="page-targets" class="page">
+    <div class="section-header">
+      <div class="section-title-lg">목표 설정</div>
+      <button class="btn-sm btn-primary" onclick="saveTargets()">저장</button>
+    </div>
+    <div class="target-grid">
+      <div class="target-card">
+        <div class="target-card-title">📊 팀 전체 목표</div>
+        <div class="tgt-row">
+          <span class="tgt-label">월간 매출 목표</span>
+          <input class="target-input-sm" id="t-sales" type="text" placeholder="0" oninput="fmtComma(this)" />
+          <span class="tgt-unit">원</span>
+          <div class="tgt-bar-wrap"><div class="tgt-bar-fill" id="t-sales-bar" style="width:0%;background:var(--amber)"></div></div>
+          <span class="tgt-pct" id="t-sales-pct" style="color:var(--amber)">-</span>
+        </div>
+        <div class="tgt-row">
+          <span class="tgt-label">월간 방문 목표</span>
+          <input class="target-input-sm" id="t-visit" type="number" placeholder="0" />
+          <span class="tgt-unit">건</span>
+          <div class="tgt-bar-wrap"><div class="tgt-bar-fill" id="t-visit-bar" style="width:0%;background:var(--green)"></div></div>
+          <span class="tgt-pct" id="t-visit-pct" style="color:var(--green-dark)">-</span>
+        </div>
+      </div>
+      <div class="target-card">
+        <div class="target-card-title">👤 영업사원별 목표</div>
+        <div id="personal-targets"></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">목표 대비 달성 현황</div>
+      <div class="chart-card-sub">영업사원별 방문 건수 달성률</div>
+      <div style="position:relative;height:220px"><canvas id="chart-target"></canvas></div>
+    </div>
+  </div>
+
+
+
+  <!-- ── CLIENT MANAGEMENT ── -->
+  <div id="page-clients" class="page">
+    <div class="section-header" style="margin-bottom:16px">
+      <div class="section-title-lg">🏢 거래처 관리</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm btn-ghost" onclick="exportClients()">↓ 전체 엑셀</button>
+        <button class="btn-sm btn-ghost" onclick="openModal('modal-client-upload')">↑ 일괄 업로드</button>
+        <button class="btn-sm btn-primary" onclick="openAddClientModal()">+ 거래처 추가</button>
+      </div>
+    </div>
+    <div class="client-toolbar" style="flex-wrap:wrap;gap:8px">
+      <input class="client-search" id="client-search" placeholder="거래처명, 코드, 지역 검색..." oninput="renderClients()" />
+      <select class="filter-select" id="client-filter-region" onchange="renderClients()">
+        <option value="">전체 지역</option>
+        <option>서울</option><option>경기</option><option>강원</option><option>세종</option>
+        <option>대전</option><option>충북</option><option>충남</option><option>인천</option>
+        <option>부산</option><option>경남</option><option>전남</option><option>전북</option>
+      </select>
+      <select class="filter-select" id="client-filter-type" onchange="renderClients()">
+        <option value="">전체 유형</option>
+        <option>기존 거래처</option><option>신규거래처</option><option>휴면거래처</option><option>거래 재개</option>
+      </select>
+      <select class="filter-select" id="client-filter-deal" onchange="renderClients()">
+        <option value="">거래가능성 전체</option>
+        <option value="○">○ 긍정적</option><option value="△">△ 보통</option><option value="×">× 어려움</option>
+      </select>
+      <select class="filter-select" id="client-sort" onchange="renderClients()" style="min-width:140px">
+        <option value="visits-desc">방문 많은순</option>
+        <option value="visits-asc">방문 적은순</option>
+        <option value="last-desc">최근 방문 최신순</option>
+        <option value="last-asc">최근 방문 오래된순</option>
+        <option value="first-desc">첫 방문 최신순</option>
+        <option value="first-asc">첫 방문 오래된순</option>
+        <option value="name-asc">이름 가나다순</option>
+      </select>
+      <span id="client-count-label" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+    </div>
+    <div class="table-card">
+      <div class="client-action-bar" id="client-action-bar">
+        <span id="client-selected-label">0개 선택됨</span>
+        <button class="btn-sm btn-primary" onclick="exportSelectedClients()">↓ 선택 항목 엑셀 다운로드</button>
+        <button class="btn-sm btn-danger" onclick="deleteSelectedClients()" id="client-delete-btn" class="admin-only" style="display:none">삭제</button>
+        <button class="btn-sm btn-ghost" onclick="clearClientSelection()" style="margin-left:auto">선택 해제</button>
+      </div>
+      <div class="client-table-wrap"><div id="client-grid"></div></div>
+    </div>
+  </div>
+
+  <!-- ── STATS PAGE ── -->
+  <div id="page-stats" class="page">
+    <div class="section-header" style="margin-bottom:16px">
+      <div class="section-title-lg">실적 분석</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
+        <div class="drp-wrap" id="drp-stats">
+          <div class="drp-trigger" onclick="drpOpen('stats')">
+            <span class="drp-trigger-icon">📅</span>
+            <span class="drp-trigger-text" id="drp-stats-label">기간 선택</span>
+          </div>
+          <div class="drp-dropdown" id="drp-stats-dropdown"></div>
+        </div>
+        <input type="hidden" id="stats-date-from" /><input type="hidden" id="stats-date-to" />
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+        <div style="font-size:11px;font-weight:600;color:var(--text2)">영업사원</div>
+        <div id="stats-person-filter" class="stats-person-btns"></div>
+      </div>
+    </div>
+    <div class="stats-kpi-row" id="stats-kpi-row"></div>
+    <div class="chart-grid" style="margin-bottom:16px">
+      <div class="chart-card">
+        <div class="chart-card-title">월별 매출 추이</div>
+        <div class="chart-card-sub" id="stats-chart-sub">최근 6개월</div>
+        <div style="position:relative;height:210px"><canvas id="chart-stats-monthly"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">영업사원별 매출 비중</div>
+        <div class="chart-card-sub">선택 기간 기준</div>
+        <div style="position:relative;height:210px"><canvas id="chart-stats-deal"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-card-title">일별 매출 추이</div>
+      <div class="chart-card-sub" id="stats-daily-sales-sub">이번달</div>
+      <div style="position:relative;height:240px"><canvas id="chart-stats-daily-sales"></canvas></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-card-title" id="stats-daily-qty-title">일별 출고 수량</div>
+      <div class="chart-card-sub" id="stats-daily-qty-sub">이번달</div>
+      <div style="position:relative;height:240px"><canvas id="chart-stats-daily-qty"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── REVISIT PAGE ── -->
+  <div id="page-revisit" class="page">
+    <div class="section-header" style="margin-bottom:16px">
+      <div class="section-title-lg">재방문 관리</div>
+    </div>
+    <div class="chart-grid-3" style="margin-bottom:20px">
+      <div class="chart-card">
+        <div class="chart-card-title" style="color:var(--red)">오늘 재방문</div>
+        <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--red);margin:8px 0" id="rv-today-cnt">0</div>
+        <div style="font-size:11px;color:var(--text3)">건</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title" style="color:var(--amber)">3일 이내</div>
+        <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--amber);margin:8px 0" id="rv-soon-cnt">0</div>
+        <div style="font-size:11px;color:var(--text3)">건</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">이번 달 예정</div>
+        <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--blue);margin:8px 0" id="rv-month-cnt">0</div>
+        <div style="font-size:11px;color:var(--text3)">건</div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-header-title">재방문 예정 목록</div>
+        <select class="filter-select" id="rv-filter" onchange="renderRevisit()"><option value="upcoming">예정된 방문</option><option value="all">전체</option><option value="done">완료</option></select>
+      </div>
+      <div id="revisit-list" style="padding:0 20px 12px"></div>
+    </div>
+  </div>
+
+  <!-- ── NOTICE MANAGE (admin) ── -->
+  <div id="page-notice" class="page">
+    <div class="section-header" style="margin-bottom:16px">
+      <div class="section-title-lg">📢 공지사항</div>
+      <button class="btn-sm btn-primary admin-only" onclick="openModal('modal-add-notice')" style="display:none">+ 공지 작성</button>
+    </div>
+    <div id="notice-manage-list"></div>
+    <div id="notice-detail" class="board-detail"></div>
+  </div>
+
+  <!-- ── PRODUCTS PAGE ── -->
+  <div id="page-products" class="page">
+    <div class="section-header" style="margin-bottom:20px">
+      <div class="section-title-lg">📦 제품별 현황</div>
+    </div>
+    <!-- 필터 바 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
+        <div class="drp-wrap" id="drp-prod">
+          <div class="drp-trigger" onclick="drpOpen('prod')">
+            <span class="drp-trigger-icon">📅</span>
+            <span class="drp-trigger-text" id="drp-prod-label">기간 선택</span>
+          </div>
+          <div class="drp-dropdown" id="drp-prod-dropdown"></div>
+        </div>
+        <input type="hidden" id="prod-date-from" /><input type="hidden" id="prod-date-to" />
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">영업사원</div>
+        <select id="prod-filter-person" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderProducts()">
+          <option value="all">전체</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">품목군</div>
+        <select id="prod-filter-category" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderProducts()">
+          <option value="all">전체</option>
+        </select>
+      </div>
+      <div style="margin-left:auto">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">검색</div>
+        <input id="prod-search" class="form-input" style="font-size:12px;padding:6px 10px;width:180px" placeholder="품목명 검색..." oninput="renderProducts()" />
+      </div>
+    </div>
+    <!-- 요약 카드 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div class="kpi-card"><div class="kpi-label">품목 수</div><div class="kpi-value" id="prod-sum-items" style="font-size:26px">0</div><div class="kpi-sub">종</div></div>
+      <div class="kpi-card"><div class="kpi-label" id="prod-sum-qty-label">총 출고수량</div><div class="kpi-value" id="prod-sum-qty" style="font-size:26px;color:var(--green-dark)">0</div><div class="kpi-sub">개</div></div>
+      <div class="kpi-card"><div class="kpi-label">총 공급가</div><div class="kpi-value" id="prod-sum-sales" style="font-size:26px;color:var(--blue)">0</div><div class="kpi-sub">원</div></div>
+      <div class="kpi-card"><div class="kpi-label">평균 단가</div><div class="kpi-value" id="prod-sum-avg" style="font-size:26px;color:var(--amber)">0</div><div class="kpi-sub">원</div></div>
+    </div>
+    <!-- 테이블 -->
+    <div class="chart-card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead id="prod-thead">
+            <tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap">#</th>
+              <th data-col="name"     style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('name')">품목명 <span id="prod-sort-name"></span></th>
+              <th data-col="category" style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('category')">품목군 <span id="prod-sort-category"></span></th>
+              <th data-col="qty" id="prod-qty-header" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('qty')"><span id="prod-qty-header-label">출고수량</span> <span id="prod-sort-qty"></span></th>
+              <th data-col="sales"    style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('sales')">공급가 합계(원) <span id="prod-sort-sales"></span></th>
+              <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap">비중</th>
+              <th data-col="clientCount" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('clientCount')">거래처 수 <span id="prod-sort-clientCount"></span></th>
+            </tr>
+          </thead>
+          <tbody id="prod-tbody"></tbody>
+        </table>
+      </div>
+      <div id="prod-empty" style="display:none;padding:48px;text-align:center;color:var(--text3)">ERP 데이터를 먼저 업로드하세요. (사이드바 → ERP 자료 업로드)</div>
+      <div id="prod-pagination" style="display:none;padding:14px 20px;border-top:1px solid var(--border);align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <span id="prod-page-info" style="font-size:12px;color:var(--text3)"></span>
+        <div style="display:flex;gap:4px" id="prod-page-btns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GRADE PAGE ── -->
+  <div id="page-grade" class="page">
+    <div class="section-header" style="margin-bottom:20px">
+      <div class="section-title-lg">⭐ 거래처 등급</div>
+      <button class="btn-sm btn-primary" onclick="saveGradeSettings()">저장</button>
+    </div>
+    <!-- 등급 설정 카드 -->
+    <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-card-title" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px" onclick="toggleGradeSettings()">
+        <span>등급 기준 설정</span>
+        <span id="grade-settings-arrow" style="font-size:13px;color:var(--green-dark);transition:transform .2s;font-weight:700">▼</span>
+      </div>
+      <div id="grade-settings-body" style="display:none">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px;margin-top:10px">당사 구매액 기준으로 등급을 자동 부여합니다. 기준값은 만원 단위로 입력하세요.</div>
+        <div id="grade-settings-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <button class="btn-sm btn-ghost" style="margin-top:12px" onclick="addGradeTier()">+ 등급 추가</button>
+      </div>
+    </div>
+    <!-- 필터 -->
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <span style="font-size:12px;font-weight:600;color:var(--text2)">기간</span>
+      <div class="drp-wrap" id="drp-grade">
+        <div class="drp-trigger" onclick="drpOpen('grade')">
+          <span class="drp-trigger-icon">📅</span>
+          <span class="drp-trigger-text" id="drp-grade-label">기간 선택</span>
+        </div>
+        <div class="drp-dropdown" id="drp-grade-dropdown"></div>
+      </div>
+      <input type="hidden" id="grade-date-from" /><input type="hidden" id="grade-date-to" />
+      <button class="btn-sm btn-primary" onclick="renderGrade()" style="padding:5px 16px">🔍 조회</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <select id="grade-filter-grade" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderGrade()">
+        <option value="all">전체 등급</option>
+      </select>
+      <select id="grade-filter-region" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderGrade()">
+        <option value="all">전체 지역</option>
+        <option>서울</option><option>경기</option><option>강원</option><option>대전</option>
+        <option>충북</option><option>충남</option><option>광주</option><option>전북</option>
+        <option>전남</option><option>부산</option><option>경남</option><option>대구</option><option>인천</option>
+      </select>
+      <input id="grade-search" class="form-input" style="font-size:12px;padding:6px 10px;width:200px" placeholder="거래처명 검색..." oninput="renderGrade()" />
+      <span id="grade-count-label" style="margin-left:auto;font-size:12px;color:var(--text3)"></span>
+    </div>
+    <!-- 등급별 요약 바 -->
+    <div id="grade-summary-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"></div>
+    <!-- 테이블 -->
+    <div class="chart-card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2)">거래처명</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2)">지역</th>
+              <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2)" id="grade-sales-header">기간 매출(원)</th>
+              <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--text2)">자동 등급</th>
+              <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--text2)">수동 등급</th>
+              <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--text2)">최종 등급</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2)">메모</th>
+            </tr>
+          </thead>
+          <tbody id="grade-tbody"></tbody>
+        </table>
+      </div>
+      <div id="grade-pagination" style="display:none;padding:14px 20px;border-top:1px solid var(--border);align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <span id="grade-page-info" style="font-size:12px;color:var(--text3)"></span>
+        <div style="display:flex;gap:4px" id="grade-page-btns"></div>
+      </div>
+    </div>
+  </div>
+</main>
+</div><!-- .app -->
+
+
+<!-- ERP 주문 업로드 모달 -->
+<div class="modal-overlay" id="modal-erp-upload" onclick="if(event.target===this)closeModal('modal-erp-upload')">
+  <div class="modal" style="width:760px">
+    <div class="modal-title">⬆ ERP 주문/출고내역 업로드</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">ERP에서 다운받은 주문현황과 출고현황 엑셀(.xlsx)을 모두 업로드하세요. 날짜가 중복된 데이터는 기준별로 자동 덮어씁니다.</div>
+    <div id="erp-upload-status" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:13px"></div>
+    <div class="erp-upload-grid">
+      <div class="erp-file-card" onclick="document.getElementById('erp-order-file-input').click()">
+        <div style="font-size:28px;margin-bottom:8px">📄</div>
+        <div class="erp-file-title">주문현황 파일</div>
+        <div class="erp-file-sub">headerGrid_excel<br>.xlsx 파일</div>
+        <div class="erp-file-state" id="erp-order-state">파일 미선택</div>
+        <input type="file" id="erp-order-file-input" accept=".xlsx" style="display:none" onchange="erpHandleFile(this,'order')" />
+      </div>
+      <div class="erp-file-card" onclick="document.getElementById('erp-ship-file-input').click()">
+        <div style="font-size:28px;margin-bottom:8px">📦</div>
+        <div class="erp-file-title">출고현황 파일</div>
+        <div class="erp-file-sub">grid_excel<br>.xlsx 파일</div>
+        <div class="erp-file-state" id="erp-ship-state">파일 미선택</div>
+        <input type="file" id="erp-ship-file-input" accept=".xlsx" style="display:none" onchange="erpHandleFile(this,'ship')" />
+      </div>
+    </div>
+    <div id="erp-preview" style="display:none;margin-top:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px" id="erp-preview-label"></div>
+      <div style="background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--text2);max-height:220px;overflow-y:auto" id="erp-preview-list"></div>
+    </div>
+    <div class="modal-footer" style="margin-top:20px">
+      <div style="font-size:11px;color:var(--text3)" id="erp-total-label"></div>
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-erp-upload')">닫기</button>
+      <button class="btn-sm btn-primary" id="erp-confirm-btn" style="display:none" onclick="erpConfirmUpload()">저장 및 반영</button>
+    </div>
+  </div>
+</div>
+</div><!-- #app-screen -->
+
+<!-- ══════ MODALS ══════ -->
+<div class="modal-overlay" id="modal-add-user" onclick="if(event.target===this)closeModal('modal-add-user')">
+  <div class="modal">
+    <div class="modal-title">계정 추가</div>
+    <div class="form-group" style="margin-bottom:14px"><label class="form-label">이름 <span class="form-required">*</span></label><input class="form-input" id="nu-name" placeholder="이름" /></div>
+    <div class="form-group" style="margin-bottom:14px"><label class="form-label">아이디 <span class="form-required">*</span></label><input class="form-input" id="nu-id" placeholder="아이디" /></div>
+    <div class="form-group" style="margin-bottom:14px"><label class="form-label">비밀번호 <span class="form-required">*</span></label><input class="form-input" id="nu-pw" type="password" placeholder="초기 비밀번호" /></div>
+    <div class="form-group" style="margin-bottom:14px"><label class="form-label">역할</label>
+      <select class="form-select" id="nu-role">
+        <option value="user">영업사원</option>
+        <option value="manager">영업관리</option>
+        <option value="planner">기획</option>
+        <option value="admin">관리자</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-add-user')">취소</button>
+      <button class="btn-sm btn-primary" onclick="addUser()">추가</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-entry" onclick="if(event.target===this)closeModal('modal-edit-entry')">
+  <div class="modal" style="width:520px">
+    <div class="modal-title">일지 수정</div>
+    <input type="hidden" id="edit-entry-id" />
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group"><label class="form-label">기관명</label><input class="form-input" id="e-institution" /></div>
+      <div class="form-group"><label class="form-label">방문일자</label><input class="form-input" id="e-date" type="date" /></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">미팅 내용</label><textarea class="form-textarea" id="e-meeting" style="min-height:80px"></textarea></div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">이슈사항</label><textarea class="form-textarea" id="e-issues" style="min-height:52px"></textarea></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">거래 가능성</label>
+        <select class="form-select" id="e-deal"><option value="○">○ 긍정적</option><option value="△">△ 보통</option><option value="×">× 어려움</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">당사 월 구매액 (원)</label><input class="form-input" id="e-sales" type="number" /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-edit-entry')">취소</button>
+      <button class="btn-sm btn-primary" onclick="saveEditEntry()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 본인 비밀번호 변경 -->
+<div class="modal-overlay" id="modal-change-pw" onclick="if(event.target===this)closeModal('modal-change-pw')">
+  <div class="modal">
+    <div class="modal-title">🔑 비밀번호 변경</div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">현재 비밀번호 <span class="form-required">*</span></label>
+      <input class="form-input" id="cpw-current" type="password" placeholder="현재 비밀번호 입력" />
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">새 비밀번호 <span class="form-required">*</span></label>
+      <input class="form-input" id="cpw-new" type="password" placeholder="새 비밀번호 (4자 이상)" />
+    </div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label class="form-label">새 비밀번호 확인 <span class="form-required">*</span></label>
+      <input class="form-input" id="cpw-confirm" type="password" placeholder="새 비밀번호 다시 입력" />
+    </div>
+    <div id="cpw-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-change-pw')">취소</button>
+      <button class="btn-sm btn-primary" onclick="changeMyPassword()">변경하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자: 특정 계정 비밀번호 초기화 -->
+<div class="modal-overlay" id="modal-reset-pw" onclick="if(event.target===this)closeModal('modal-reset-pw')">
+  <div class="modal">
+    <div class="modal-title">🔒 비밀번호 초기화</div>
+    <input type="hidden" id="reset-pw-uid" />
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;padding:10px 14px;background:var(--amber-l);border-radius:var(--r2);border-left:3px solid var(--amber)">
+      <strong id="reset-pw-name"></strong> 계정의 비밀번호를 초기화합니다.
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">새 비밀번호 <span class="form-required">*</span></label>
+      <input class="form-input" id="rpw-new" type="password" placeholder="새 비밀번호 입력" />
+    </div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label class="form-label">새 비밀번호 확인 <span class="form-required">*</span></label>
+      <input class="form-input" id="rpw-confirm" type="password" placeholder="새 비밀번호 다시 입력" />
+    </div>
+    <div id="rpw-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-reset-pw')">취소</button>
+      <button class="btn-sm btn-primary" onclick="resetUserPassword()">초기화</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- 거래처 추가/수정 -->
+<div class="modal-overlay" id="modal-client-form" onclick="if(event.target===this)closeModal('modal-client-form')">
+  <div class="modal" style="width:560px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title" id="client-form-title">거래처 추가</div>
+    <input type="hidden" id="cf-id" />
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group">
+        <label class="form-label">거래처명 <span class="form-required">*</span></label>
+        <input class="form-input" id="cf-name" placeholder="예: 나눔의료기/강원강릉" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">거래처 코드</label>
+        <input class="form-input" id="cf-code" placeholder="자동 생성" style="font-family:var(--mono);color:var(--green-dark);font-weight:600" readonly />
+      </div>
+      <div class="form-group">
+        <label class="form-label">거래처 유형</label>
+        <select class="form-select" id="cf-type">
+          <option value="">선택</option><option>기존 거래처</option><option>신규거래처</option><option>휴면거래처</option><option>거래 재개</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">거래 가능성</label>
+        <select class="form-select" id="cf-deal">
+          <option value="">선택</option><option value="○">○ 긍정적</option><option value="△">△ 보통</option><option value="×">× 어려움</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">병행업종</label>
+        <select class="form-select" id="cf-side-sel" onchange="var i=document.getElementById('cf-side');if(this.value==='__other__'){i.style.display='';i.focus();i.value='';}else{i.style.display='none';i.value=this.value;}"><option value="">선택</option><option>재가센터</option><option>의료기기</option><option>장애인보조기기</option><option value="__other__">기타(직접입력)</option></select>
+        <input class="form-input" id="cf-side" placeholder="기타 업종 입력" style="margin-top:6px;display:none" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">지역</label>
+        <select class="form-select" id="cf-region">
+          <option value="">선택</option><option>서울</option><option>경기</option><option>강원</option><option>세종</option><option>대전</option><option>충북</option><option>충남</option><option>인천</option><option>부산</option><option>경남</option><option>전남</option><option>전북</option><option>광주</option><option>대구</option><option>경북</option><option>울산</option><option>제주</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">센터장 연락처</label>
+        <input class="form-input" id="cf-contact" placeholder="010-0000-0000" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">담당 영업사원</label>
+        <select class="form-select" id="cf-person">
+          <option value="">선택</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">성별</label>
+        <select class="form-select" id="cf-gender"><option value="">선택</option><option>남</option><option>여</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">연령대</label>
+        <select class="form-select" id="cf-age"><option value="">선택</option><option>20대</option><option>30대</option><option>40대</option><option>50대</option><option>60대 이상</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">층수</label>
+        <select class="form-select" id="cf-floor"><option value="">선택</option><option>1층</option><option>2층</option><option>3층</option><option>4층</option><option>5층이상</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">평수</label>
+        <select class="form-select" id="cf-area"><option value="">선택</option><option>10평이하</option><option>20평이하</option><option>30평이하</option><option>40평이하</option><option>50평이상</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">업력</label>
+        <select class="form-select" id="cf-exp"><option value="">선택</option><option>1년미만</option><option>1~2년</option><option>2~3년</option><option>3~4년</option><option>4~5년</option><option>5년이상</option></select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label class="form-label">메모</label>
+      <textarea class="form-textarea" id="cf-memo" placeholder="특이사항, 참고 내용..." style="min-height:60px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-client-form')">취소</button>
+      <button class="btn-sm btn-primary" onclick="saveClient()">저장</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 거래처 일괄 업로드 -->
+<div class="modal-overlay" id="modal-client-upload" onclick="if(event.target===this)closeModal('modal-client-upload')">
+  <div class="modal" style="width:580px">
+    <div class="modal-title">↑ 거래처 일괄 업로드</div>
+    <div style="font-size:12px;color:var(--text2);background:var(--green-subtle);border:1px solid var(--green-mid);border-radius:var(--r2);padding:10px 14px;margin-bottom:16px;line-height:1.8">
+      <strong>엑셀/CSV 파일 형식 (첫 행은 헤더)</strong><br>
+      <span style="color:var(--text3)">※ 거래처코드가 기존과 같으면 정보가 업데이트됩니다</span><br>
+      <button class="btn-sm btn-primary" onclick="downloadClientSample()" style="margin-top:6px">📥 샘플 파일 다운로드 (.xlsx)</button>
+    </div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('upload-file-input').click()"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleFileDrop(event)">
+      <div class="upload-zone-icon">📂</div>
+      <div class="upload-zone-text">파일을 드래그하거나 클릭해서 선택</div>
+      <div class="upload-zone-sub">.xlsx, .xls, .csv 파일 지원</div>
+    </div>
+    <input type="file" id="upload-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(this)" />
+    <div id="upload-preview-wrap" style="display:none;margin-top:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px" id="upload-preview-title"></div>
+      <div class="upload-preview">
+        <table style="width:100%;border-collapse:collapse;font-size:11px" id="upload-preview-table"></table>
+      </div>
+    </div>
+    <div id="upload-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-client-upload')">취소</button>
+      <button class="btn-sm btn-primary" id="upload-confirm-btn" style="display:none" onclick="confirmClientUpload()">업로드 확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 거래처 상세 보기 -->
+<div class="modal-overlay" id="modal-client-detail" onclick="if(event.target===this)closeModal('modal-client-detail')">
+  <div class="modal" style="width:600px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div style="font-size:12px;font-family:var(--mono);font-weight:700;color:var(--green-dark)" id="cd-code"></div>
+      <div class="modal-title" style="margin-bottom:0;flex:1" id="cd-name"></div>
+      <button class="btn-sm btn-ghost" onclick="editClientFromDetail()" style="font-size:11px">수정</button>
+      <button class="btn-sm btn-danger" onclick="deleteClientFromDetail()" style="font-size:11px">삭제</button>
+    </div>
+    <div class="client-detail-tabs">
+      <div class="client-detail-tab active" onclick="switchClientTab('info',this)">기본 정보</div>
+      <div class="client-detail-tab" onclick="switchClientTab('visits',this)">방문 이력</div>
+    </div>
+    <div class="client-detail-panel active" id="cd-panel-info"></div>
+    <div class="client-detail-panel" id="cd-panel-visits"></div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-client-detail')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 방문 상세 보기 -->
+<div class="modal-overlay" id="modal-detail" onclick="if(event.target===this)closeModal('modal-detail')">
+  <div class="modal" style="width:560px;max-height:80vh;overflow-y:auto">
+    <div class="modal-title">방문 상세 정보</div>
+    <div class="detail-grid" id="detail-chips"></div>
+    <div class="detail-section">
+      <div class="detail-label">미팅 내용</div>
+      <div class="detail-value" id="detail-meeting"></div>
+    </div>
+    <div class="detail-section" id="detail-issues-wrap">
+      <div class="detail-label">이슈사항</div>
+      <div class="detail-value" id="detail-issues"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-detail')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 공지사항 작성 -->
+<div class="modal-overlay" id="modal-add-notice" onclick="if(event.target===this)closeModal('modal-add-notice')">
+  <div class="modal" style="width:500px">
+    <div class="modal-title">공지사항 작성</div>
+    <input type="hidden" id="notice-edit-id" />
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">제목 <span class="form-required">*</span></label>
+      <input class="form-input" id="n-title" placeholder="공지 제목" />
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">내용 <span class="form-required">*</span></label>
+      <textarea class="form-textarea" id="n-body" style="min-height:100px" placeholder="공지 내용을 입력하세요..."></textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)">
+        <input type="checkbox" id="n-pin" style="width:15px;height:15px;accent-color:var(--red)" /> 상단 고정
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-add-notice')">취소</button>
+      <button class="btn-sm btn-primary" onclick="saveNotice()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data/client-seed.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/state.js"></script>
+<script src="js/products-grades-erp.js"></script>
+<script src="js/core-auth-nav.js"></script>
+<script src="js/journals-weekly-monthly.js"></script>
+<script src="js/dashboard-records-users.js"></script>
+<script src="js/clients.js"></script>
+<script src="js/daily-entry.js"></script>
+<script src="js/stats-notices.js"></script>
+<script src="js/bootstrap-datepicker.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

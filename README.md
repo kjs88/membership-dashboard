@@ -1,0 +1,23 @@
+# dashboard_fixed_v9_app
+
+?? dashboard_fixed_v9.html? CSS, JS, ?? ??? ???? ??? ?????.
+?? localStorage ?? ??? ?????.
+
+## Entry points
+- ../dashboard_fixed_v9.html: ?? Opera ????? ?? ?? ??
+- index.html: ?? ?? ?? ?? ??
+
+## Structure
+- css/style.css
+- data/client-seed.js
+- js/storage.js
+- js/state.js
+- js/products-grades-erp.js
+- js/core-auth-nav.js
+- js/journals-weekly-monthly.js
+- js/dashboard-records-users.js
+- js/clients.js
+- js/daily-entry.js
+- js/stats-notices.js
+- js/bootstrap-datepicker.js
+- js/main.js
