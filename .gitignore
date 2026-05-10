@@ -13,3 +13,5 @@ playwright-report/
 test-results/
 __pycache__/
 
+# Netlify local metadata
+.netlify/
