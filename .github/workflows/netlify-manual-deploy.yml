@@ -1,0 +1,24 @@
+name: 배포하겠습니다
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: netlify-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Netlify 수동 배포
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 저장소 가져오기
+        uses: actions/checkout@v4
+
+      - name: Netlify 배포
+        run: npx --yes netlify-cli@latest deploy --prod --dir . --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN"
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
