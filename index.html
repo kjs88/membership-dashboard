@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>영업일지 대시보드</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>멤버십사업팀 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
@@ -37,9 +37,14 @@
       <!-- LOGIN MODE -->
       <div id="login-mode">
         <div class="login-logo">
-          <div class="login-logo-badge">SALES HQ</div>
-          <div class="login-logo-title">영업일지 대시보드</div>
-          <div class="login-logo-sub">멤버십사업팀 · 도매영업</div>
+          <div class="login-logo-brand" aria-label="HECTON PROJECT">
+            <img src="assets/hecton-project-logo.png" alt="HECTON PROJECT">
+          </div>
+          <div class="login-logo-unit">
+            <span>비전개발본부</span>
+            <span>멤버십사업팀</span>
+          </div>
+          <div class="login-logo-title login-logo-dashboard-title">매출 · 영업 대시보드</div>
         </div>
         <div class="login-group">
           <label class="login-label">아이디</label>
@@ -49,10 +54,27 @@
           <label class="login-label">비밀번호</label>
           <input class="login-input" id="li-pw" type="password" placeholder="비밀번호를 입력하세요" onkeydown="if(event.key==='Enter')doLogin()" />
         </div>
+        <label class="login-remember">
+          <input type="checkbox" id="li-remember">
+          <span>로그인 상태 유지</span>
+        </label>
         <button class="login-btn" onclick="doLogin()">로그인</button>
         <div class="login-err" id="login-err">아이디 또는 비밀번호가 올바르지 않습니다.</div>
         <div class="login-hint">
           계정이 없으신가요? <a href="javascript:void(0)" onclick="switchAuthMode('signup')" style="color:var(--green);font-weight:700;text-decoration:none">회원가입 신청</a>
+        </div>
+        <div class="login-security-notice">
+          <div class="login-security-head">
+            <span class="login-security-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"></path>
+                <rect x="8" y="11" width="8" height="5" rx="1"></rect>
+                <path d="M10 11V9a2 2 0 1 1 4 0v2"></path>
+              </svg>
+            </span>
+            <strong>본 시스템의 정보는 헥톤프로젝트의 중요한 자산입니다.</strong>
+          </div>
+          <p>비인가 접근 및 정보 유출 행위는 엄격히 금지되며, 위반 시 관련 법령과 사내 보안정책에 따라 제재 및 법적 책임을 질 수 있습니다.</p>
         </div>
       </div>
       <!-- SIGNUP MODE -->

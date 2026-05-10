@@ -1,13 +1,57 @@
+const CURRENT_USER_STORAGE_KEY = 'sj-current-user';
+
+function clearCurrentUserStorage() {
+  try { sessionStorage.removeItem(CURRENT_USER_STORAGE_KEY); } catch (err) { console.error('[auth:clearSession]', err); }
+  try { localStorage.removeItem(CURRENT_USER_STORAGE_KEY); } catch (err) { console.error('[auth:clearLocal]', err); }
+}
+
+function loadStoredCurrentUser() {
+  let saved = '';
+  let fromPersistentStorage = false;
+  try { saved = sessionStorage.getItem(CURRENT_USER_STORAGE_KEY) || ''; }
+  catch (err) { console.error('[auth:getSession]', err); }
+  if (!saved) {
+    try {
+      saved = localStorage.getItem(CURRENT_USER_STORAGE_KEY) || '';
+      fromPersistentStorage = !!saved;
+    } catch (err) {
+      console.error('[auth:getLocal]', err);
+    }
+  }
+  if (!saved) return null;
+  try {
+    const storedUser = JSON.parse(saved);
+    const user = allUsers.find(u => u.id === storedUser?.id);
+    if (!user) {
+      clearCurrentUserStorage();
+      return null;
+    }
+    if (fromPersistentStorage) {
+      sessionStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify({ id: user.id }));
+    }
+    return user;
+  } catch (err) {
+    console.error('[auth:parseStoredUser]', err);
+    clearCurrentUserStorage();
+    return null;
+  }
+}
+
+function saveCurrentUser(user, rememberLogin) {
+  const storedUser = JSON.stringify({ id: user.id });
+  try { sessionStorage.setItem(CURRENT_USER_STORAGE_KEY, storedUser); }
+  catch (err) { console.error('[auth:setSession]', err); }
+  try {
+    if (rememberLogin) localStorage.setItem(CURRENT_USER_STORAGE_KEY, storedUser);
+    else localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+  } catch (err) {
+    console.error('[auth:setLocal]', err);
+  }
+}
+
 async function checkFbConfig() {
   ensureUsers();
-  const saved = sessionStorage.getItem('sj-current-user');
-  if (saved) {
-    try {
-      currentUser = JSON.parse(saved);
-      const exists = allUsers.find(u => u.id === currentUser.id);
-      if (!exists) { sessionStorage.removeItem('sj-current-user'); currentUser = null; }
-    } catch(e) { sessionStorage.removeItem('sj-current-user'); currentUser = null; }
-  }
+  currentUser = loadStoredCurrentUser();
   if (currentUser) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
@@ -76,7 +120,7 @@ function loadOrderBasisPreference() {
   let saved = '';
   try { saved = localStorage.getItem('sj-order-basis') || ''; }
   catch (err) { console.error('[storage:getPlain] sj-order-basis', err); }
-  orderBasis = ORDER_BASIS_META[saved] ? saved : 'ship';
+  orderBasis = ORDER_BASIS_META[saved] ? saved : 'order';
 }
 
 function applyOrderBasis() {
@@ -152,7 +196,7 @@ function doLogin() {
     return;
   }
   currentUser = user;
-  sessionStorage.setItem('sj-current-user', JSON.stringify(user));
+  saveCurrentUser(user, document.getElementById('li-remember')?.checked);
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
   initUI();
@@ -163,13 +207,15 @@ function doLogin() {
 
 function doLogout() {
   currentUser = null;
-  sessionStorage.removeItem('sj-current-user');
+  clearCurrentUserStorage();
   const badge = document.getElementById('fb-status-badge');
   if (badge) badge.style.display = 'none';
   document.getElementById('app-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'block';
   document.getElementById('li-id').value = '';
   document.getElementById('li-pw').value = '';
+  const remember = document.getElementById('li-remember');
+  if (remember) remember.checked = false;
 }
 
 function ensureUsers() {
