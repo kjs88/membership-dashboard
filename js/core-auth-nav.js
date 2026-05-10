@@ -117,10 +117,8 @@ function getOrderBasisMeta(basis = orderBasis) {
 }
 
 function loadOrderBasisPreference() {
-  let saved = '';
-  try { saved = localStorage.getItem('sj-order-basis') || ''; }
-  catch (err) { console.error('[storage:getPlain] sj-order-basis', err); }
-  orderBasis = ORDER_BASIS_META[saved] ? saved : 'order';
+  orderBasis = 'order';
+  setPlainStorage('sj-order-basis', orderBasis);
 }
 
 function applyOrderBasis() {
