@@ -35,6 +35,14 @@ GitHub 저장소에는 아래 Secrets가 필요합니다.
 - `NETLIFY_AUTH_TOKEN`
 - `NETLIFY_SITE_ID`
 
+GitHub CLI가 설치되어 있고 로그인되어 있다면 아래 스크립트로 등록할 수 있습니다.
+
+```powershell
+.\scripts\setup-github-netlify-secrets.ps1 `
+  -NetlifyAuthToken "Netlify에서 만든 token" `
+  -NetlifySiteId "Netlify site id"
+```
+
 배포할 때는 GitHub 저장소에서:
 
 1. `Actions` 탭으로 이동
@@ -50,4 +58,3 @@ git push
 ```
 
 위 명령은 저장소 업데이트만 합니다. 실제 Netlify 배포는 `배포하겠습니다` workflow를 실행해야 진행됩니다.
-
