@@ -936,7 +936,10 @@ function openModal(id) {
     const err = document.getElementById('cpw-err');
     if (err) err.style.display = 'none';
   }
-  if (id === 'modal-erp-upload') erpUpdateUploadPreview();
+  if (id === 'modal-erp-upload') {
+    erpRefreshSyncStatus();
+    erpUpdateUploadPreview();
+  }
   modal.classList.add('open');
 }
 function closeModal(id) {

@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260511-login">
+<link rel="stylesheet" href="css/style.css?v=20260518-erp-auto">
 </head>
 <body>
 
@@ -160,7 +160,7 @@
     <div class="nav-label" data-roles="admin,planner" style="display:none">관리/설정</div>
     <div class="nav-item admin-only" onclick="showPage('users',this)" id="nav-users" style="display:none"><span class="nav-icon">👥</span>계정 관리</div>
     <div class="nav-item" data-roles="admin,planner" onclick="showPage('targets',this)" id="nav-targets" style="display:none"><span class="nav-icon">◎</span>목표 설정</div>
-    <div class="nav-item" data-roles="admin,planner" onclick="openModal('modal-erp-upload')" style="display:none"><span class="nav-icon">⬆</span>ERP 자료 업로드</div>
+    <div class="nav-item" data-roles="admin,planner" onclick="openModal('modal-erp-upload')" style="display:none"><span class="nav-icon">↻</span>ERP API 연동</div>
     <div class="nav-label">계정</div>
     <div class="nav-item" onclick="openModal('modal-change-pw')"><span class="nav-icon">🔑</span>비밀번호 변경</div>
   </nav>
@@ -1074,7 +1074,7 @@
           <tbody id="prod-tbody"></tbody>
         </table>
       </div>
-      <div id="prod-empty" style="display:none;padding:48px;text-align:center;color:var(--text3)">ERP 데이터를 먼저 업로드하세요. (사이드바 → ERP 자료 업로드)</div>
+      <div id="prod-empty" style="display:none;padding:48px;text-align:center;color:var(--text3)">ERP 데이터를 먼저 연동하세요. (사이드바 → ERP API 연동)</div>
       <div id="prod-pagination" style="display:none;padding:14px 20px;border-top:1px solid var(--border);align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <span id="prod-page-info" style="font-size:12px;color:var(--text3)"></span>
         <div style="display:flex;gap:4px" id="prod-page-btns"></div>
@@ -1156,13 +1156,40 @@
 </div><!-- .app -->
 
 
-<!-- ERP 주문 업로드 모달 -->
+<!-- ERP API 연동 모달 -->
 <div class="modal-overlay" id="modal-erp-upload" onclick="if(event.target===this)closeModal('modal-erp-upload')">
   <div class="modal" style="width:760px">
-    <div class="modal-title">⬆ ERP 주문/출고내역 업로드</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">ERP에서 다운받은 주문현황과 출고현황 엑셀(.xlsx)을 모두 업로드하세요. 날짜가 중복된 데이터는 기준별로 자동 덮어씁니다.</div>
+    <div class="modal-title">ERP API 연동</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">아마란스 API에서 주문현황과 출고현황을 가져와 대시보드 데이터로 반영합니다. API 키는 브라우저가 아니라 Netlify Function 또는 서버 환경변수에만 저장합니다.</div>
     <div id="erp-upload-status" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:13px"></div>
-    <div class="erp-upload-grid">
+    <div class="erp-sync-panel">
+      <div class="erp-sync-summary">
+        <div>
+          <div class="erp-sync-label">연동 상태</div>
+          <div class="erp-sync-value" id="erp-sync-state">아직 동기화 기록 없음</div>
+        </div>
+        <div>
+          <div class="erp-sync-label">자동 갱신</div>
+          <div class="erp-sync-value" id="erp-sync-auto-state">영업시간 중 1시간마다</div>
+        </div>
+        <div>
+          <div class="erp-sync-label">주문현황</div>
+          <div class="erp-sync-value" id="erp-sync-order-count">-</div>
+        </div>
+        <div>
+          <div class="erp-sync-label">출고현황</div>
+          <div class="erp-sync-value" id="erp-sync-ship-count">-</div>
+        </div>
+      </div>
+      <div class="erp-sync-actions">
+        <button class="btn-sm btn-primary" onclick="erpSyncFromApi()">새로고침</button>
+        <button class="btn-sm btn-ghost" onclick="erpRefreshSyncStatus()">상태만 갱신</button>
+      </div>
+    </div>
+    <details class="erp-manual-fallback">
+      <summary>엑셀 파일로 수동 반영</summary>
+      <div style="font-size:12px;color:var(--text3);margin:10px 0 12px">API 설정 전이나 장애 상황에서는 기존처럼 주문현황과 출고현황 엑셀(.xlsx)을 업로드할 수 있습니다.</div>
+      <div class="erp-upload-grid">
       <div class="erp-file-card" onclick="document.getElementById('erp-order-file-input').click()">
         <div style="font-size:28px;margin-bottom:8px">📄</div>
         <div class="erp-file-title">주문현황 파일</div>
@@ -1177,7 +1204,8 @@
         <div class="erp-file-state" id="erp-ship-state">파일 미선택</div>
         <input type="file" id="erp-ship-file-input" accept=".xlsx" style="display:none" onchange="erpHandleFile(this,'ship')" />
       </div>
-    </div>
+      </div>
+    </details>
     <div id="erp-preview" style="display:none;margin-top:16px">
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px" id="erp-preview-label"></div>
       <div style="background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--text2);max-height:220px;overflow-y:auto" id="erp-preview-list"></div>
@@ -1185,7 +1213,7 @@
     <div class="modal-footer" style="margin-top:20px">
       <div style="font-size:11px;color:var(--text3)" id="erp-total-label"></div>
       <button class="btn-sm btn-ghost" onclick="closeModal('modal-erp-upload')">닫기</button>
-      <button class="btn-sm btn-primary" id="erp-confirm-btn" style="display:none" onclick="erpConfirmUpload()">저장 및 반영</button>
+      <button class="btn-sm btn-primary" id="erp-confirm-btn" style="display:none" onclick="erpConfirmUpload()">수동 파일 저장 및 반영</button>
     </div>
   </div>
 </div>
@@ -1469,10 +1497,10 @@
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/storage.js?v=20260511-login"></script>
 <script src="js/state.js?v=20260511-login"></script>
-<script src="js/products-grades-erp.js?v=20260511-login"></script>
-<script src="js/core-auth-nav.js?v=20260511-order-default"></script>
+<script src="js/products-grades-erp.js?v=20260518-erp-auto"></script>
+<script src="js/core-auth-nav.js?v=20260518-erp-auto"></script>
 <script src="js/journals-weekly-monthly.js?v=20260511-login"></script>
-<script src="js/dashboard-records-users.js?v=20260511-login"></script>
+<script src="js/dashboard-records-users.js?v=20260518-erp-api"></script>
 <script src="js/clients.js?v=20260511-login"></script>
 <script src="js/daily-entry.js?v=20260511-login"></script>
 <script src="js/stats-notices.js?v=20260511-login"></script>

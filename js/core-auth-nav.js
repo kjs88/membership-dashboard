@@ -277,6 +277,7 @@ function initUI() {
   if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   setTimeout(()=>{ if(getShared('sj-draft-'+currentUser?.id, null)) loadDraft(); }, 500);
   initDatePickers();
+  if (typeof erpStartAutoSync === 'function') erpStartAutoSync();
 }
 
 // ════════════════════════════════════

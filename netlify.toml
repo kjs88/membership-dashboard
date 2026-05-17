@@ -2,6 +2,9 @@
   publish = "."
   command = ""
 
+[functions]
+  directory = "netlify/functions"
+
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -21,4 +24,3 @@
   for = "/data/*"
   [headers.values]
     Cache-Control = "public, max-age=3600"
-

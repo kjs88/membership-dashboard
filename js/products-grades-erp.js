@@ -466,9 +466,43 @@ function setManualGrade(name, grade) {
 
 
 // ════════════════════════════════════
-// ERP 주문 업로드
+// ERP API 연동 / 수동 업로드
 // ════════════════════════════════════
 let erpParsedByBasis = { order: [], ship: [] };
+const ERP_SYNC_ENDPOINT = '/.netlify/functions/erp-sync';
+const ERP_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000;
+const ERP_AUTO_SYNC_CHECK_MS = 5 * 60 * 1000;
+const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
+const ERP_AUTO_SYNC_LOCK_MS = 10 * 60 * 1000;
+const ERP_AUTO_SYNC_META_KEY = 'sj-erp-auto-sync-meta';
+const ERP_AUTO_SYNC_LOCK_KEY = 'sj-erp-auto-sync-lock';
+const ERP_AUTO_SYNC_HOLIDAYS = {
+  '2026-01-01': '신정',
+  '2026-02-16': '설날 연휴',
+  '2026-02-17': '설날',
+  '2026-02-18': '설날 연휴',
+  '2026-03-01': '삼일절',
+  '2026-03-02': '삼일절 대체공휴일',
+  '2026-05-01': '근로자의 날',
+  '2026-05-05': '어린이날',
+  '2026-05-24': '부처님오신날',
+  '2026-05-25': '부처님오신날 대체공휴일',
+  '2026-06-03': '지방선거일',
+  '2026-06-06': '현충일',
+  '2026-07-17': '제헌절',
+  '2026-08-15': '광복절',
+  '2026-08-17': '광복절 대체공휴일',
+  '2026-09-24': '추석 연휴',
+  '2026-09-25': '추석',
+  '2026-09-26': '추석 연휴',
+  '2026-10-03': '개천절',
+  '2026-10-05': '개천절 대체공휴일',
+  '2026-10-09': '한글날',
+  '2026-12-25': '성탄절',
+};
+let erpAutoSyncTimer = null;
+let erpAutoSyncInFlight = false;
+let erpAutoSyncListenersReady = false;
 
 function erpNum(v) {
   return parseFloat(String(v ?? '').replace(/,/g, '')) || 0;
@@ -625,6 +659,31 @@ function erpMergeByDate(existing, parsed) {
   return [...existing.filter(r => !uploadDates.has(r.date)), ...parsed];
 }
 
+function erpSaveRows(parsedOrder, parsedShip, sourceLabel = 'ERP') {
+  const existingOrder = getShared('sj-orders-order', []);
+  const existingShip = getShared('sj-orders-ship', getShared('sj-orders', []));
+
+  const mergedOrder = parsedOrder.length ? erpMergeByDate(existingOrder, parsedOrder) : existingOrder;
+  const mergedShip = parsedShip.length ? erpMergeByDate(existingShip, parsedShip) : existingShip;
+  setShared('sj-orders-order', mergedOrder);
+  setShared('sj-orders-ship', mergedShip);
+  setShared('sj-orders', mergedShip);
+  allOrderOrders = mergedOrder;
+  allShipOrders = mergedShip;
+  applyOrderBasis();
+  rerenderOrderBasisPages();
+
+  const meta = {
+    source: sourceLabel,
+    syncedAt: new Date().toISOString(),
+    orderCount: parsedOrder.length,
+    shipCount: parsedShip.length,
+  };
+  setPlainStorage('sj-erp-sync-meta', JSON.stringify(meta));
+  erpRefreshSyncStatus();
+  return meta;
+}
+
 function erpResetUploadState() {
   erpParsedByBasis = { order: [], ship: [] };
   ['order','ship'].forEach(basis => {
@@ -653,20 +712,307 @@ function erpConfirmUpload() {
     return;
   }
 
-  const existingOrder = getShared('sj-orders-order', []);
-  const existingShip = getShared('sj-orders-ship', getShared('sj-orders', []));
-
-  const mergedOrder = erpMergeByDate(existingOrder, parsedOrder);
-  const mergedShip = erpMergeByDate(existingShip, parsedShip);
-  setShared('sj-orders-order', mergedOrder);
-  setShared('sj-orders-ship', mergedShip);
-  setShared('sj-orders', mergedShip);
-  allOrderOrders = mergedOrder;
-  allShipOrders = mergedShip;
-  applyOrderBasis();
-  rerenderOrderBasisPages();
+  erpSaveRows(parsedOrder, parsedShip, 'manual-xlsx');
 
   closeModal('modal-erp-upload');
   showToast(`ERP 데이터 저장 완료 · 주문 ${parsedOrder.length.toLocaleString()}건 / 출고 ${parsedShip.length.toLocaleString()}건`, 'success');
   erpResetUploadState();
+}
+
+function erpPick(row, keys) {
+  for (const key of keys) {
+    if (row && row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
+  }
+  return '';
+}
+
+function erpNormalizeApiRows(rows, basis) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return [];
+
+  try {
+    return erpParseRows(list, basis);
+  } catch (_) {
+    const dateKeys = basis === 'order'
+      ? ['date','orderDate','orderedAt','주문일자','수주일자']
+      : ['date','shipDate','shippedAt','출고일자'];
+    const noKeys = basis === 'order'
+      ? ['orderNo','orderNumber','no','주문번호','수주번호']
+      : ['orderNo','shipNo','shipmentNo','no','출고번호'];
+    const qtyKeys = basis === 'order'
+      ? ['qty','quantity','orderQty','주문수량','수주수량']
+      : ['qty','quantity','shipQty','출고수량'];
+
+    return list.map(r => ({
+      basis,
+      date: erpFormatDate(erpPick(r, dateKeys)),
+      client: String(erpPick(r, ['client','clientName','customer','customerName','거래처','거래처명','고객']) || '').trim(),
+      product: String(erpPick(r, ['product','productName','item','itemName','품명']) || '').trim(),
+      category: String(erpPick(r, ['category','itemGroup','largeCategory','대분류','품목군']) || '').trim(),
+      qty: erpNum(erpPick(r, qtyKeys)),
+      supply: erpNum(erpPick(r, ['supply','supplyAmount','amount','netAmount','공급가'])),
+      total: erpNum(erpPick(r, ['total','totalAmount','grossAmount','합계액'])),
+      person: String(erpPick(r, ['person','salesPerson','manager','담당자']) || '').trim(),
+      region: String(erpPick(r, ['region','area','지역']) || '').trim(),
+      orderNo: String(erpPick(r, noKeys) || '').trim(),
+    })).filter(r => r.date && r.client);
+  }
+}
+
+function erpSetStatus(kind, message) {
+  const statusEl = document.getElementById('erp-upload-status');
+  if (!statusEl) return;
+  const styles = {
+    ok: ['var(--green-light)', 'var(--green-dark)'],
+    warn: ['var(--amber-l)', 'var(--amber)'],
+    error: ['var(--red-l)', 'var(--red)'],
+    info: ['var(--surface2)', 'var(--text2)'],
+  };
+  const [bg, color] = styles[kind] || styles.info;
+  statusEl.style.display = 'block';
+  statusEl.style.background = bg;
+  statusEl.style.color = color;
+  statusEl.innerHTML = message;
+}
+
+function erpReadSyncMeta() {
+  try {
+    return JSON.parse(localStorage.getItem('sj-erp-sync-meta') || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function erpReadAutoSyncMeta() {
+  try {
+    return JSON.parse(localStorage.getItem(ERP_AUTO_SYNC_META_KEY) || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function erpWriteAutoSyncMeta(meta) {
+  setPlainStorage(ERP_AUTO_SYNC_META_KEY, JSON.stringify({
+    ...(erpReadAutoSyncMeta() || {}),
+    ...meta,
+  }));
+}
+
+function erpGetKstParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return {
+    ymd: `${parts.year}-${parts.month}-${parts.day}`,
+    weekday: parts.weekday,
+    hour: Number(parts.hour || 0),
+    minute: Number(parts.minute || 0),
+  };
+}
+
+function erpAutoSyncBlockReason(date = new Date()) {
+  const parts = erpGetKstParts(date);
+  if (parts.weekday === 'Sat' || parts.weekday === 'Sun') return '주말';
+  if (ERP_AUTO_SYNC_HOLIDAYS[parts.ymd]) return ERP_AUTO_SYNC_HOLIDAYS[parts.ymd];
+  if (parts.hour < 9 || parts.hour >= 21) return '야간 시간대';
+  return '';
+}
+
+function erpFormatLocalTime(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function erpGetNextAutoSyncText() {
+  const now = new Date();
+  const blockReason = erpAutoSyncBlockReason(now);
+  const autoMeta = erpReadAutoSyncMeta();
+  if (erpAutoSyncInFlight) return '자동 동기화 실행 중';
+  if (blockReason) return `대기 · ${blockReason}`;
+  const syncMeta = erpReadSyncMeta();
+  const lastSyncedAt = syncMeta?.syncedAt ? new Date(syncMeta.syncedAt) : null;
+  if (!lastSyncedAt || Number.isNaN(lastSyncedAt.getTime())) return '영업시간 중 곧 실행';
+  const nextAt = new Date(lastSyncedAt.getTime() + ERP_AUTO_SYNC_INTERVAL_MS);
+  if (nextAt <= now) return '영업시간 중 곧 실행';
+  if (autoMeta?.lastAutoStatus === 'error' && autoMeta.lastAutoAttemptAt) {
+    const retryAt = new Date(new Date(autoMeta.lastAutoAttemptAt).getTime() + ERP_AUTO_SYNC_RETRY_MS);
+    if (retryAt > now) return `오류 후 재시도 ${erpFormatLocalTime(retryAt)}`;
+  }
+  return `다음 ${erpFormatLocalTime(nextAt)}`;
+}
+
+function erpRefreshSyncStatus() {
+  const meta = erpReadSyncMeta();
+  const stateEl = document.getElementById('erp-sync-state');
+  const orderEl = document.getElementById('erp-sync-order-count');
+  const shipEl = document.getElementById('erp-sync-ship-count');
+  const autoEl = document.getElementById('erp-sync-auto-state');
+  if (!meta) {
+    if (stateEl) stateEl.textContent = '아직 동기화 기록 없음';
+    if (orderEl) orderEl.textContent = (allOrderOrders || []).length ? `${allOrderOrders.length.toLocaleString()}건 저장됨` : '-';
+    if (shipEl) shipEl.textContent = (allShipOrders || []).length ? `${allShipOrders.length.toLocaleString()}건 저장됨` : '-';
+    if (autoEl) autoEl.textContent = erpGetNextAutoSyncText();
+    return;
+  }
+  const syncedAt = meta.syncedAt ? new Date(meta.syncedAt) : null;
+  if (stateEl) stateEl.textContent = syncedAt ? `${syncedAt.toLocaleString()} · ${meta.source || 'ERP'}` : `${meta.source || 'ERP'} 동기화됨`;
+  if (orderEl) orderEl.textContent = `${Number(meta.orderCount || 0).toLocaleString()}건`;
+  if (shipEl) shipEl.textContent = `${Number(meta.shipCount || 0).toLocaleString()}건`;
+  if (autoEl) autoEl.textContent = erpGetNextAutoSyncText();
+}
+
+function erpRenderSyncPreview(parsedOrder, parsedShip, label = 'API 동기화 미리보기') {
+  erpParsedByBasis = { order: parsedOrder, ship: parsedShip };
+  erpUpdateUploadPreview();
+  const previewLabel = document.getElementById('erp-preview-label');
+  const confirmBtn = document.getElementById('erp-confirm-btn');
+  if (previewLabel) previewLabel.textContent = label;
+  if (confirmBtn) confirmBtn.style.display = 'none';
+}
+
+function erpExtractApiRows(payload, basis) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  const keys = basis === 'order'
+    ? ['order','orders','orderRows','orderStatus','주문현황']
+    : ['ship','ships','shipments','shipmentRows','outbound','outboundRows','출고현황'];
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+    if (payload[key] && Array.isArray(payload[key].rows)) return payload[key].rows;
+    if (payload[key] && Array.isArray(payload[key].items)) return payload[key].items;
+    if (payload[key] && Array.isArray(payload[key].data)) return payload[key].data;
+  }
+  if (payload.data) return erpExtractApiRows(payload.data, basis);
+  if (payload.result) return erpExtractApiRows(payload.result, basis);
+  return [];
+}
+
+async function erpSyncFromApi(options = {}) {
+  const silent = options.silent === true;
+  const sourceLabel = options.auto ? 'amarans-api-auto' : 'amarans-api';
+  if (!silent) erpSetStatus('info', '아마란스 API에서 데이터를 가져오는 중입니다.');
+  try {
+    const res = await fetch(ERP_SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ basis: 'both' }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.message || payload.error || `ERP API 동기화 실패 (${res.status})`);
+
+    const parsedOrder = erpNormalizeApiRows(erpExtractApiRows(payload, 'order'), 'order');
+    const parsedShip = erpNormalizeApiRows(erpExtractApiRows(payload, 'ship'), 'ship');
+    if (!parsedOrder.length || !parsedShip.length) {
+      throw new Error(`API 응답에서 주문/출고 데이터를 모두 찾지 못했습니다. 주문 ${parsedOrder.length}건, 출고 ${parsedShip.length}건`);
+    }
+
+    erpSaveRows(parsedOrder, parsedShip, options.auto ? sourceLabel : (payload.source || sourceLabel));
+    erpRenderSyncPreview(parsedOrder, parsedShip, 'API 동기화 결과');
+    if (!silent) {
+      erpSetStatus('ok', `동기화 완료 · 주문 <strong>${parsedOrder.length.toLocaleString()}건</strong> / 출고 <strong>${parsedShip.length.toLocaleString()}건</strong>`);
+      showToast('ERP API 데이터가 반영되었습니다.', 'success');
+    }
+    return { ok: true, orderCount: parsedOrder.length, shipCount: parsedShip.length };
+  } catch (err) {
+    if (!silent) erpSetStatus('error', `ERP API 동기화 오류: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+}
+
+function erpClaimAutoSyncLock() {
+  const now = Date.now();
+  const lock = (() => {
+    try { return JSON.parse(localStorage.getItem(ERP_AUTO_SYNC_LOCK_KEY) || 'null'); }
+    catch (_) { return null; }
+  })();
+  if (lock?.at && now - Number(lock.at) < ERP_AUTO_SYNC_LOCK_MS) return false;
+  setPlainStorage(ERP_AUTO_SYNC_LOCK_KEY, JSON.stringify({ at: now }));
+  return true;
+}
+
+function erpReleaseAutoSyncLock() {
+  try { localStorage.removeItem(ERP_AUTO_SYNC_LOCK_KEY); } catch (_) {}
+}
+
+function erpShouldAutoSync() {
+  if (document.hidden) return { ok: false, reason: '탭 비활성' };
+  const blockReason = erpAutoSyncBlockReason();
+  if (blockReason) return { ok: false, reason: blockReason };
+
+  const now = Date.now();
+  const autoMeta = erpReadAutoSyncMeta();
+  if (autoMeta?.lastAutoStatus === 'error' && autoMeta.lastAutoAttemptAt) {
+    const lastAttempt = new Date(autoMeta.lastAutoAttemptAt).getTime();
+    if (Number.isFinite(lastAttempt) && now - lastAttempt < ERP_AUTO_SYNC_RETRY_MS) {
+      return { ok: false, reason: '오류 후 재시도 대기' };
+    }
+  }
+
+  const syncMeta = erpReadSyncMeta();
+  const lastSynced = syncMeta?.syncedAt ? new Date(syncMeta.syncedAt).getTime() : 0;
+  if (Number.isFinite(lastSynced) && lastSynced && now - lastSynced < ERP_AUTO_SYNC_INTERVAL_MS) {
+    return { ok: false, reason: '1시간 미도래' };
+  }
+  return { ok: true };
+}
+
+async function erpRunAutoSync() {
+  const decision = erpShouldAutoSync();
+  if (!decision.ok || erpAutoSyncInFlight) {
+    erpRefreshSyncStatus();
+    return;
+  }
+  if (!erpClaimAutoSyncLock()) return;
+
+  erpAutoSyncInFlight = true;
+  erpWriteAutoSyncMeta({ lastAutoAttemptAt: new Date().toISOString(), lastAutoStatus: 'running' });
+  erpRefreshSyncStatus();
+
+  try {
+    const result = await erpSyncFromApi({ auto: true, silent: true });
+    erpWriteAutoSyncMeta({
+      lastAutoFinishedAt: new Date().toISOString(),
+      lastAutoStatus: result.ok ? 'ok' : 'error',
+      lastAutoError: result.ok ? '' : result.error,
+    });
+    if (!result.ok) console.warn('[erp:auto-sync]', result.error);
+  } finally {
+    erpAutoSyncInFlight = false;
+    erpReleaseAutoSyncLock();
+    erpRefreshSyncStatus();
+  }
+}
+
+function erpStartAutoSync() {
+  if (erpAutoSyncTimer) {
+    erpRefreshSyncStatus();
+    return;
+  }
+  erpRefreshSyncStatus();
+  setTimeout(erpRunAutoSync, 2000);
+  erpAutoSyncTimer = setInterval(erpRunAutoSync, ERP_AUTO_SYNC_CHECK_MS);
+
+  if (!erpAutoSyncListenersReady) {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) erpRunAutoSync();
+    });
+    window.addEventListener('focus', erpRunAutoSync);
+    erpAutoSyncListenersReady = true;
+  }
 }
