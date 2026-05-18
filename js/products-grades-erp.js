@@ -470,6 +470,7 @@ function setManualGrade(name, grade) {
 // ════════════════════════════════════
 let erpParsedByBasis = { order: [], ship: [] };
 const ERP_SYNC_ENDPOINT = '/.netlify/functions/erp-sync';
+const ERP_REMOTE_DATA_PATH = 'erp/latest';
 const ERP_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000;
 const ERP_AUTO_SYNC_CHECK_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
@@ -903,6 +904,57 @@ function erpExtractApiRows(payload, basis) {
   return [];
 }
 
+function erpGetRemoteDataUrl() {
+  const base = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
+  return base ? `${base}/${ERP_REMOTE_DATA_PATH}.json` : '';
+}
+
+async function erpRefreshFromRemote(options = {}) {
+  const silent = options.silent === true;
+  const url = erpGetRemoteDataUrl();
+  if (!url) {
+    const message = 'Firebase DB_URL이 설정되지 않았습니다.';
+    if (!silent) erpSetStatus('error', message);
+    return { ok: false, error: message };
+  }
+
+  if (!silent) erpSetStatus('info', 'Firebase에서 최신 ERP 데이터를 불러오는 중입니다.');
+  try {
+    const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(`Firebase ERP 데이터 조회 실패 (${res.status})`);
+    if (!payload) throw new Error('Firebase에 ERP 최신 데이터가 없습니다. Python 수집기를 먼저 실행하세요.');
+
+    const parsedOrder = erpNormalizeApiRows(erpExtractApiRows(payload, 'order'), 'order');
+    const parsedShip = erpNormalizeApiRows(erpExtractApiRows(payload, 'ship'), 'ship');
+    if (!parsedOrder.length || !parsedShip.length) {
+      throw new Error(`Firebase 데이터에서 주문/출고를 모두 찾지 못했습니다. 주문 ${parsedOrder.length}건, 출고 ${parsedShip.length}건`);
+    }
+
+    const meta = erpSaveRows(parsedOrder, parsedShip, payload.source || 'amarans-playwright');
+    if (payload.syncedAt) {
+      meta.syncedAt = payload.syncedAt;
+      meta.orderCount = payload.orderCount || parsedOrder.length;
+      meta.shipCount = payload.shipCount || parsedShip.length;
+      setPlainStorage('sj-erp-sync-meta', JSON.stringify(meta));
+      erpRefreshSyncStatus();
+    }
+    erpRenderSyncPreview(parsedOrder, parsedShip, 'Firebase 최신 ERP 데이터');
+
+    if (!silent) {
+      erpSetStatus('ok', `최신 ERP 데이터 반영 완료 · 주문 <strong>${parsedOrder.length.toLocaleString()}건</strong> / 출고 <strong>${parsedShip.length.toLocaleString()}건</strong>`);
+      showToast('최신 ERP 데이터를 불러왔습니다.', 'success');
+    }
+    return { ok: true, orderCount: parsedOrder.length, shipCount: parsedShip.length };
+  } catch (err) {
+    if (!silent) erpSetStatus('error', `ERP 데이터 새로고침 오류: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+}
+
 async function erpSyncFromApi(options = {}) {
   const silent = options.silent === true;
   const sourceLabel = options.auto ? 'amarans-api-auto' : 'amarans-api';
@@ -985,7 +1037,7 @@ async function erpRunAutoSync() {
   erpRefreshSyncStatus();
 
   try {
-    const result = await erpSyncFromApi({ auto: true, silent: true });
+    const result = await erpRefreshFromRemote({ auto: true, silent: true });
     erpWriteAutoSyncMeta({
       lastAutoFinishedAt: new Date().toISOString(),
       lastAutoStatus: result.ok ? 'ok' : 'error',
