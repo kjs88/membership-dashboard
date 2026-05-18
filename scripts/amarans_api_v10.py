@@ -849,7 +849,11 @@ def run(playwright: Playwright, days=90, save_xlsx=False):
     is_auto = bool(os.environ.get("AMARANS_USERNAME"))
     headless = is_auto and os.environ.get("AMARANS_HEADLESS", "1") != "0"
 
-    browser = playwright.chromium.launch(channel="chrome", headless=headless, slow_mo=200)
+    browser_channel = os.environ.get("AMARANS_BROWSER_CHANNEL", "chrome").strip()
+    launch_options = {"headless": headless, "slow_mo": 200}
+    if browser_channel:
+        launch_options["channel"] = browser_channel
+    browser = playwright.chromium.launch(**launch_options)
     context = browser.new_context(accept_downloads=True, viewport={"width": 1366, "height": 768})
     page = context.new_page()
     page.set_default_timeout(60000)

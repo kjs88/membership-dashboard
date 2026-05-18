@@ -470,11 +470,14 @@ function setManualGrade(name, grade) {
 // ════════════════════════════════════
 let erpParsedByBasis = { order: [], ship: [] };
 const ERP_SYNC_ENDPOINT = '/.netlify/functions/erp-sync';
+const ERP_TRIGGER_SYNC_ENDPOINT = '/.netlify/functions/erp-trigger-sync';
 const ERP_REMOTE_DATA_PATH = 'erp/latest';
 const ERP_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000;
 const ERP_AUTO_SYNC_CHECK_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
 const ERP_AUTO_SYNC_LOCK_MS = 10 * 60 * 1000;
+const ERP_TRIGGER_POLL_MS = 15 * 1000;
+const ERP_TRIGGER_TIMEOUT_MS = 12 * 60 * 1000;
 const ERP_AUTO_SYNC_META_KEY = 'sj-erp-auto-sync-meta';
 const ERP_AUTO_SYNC_LOCK_KEY = 'sj-erp-auto-sync-lock';
 const ERP_AUTO_SYNC_HOLIDAYS = {
@@ -909,6 +912,18 @@ function erpGetRemoteDataUrl() {
   return base ? `${base}/${ERP_REMOTE_DATA_PATH}.json` : '';
 }
 
+function erpSleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function erpIsNewerRemoteSync(remoteSyncedAt, previousSyncedAt) {
+  if (!remoteSyncedAt) return false;
+  if (!previousSyncedAt) return true;
+  const remoteTime = new Date(remoteSyncedAt).getTime();
+  const previousTime = new Date(previousSyncedAt).getTime();
+  return Number.isFinite(remoteTime) && (!Number.isFinite(previousTime) || remoteTime > previousTime);
+}
+
 async function erpRefreshFromRemote(options = {}) {
   const silent = options.silent === true;
   const url = erpGetRemoteDataUrl();
@@ -948,9 +963,47 @@ async function erpRefreshFromRemote(options = {}) {
       erpSetStatus('ok', `최신 ERP 데이터 반영 완료 · 주문 <strong>${parsedOrder.length.toLocaleString()}건</strong> / 출고 <strong>${parsedShip.length.toLocaleString()}건</strong>`);
       showToast('최신 ERP 데이터를 불러왔습니다.', 'success');
     }
-    return { ok: true, orderCount: parsedOrder.length, shipCount: parsedShip.length };
+    return { ok: true, orderCount: parsedOrder.length, shipCount: parsedShip.length, syncedAt: payload.syncedAt || meta.syncedAt };
   } catch (err) {
     if (!silent) erpSetStatus('error', `ERP 데이터 새로고침 오류: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+}
+
+async function erpTriggerCollectorAndRefresh() {
+  const beforeSyncedAt = erpReadSyncMeta()?.syncedAt || '';
+  erpSetStatus('info', '아마란스 수집기를 실행 요청하는 중입니다.');
+
+  try {
+    const triggerRes = await fetch(ERP_TRIGGER_SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ basis: 'both' }),
+    });
+    const triggerPayload = await triggerRes.json().catch(() => ({}));
+    if (!triggerRes.ok) {
+      throw new Error(triggerPayload.message || triggerPayload.error || `수집기 실행 요청 실패 (${triggerRes.status})`);
+    }
+
+    erpSetStatus('info', '아마란스 수집기가 실행 중입니다. 새 데이터가 올라오면 자동 반영합니다.');
+    const started = Date.now();
+    let lastError = '';
+
+    while (Date.now() - started < ERP_TRIGGER_TIMEOUT_MS) {
+      await erpSleep(ERP_TRIGGER_POLL_MS);
+      const result = await erpRefreshFromRemote({ silent: true });
+      if (result.ok && erpIsNewerRemoteSync(result.syncedAt, beforeSyncedAt)) {
+        erpSetStatus('ok', `최신 ERP 데이터 반영 완료 · 주문 <strong>${result.orderCount.toLocaleString()}건</strong> / 출고 <strong>${result.shipCount.toLocaleString()}건</strong>`);
+        showToast('아마란스 최신 데이터가 반영되었습니다.', 'success');
+        return result;
+      }
+      if (!result.ok) lastError = result.error || '';
+      erpSetStatus('info', '아마란스 수집기가 실행 중입니다. Firebase 최신 데이터 업로드를 기다리는 중입니다.');
+    }
+
+    throw new Error(lastError || '수집기 실행 후 새 ERP 데이터가 제한 시간 안에 올라오지 않았습니다.');
+  } catch (err) {
+    erpSetStatus('error', `ERP 연동 실행 오류: ${err.message}`);
     return { ok: false, error: err.message };
   }
 }

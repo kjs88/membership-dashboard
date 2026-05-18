@@ -61,16 +61,39 @@ git push
 
 ## Amarans API 연동
 
-아마란스 수집은 로컬 Python 자동화가 담당하고, Netlify 대시보드는 Firebase Realtime Database의 `erp/latest`를 읽습니다.
+아마란스 수집은 GitHub Actions 또는 로컬 Python 자동화가 담당하고, Netlify 대시보드는 Firebase Realtime Database의 `erp/latest`를 읽습니다.
 아마란스 계정 정보와 `wehago-sign`은 브라우저/Netlify에 저장하지 않습니다.
 
 흐름:
+
+1. 대시보드의 `연동 실행` 버튼이 `/.netlify/functions/erp-trigger-sync`를 호출합니다.
+2. Netlify Function이 GitHub Actions의 `아마란스 ERP 동기화` workflow를 실행합니다.
+3. `scripts/amarans_api_v10.py`가 Playwright로 아마란스에 로그인합니다.
+4. 아마란스 페이지가 만든 signed API 요청을 가로채고 payload만 교체합니다.
+5. 주문현황/출고현황을 누적 merge한 뒤 대시보드 형식으로 변환합니다.
+6. Firebase `erp/latest`에 `{ order, ship, syncedAt, orderCount, shipCount }`를 업로드합니다.
+7. 대시보드는 Firebase 최신 ERP 데이터가 올라올 때까지 기다렸다가 `localStorage`와 화면에 반영합니다.
+
+필요한 GitHub Secrets:
+
+- `AMARANS_USERNAME`
+- `AMARANS_PASSWORD`
+- `AMARANS_FIREBASE_DB_URL` Firebase URL을 기본값과 다르게 쓸 때만
+- `AMARANS_FIREBASE_AUTH_TOKEN` Firebase 규칙에서 인증이 필요할 때만
+
+필요한 Netlify 환경변수:
+
+- `GITHUB_ACTIONS_TOKEN` GitHub Actions workflow 실행 권한이 있는 token
+- `GITHUB_ACTIONS_REPO` 기본값: `kjs88/membership-dashboard`
+- `AMARANS_SYNC_WORKFLOW` 기본값: `amarans-sync.yml`
+- `AMARANS_SYNC_REF` 기본값: `main`
+
+Python 수집기 동작:
 
 1. `scripts/amarans_api_v10.py`가 Playwright로 아마란스에 로그인합니다.
 2. 아마란스 페이지가 만든 signed API 요청을 가로채고 payload만 교체합니다.
 3. 주문현황/출고현황을 누적 merge한 뒤 대시보드 형식으로 변환합니다.
 4. Firebase `erp/latest`에 `{ order, ship, syncedAt, orderCount, shipCount }`를 업로드합니다.
-5. 대시보드는 로그인 후 Firebase 최신 ERP 데이터를 불러와 `localStorage`와 화면에 반영합니다.
 
 Python 환경변수:
 
@@ -84,8 +107,8 @@ Python 환경변수:
 
 ### 자동 갱신 동작
 
-로컬 Windows 작업 스케줄러가 `scripts/amarans_api_v10.py --auto --recent 90`을 1시간마다 실행합니다.
-Python 스크립트는 `--auto`에서 아래 조건을 스스로 검사하고 필요 없는 시간에는 종료합니다.
+GitHub Actions schedule이 한국시간 평일 09:00~20:00에 1시간마다 실행됩니다.
+Python 스크립트는 schedule 실행에서 아래 조건을 스스로 검사하고 필요 없는 시간에는 종료합니다.
 
 - 한국시간 기준 09:00 이상 21:00 미만에만 실행
 - 토요일, 일요일은 실행하지 않음
@@ -93,9 +116,10 @@ Python 스크립트는 `--auto`에서 아래 조건을 스스로 검사하고 �
 - `--force`를 붙이면 시간/주말/공휴일 제한 없이 즉시 수집
 
 대시보드가 열려 있을 때는 마지막 반영 후 1시간이 지나면 Firebase 최신 데이터를 다시 읽습니다.
-`새로고침` 버튼은 시간/주말/공휴일 제한 없이 Firebase의 최신 ERP 데이터를 즉시 다시 읽습니다.
+`연동 실행` 버튼은 시간/주말/공휴일 제한 없이 GitHub Actions 수집기를 즉시 실행하고, Firebase에 새 데이터가 올라오면 자동 반영합니다.
+`저장 데이터 새로고침` 버튼은 수집기를 실행하지 않고 Firebase에 이미 올라온 최신 ERP 데이터만 다시 읽습니다.
 
-아마란스에서 지금 즉시 새 데이터를 다시 수집하려면 로컬 PC에서 아래 명령을 실행합니다.
+로컬 PC에서 직접 강제 수집하려면 아래 명령을 실행합니다.
 
 ```powershell
 python .\scripts\amarans_api_v10.py --auto --force --recent 90

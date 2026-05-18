@@ -1,0 +1,47 @@
+name: 아마란스 ERP 동기화
+
+on:
+  workflow_dispatch:
+  schedule:
+    # KST 09:00-20:00, Monday-Friday. Korean holidays are skipped in the script.
+    - cron: '0 0-11 * * 1-5'
+
+concurrency:
+  group: amarans-erp-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: 주문/출고현황 수집
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: 저장소 가져오기
+        uses: actions/checkout@v5
+
+      - name: Python 설정
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright pandas openpyxl
+          python -m playwright install --with-deps chromium
+
+      - name: 아마란스 ERP 수집 및 Firebase 업로드
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python scripts/amarans_api_v10.py --auto --recent 90
+          else
+            python scripts/amarans_api_v10.py --auto --force --recent 90
+          fi
+        env:
+          AMARANS_USERNAME: ${{ secrets.AMARANS_USERNAME }}
+          AMARANS_PASSWORD: ${{ secrets.AMARANS_PASSWORD }}
+          AMARANS_FIREBASE_DB_URL: ${{ secrets.AMARANS_FIREBASE_DB_URL }}
+          AMARANS_FIREBASE_AUTH_TOKEN: ${{ secrets.AMARANS_FIREBASE_AUTH_TOKEN }}
+          AMARANS_BROWSER_CHANNEL: ''
+          AMARANS_DASHBOARD_DIR: ${{ github.workspace }}

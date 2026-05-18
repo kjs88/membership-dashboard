@@ -13,5 +13,9 @@ playwright-report/
 test-results/
 __pycache__/
 
+# Generated ERP data
+js/erp-data.js
+downloads/api/
+
 # Netlify local metadata
 .netlify/
