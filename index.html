@@ -1213,6 +1213,7 @@
     <div class="modal-footer" style="margin-top:20px">
       <div style="font-size:11px;color:var(--text3)" id="erp-total-label"></div>
       <button class="btn-sm btn-ghost" onclick="closeModal('modal-erp-upload')">닫기</button>
+      <button class="btn-sm btn-ghost" id="fb-migrate-btn" onclick="(async()=>{const b=document.getElementById('fb-migrate-btn');b.disabled=true;b.textContent='업로드 중...';const ok=await pushAllToFirebase();b.disabled=false;b.textContent='데이터 Firebase 업로드';alert(ok?'업로드 완료! 다른 브라우저에서 새로고침하면 데이터가 나타납니다.':'업로드 실패. 콘솔을 확인해주세요.');})()">데이터 Firebase 업로드</button>
       <button class="btn-sm btn-primary" id="erp-confirm-btn" style="display:none" onclick="erpConfirmUpload()">수동 파일 저장 및 반영</button>
     </div>
   </div>
