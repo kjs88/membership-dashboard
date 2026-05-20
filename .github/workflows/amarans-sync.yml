@@ -2,6 +2,15 @@ name: 아마란스 ERP 동기화
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: '수집 범위'
+        required: false
+        default: 'recent60'
+        type: choice
+        options:
+          - recent60
+          - full
   schedule:
     # KST 09:00-20:00, Monday-Friday. Korean holidays are skipped in the script.
     - cron: '0 0-11 * * 1-5'
@@ -34,9 +43,11 @@ jobs:
       - name: 아마란스 ERP 수집 및 Firebase 업로드
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            python scripts/amarans_api_v10.py --auto --recent 90
+            python scripts/amarans_api_v10.py --auto --recent 60
+          elif [ "${{ inputs.mode }}" = "full" ]; then
+            python scripts/amarans_api_v10.py --auto --force --full
           else
-            python scripts/amarans_api_v10.py --auto --force --recent 90
+            python scripts/amarans_api_v10.py --auto --force --recent 60
           fi
         env:
           AMARANS_USERNAME: ${{ secrets.AMARANS_USERNAME }}

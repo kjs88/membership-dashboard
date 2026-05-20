@@ -421,7 +421,79 @@ def build_firebase_rest_url(path):
     return url
 
 
-def upload_dashboard_data_remote(ship_records, order_records):
+def fetch_remote_dashboard_payload():
+    """Read the current Firebase ERP payload used as the full-year base."""
+    if SKIP_FIREBASE_UPLOAD:
+        return None
+
+    url = build_firebase_rest_url(REMOTE_ERP_PATH)
+    if not url:
+        return None
+
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw = resp.read()
+        if not raw or raw.strip() == b"null":
+            return None
+        return json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        print(f"  Remote base read skipped: {exc}")
+        return None
+
+
+def remote_payload_has_full_year_base(payload):
+    """Return True only after a full-year bootstrap has been uploaded."""
+    if not isinstance(payload, dict):
+        return False
+    try:
+        year = int(payload.get("year") or 0)
+    except (TypeError, ValueError):
+        year = 0
+    if year != TARGET_YEAR:
+        return False
+    if payload.get("hasFullYearBase") is not True:
+        return False
+    return isinstance(payload.get("order"), list) and isinstance(payload.get("ship"), list)
+
+
+def _parse_dashboard_record_date(row):
+    value = _safe_str(row.get("date") if isinstance(row, dict) else "")
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y%m%d"):
+        try:
+            sample = value[:10] if fmt == "%Y-%m-%d" else value[:8]
+            return datetime.strptime(sample, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def merge_dashboard_date_window(existing_records, fresh_records, date_from, date_to):
+    """Replace only the fetched date window inside the full-year Firebase base."""
+    existing_records = existing_records if isinstance(existing_records, list) else []
+    fresh_records = fresh_records if isinstance(fresh_records, list) else []
+    start = datetime.strptime(date_from, "%Y%m%d").date()
+    end = datetime.strptime(date_to, "%Y%m%d").date()
+
+    kept = []
+    removed = 0
+    dropped_other_year = 0
+    for row in existing_records:
+        record_date = _parse_dashboard_record_date(row)
+        if record_date and record_date.year != TARGET_YEAR:
+            dropped_other_year += 1
+            continue
+        if record_date and start <= record_date <= end:
+            removed += 1
+            continue
+        kept.append(row)
+
+    return kept + fresh_records, removed, dropped_other_year
+
+
+def upload_dashboard_data_remote(ship_records, order_records, date_from=None, date_to=None, remote_payload=None):
     """대시보드가 읽을 최신 ERP 데이터를 Firebase REST API로 업로드."""
     if SKIP_FIREBASE_UPLOAD:
         print("  원격 업로드 생략: AMARANS_SKIP_FIREBASE_UPLOAD 설정됨")
@@ -433,10 +505,49 @@ def upload_dashboard_data_remote(ship_records, order_records):
         return False
 
     now_iso = datetime.now().isoformat(timespec="seconds")
+    full_year_from = f"{TARGET_YEAR}0101"
+    full_year_to = f"{TARGET_YEAR}1231"
+    is_full_year = date_from == full_year_from and date_to == full_year_to
+    sync_mode = "full-year" if is_full_year else "recent-window"
+    base_synced_at = ""
+
+    if not is_full_year and date_from and date_to:
+        if remote_payload is None:
+            remote_payload = fetch_remote_dashboard_payload()
+
+        if remote_payload_has_full_year_base(remote_payload):
+            base_synced_at = _safe_str(remote_payload.get("syncedAt", ""))
+            order_records, order_removed, order_dropped = merge_dashboard_date_window(
+                remote_payload.get("order", []),
+                order_records,
+                date_from,
+                date_to,
+            )
+            ship_records, ship_removed, ship_dropped = merge_dashboard_date_window(
+                remote_payload.get("ship", []),
+                ship_records,
+                date_from,
+                date_to,
+            )
+            sync_mode = "recent-window-merged"
+            print(
+                "  Remote merge: "
+                f"{date_from}~{date_to}, "
+                f"order replaced {order_removed:,}, ship replaced {ship_removed:,}, "
+                f"other-year dropped {order_dropped + ship_dropped:,}"
+            )
+        else:
+            print("  Remote full-year base not found. Uploading the fetched window as-is.")
+
     payload = {
         "source": "amarans-playwright",
         "syncedAt": now_iso,
         "year": TARGET_YEAR,
+        "syncMode": sync_mode,
+        "hasFullYearBase": is_full_year or (remote_payload_has_full_year_base(remote_payload) if remote_payload else False),
+        "rangeFrom": date_from or "",
+        "rangeTo": date_to or "",
+        "baseSyncedAt": base_synced_at,
         "orderCount": len(order_records),
         "shipCount": len(ship_records),
         "order": order_records,
@@ -803,6 +914,8 @@ def process_job(page, job, days, save_xlsx=False):
     if len(new_rows) >= PAGE_SIZE:
         print(f"  ⚠️ PAGE_SIZE({PAGE_SIZE:,}) 도달 — 데이터 잘렸을 수 있음")
 
+    fresh_dashboard_records = to_dashboard_format(new_rows, job)
+
     # 4) 누적 파일 로드 + merge
     out_dir = Path("downloads") / "api"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -837,10 +950,17 @@ def process_job(page, job, days, save_xlsx=False):
     dashboard_records = to_dashboard_format(merged, job)
     print(f"  대시보드 형식 변환: {len(dashboard_records):,}행")
 
-    return {"slug": slug, "raw_count": len(merged), "dashboard": dashboard_records}
+    return {
+        "slug": slug,
+        "raw_count": len(merged),
+        "dashboard": dashboard_records,
+        "fresh_dashboard": fresh_dashboard_records,
+        "date_from": date_from,
+        "date_to": date_to,
+    }
 
 
-def run(playwright: Playwright, days=90, save_xlsx=False):
+def run(playwright: Playwright, days=60, save_xlsx=False):
     username = os.environ.get("AMARANS_USERNAME") or input("Amarans ID: ").strip()
     password = os.environ.get("AMARANS_PASSWORD") or getpass.getpass("Amarans password: ").strip()
     if not username or not password:
@@ -848,6 +968,15 @@ def run(playwright: Playwright, days=90, save_xlsx=False):
 
     is_auto = bool(os.environ.get("AMARANS_USERNAME"))
     headless = is_auto and os.environ.get("AMARANS_HEADLESS", "1") != "0"
+
+    remote_payload = None
+    if days is not None and not SKIP_FIREBASE_UPLOAD:
+        remote_payload = fetch_remote_dashboard_payload()
+        if not remote_payload_has_full_year_base(remote_payload):
+            print("  Remote full-year base not found; switching this run to full-year bootstrap.")
+            days = None
+
+    date_from, date_to = compute_date_range(days)
 
     browser_channel = os.environ.get("AMARANS_BROWSER_CHANNEL", "chrome").strip()
     launch_options = {"headless": headless, "slow_mo": 200}
@@ -869,21 +998,31 @@ def run(playwright: Playwright, days=90, save_xlsx=False):
         for job in JOBS:
             r = process_job(page, job, days=days, save_xlsx=save_xlsx)
             if r:
-                results[r["slug"]] = r["dashboard"]
+                results[r["slug"]] = r
 
         # 대시보드 erp-data.js 생성
         if "ship" in results or "order" in results:
             print(f"\n{'='*60}")
             print(f"  대시보드 데이터 주입")
             print(f"{'='*60}")
-            ship_records = results.get("ship", [])
-            order_records = results.get("order", [])
+            ship_result = results.get("ship", {})
+            order_result = results.get("order", {})
+            ship_records = ship_result.get("dashboard", [])
+            order_records = order_result.get("dashboard", [])
+            remote_ship_records = ship_result.get("fresh_dashboard", ship_records)
+            remote_order_records = order_result.get("fresh_dashboard", order_records)
             write_dashboard_data_js(
                 ship_records,
                 order_records,
                 DASHBOARD_DIR,
             )
-            upload_dashboard_data_remote(ship_records, order_records)
+            upload_dashboard_data_remote(
+                remote_ship_records,
+                remote_order_records,
+                date_from=date_from,
+                date_to=date_to,
+                remote_payload=remote_payload,
+            )
 
         print("\n완료.")
         if not is_auto:
@@ -909,7 +1048,7 @@ PowerShell을 '관리자 권한'으로 열고 아래 명령을 한 번만 실행
 
 # 2) 09시~21시 매시 정각 자동 실행
 #    스크립트 내부에서 21시 이후, 주말, 2026년 한국 공휴일은 자동 스킵
-$action = New-ScheduledTaskAction -Execute 'python' -Argument '"{script_path}" --auto --recent 90'
+$action = New-ScheduledTaskAction -Execute 'python' -Argument '"{script_path}" --auto --recent 60'
 $trigger = New-ScheduledTaskTrigger -Daily -At 9am
 $trigger.Repetition = (New-ScheduledTaskTrigger -Once -At 9am -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Hours 12)).Repetition
 Register-ScheduledTask -TaskName 'Amarans_Sync' -Action $action -Trigger $trigger -RunLevel Limited
@@ -921,7 +1060,7 @@ Get-ScheduledTask -TaskName 'Amarans_Sync'
 Start-ScheduledTask -TaskName 'Amarans_Sync'
 
 # 영업시간 제한 없이 지금 강제 실행:
-python "{script_path}" --auto --force --recent 90
+python "{script_path}" --auto --force --recent 60
 
 # 작업 삭제 (필요 시):
 Unregister-ScheduledTask -TaskName 'Amarans_Sync' -Confirm:$false
@@ -961,10 +1100,10 @@ if __name__ == "__main__":
 
     # 모드 결정
     # --full : 올해 전체 (첫 1회용)
-    # --recent N : 최근 N일 (기본 90)
+    # --recent N : 최근 N일 (기본 60)
     # --auto : 환경변수 ID/PW + headless (작업 스케줄러용)
     # --with-xlsx : xlsx 양식 매핑도 같이 저장
-    days = 90
+    days = 60
     save_xlsx = "--with-xlsx" in args
     if "--full" in args:
         days = None
