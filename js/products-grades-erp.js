@@ -870,7 +870,7 @@ function erpGetNextAutoSyncText() {
   if (erpAutoSyncInFlight) return '자동 동기화 실행 중';
   if (blockReason) return `대기 · ${blockReason}`;
   const syncMeta = erpReadSyncMeta();
-  const lastSyncedAt = syncMeta?.syncedAt ? new Date(syncMeta.syncedAt) : null;
+  const lastSyncedAt = syncMeta?.syncedAt ? erpParseSyncDate(syncMeta.syncedAt) : null;
   if (!lastSyncedAt || Number.isNaN(lastSyncedAt.getTime())) return '영업시간 중 곧 실행';
   const nextAt = new Date(lastSyncedAt.getTime() + ERP_AUTO_SYNC_INTERVAL_MS);
   if (nextAt <= now) return '영업시간 중 곧 실행';
@@ -881,8 +881,16 @@ function erpGetNextAutoSyncText() {
   return `다음 ${erpFormatLocalTime(nextAt)}`;
 }
 
+function erpParseSyncDate(value) {
+  if (value instanceof Date) return value;
+  if (!value) return new Date(NaN);
+  const text = String(value).trim();
+  const legacyUtc = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(text);
+  return new Date(legacyUtc ? `${text}Z` : text);
+}
+
 function erpFormatSidebarUpdatedAt(value) {
-  const date = value instanceof Date ? value : new Date(value);
+  const date = erpParseSyncDate(value);
   if (Number.isNaN(date.getTime())) return '';
   const parts = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
@@ -921,8 +929,8 @@ function erpRefreshSyncStatus() {
     erpUpdateSidebarSyncStamp(null);
     return;
   }
-  const syncedAt = meta.syncedAt ? new Date(meta.syncedAt) : null;
-  if (stateEl) stateEl.textContent = syncedAt ? `${syncedAt.toLocaleString()} · ${meta.source || 'ERP'}` : `${meta.source || 'ERP'} 동기화됨`;
+  const syncedAt = meta.syncedAt ? erpParseSyncDate(meta.syncedAt) : null;
+  if (stateEl) stateEl.textContent = syncedAt ? `${erpFormatSidebarUpdatedAt(meta.syncedAt)} · ${meta.source || 'ERP'}` : `${meta.source || 'ERP'} 동기화됨`;
   if (orderEl) orderEl.textContent = `${Number(meta.orderCount || 0).toLocaleString()}건`;
   if (shipEl) shipEl.textContent = `${Number(meta.shipCount || 0).toLocaleString()}건`;
   if (autoEl) autoEl.textContent = erpGetNextAutoSyncText();
@@ -967,8 +975,8 @@ function erpSleep(ms) {
 function erpIsNewerRemoteSync(remoteSyncedAt, previousSyncedAt) {
   if (!remoteSyncedAt) return false;
   if (!previousSyncedAt) return true;
-  const remoteTime = new Date(remoteSyncedAt).getTime();
-  const previousTime = new Date(previousSyncedAt).getTime();
+  const remoteTime = erpParseSyncDate(remoteSyncedAt).getTime();
+  const previousTime = erpParseSyncDate(previousSyncedAt).getTime();
   return Number.isFinite(remoteTime) && (!Number.isFinite(previousTime) || remoteTime > previousTime);
 }
 
@@ -1135,7 +1143,7 @@ function erpShouldAutoSync() {
   }
 
   const syncMeta = erpReadSyncMeta();
-  const lastSynced = syncMeta?.syncedAt ? new Date(syncMeta.syncedAt).getTime() : 0;
+  const lastSynced = syncMeta?.syncedAt ? erpParseSyncDate(syncMeta.syncedAt).getTime() : 0;
   if (Number.isFinite(lastSynced) && lastSynced && now - lastSynced < ERP_AUTO_SYNC_INTERVAL_MS) {
     return { ok: false, reason: '1시간 미도래' };
   }
