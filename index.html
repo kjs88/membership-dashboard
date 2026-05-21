@@ -1182,8 +1182,7 @@
         </div>
       </div>
       <div class="erp-sync-actions">
-        <button class="btn-sm btn-primary" onclick="erpTriggerCollectorAndRefresh()">연동 실행</button>
-        <button class="btn-sm btn-ghost" onclick="erpRefreshFromRemote()">저장 데이터 새로고침</button>
+        <button class="btn-sm btn-primary" id="erp-refresh-btn" onclick="erpRunUnifiedRefresh()">새로고침</button>
       </div>
     </div>
     <details class="erp-manual-fallback">
@@ -1498,7 +1497,7 @@
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/storage.js?v=20260521-erp-runtime"></script>
 <script src="js/state.js?v=20260511-login"></script>
-<script src="js/products-grades-erp.js?v=20260521-erp-runtime"></script>
+<script src="js/products-grades-erp.js?v=20260522-unified-refresh"></script>
 <script src="js/core-auth-nav.js?v=20260521-erp-runtime"></script>
 <script src="js/journals-weekly-monthly.js?v=20260511-login"></script>
 <script src="js/dashboard-records-users.js?v=20260521-sales-mtd"></script>

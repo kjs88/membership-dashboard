@@ -1028,6 +1028,23 @@ async function erpTriggerCollectorAndRefresh() {
   }
 }
 
+async function erpRunUnifiedRefresh() {
+  const btn = document.getElementById('erp-refresh-btn');
+  const originalText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '새로고침 중...';
+  }
+  try {
+    return await erpTriggerCollectorAndRefresh();
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText || '새로고침';
+    }
+  }
+}
+
 async function erpSyncFromApi(options = {}) {
   const silent = options.silent === true;
   const sourceLabel = options.auto ? 'amarans-api-auto' : 'amarans-api';
