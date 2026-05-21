@@ -32,14 +32,22 @@ function renderDashboard() {
 }
 
 function renderSalesPage() {
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
+  const fmtYmd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const now = new Date();
+  const today = fmtYmd(now);
+  const yDate = new Date(now);
+  yDate.setDate(now.getDate() - 1);
+  const yesterday = fmtYmd(yDate);
   const ym = today.slice(0,7);
+  const monthStart = ym + '-01';
   const basisMeta = getOrderBasisMeta();
   const monthEntries = allEntries.filter(e => e.date?.startsWith(ym));
   const todayEntries = allEntries.filter(e => e.date === today);
   const yesterdayEntries = allEntries.filter(e => e.date === yesterday);
-  const erpMonth = allOrders.filter(e => (e.date||'').startsWith(ym));
+  const erpMonth = allOrders.filter(e => {
+    const d = e.date || '';
+    return d >= monthStart && d <= today;
+  });
   const useErpForCharts = erpMonth.length > 0;
   const rankSub = document.getElementById('sh-rank-sub');
   if (rankSub) rankSub.textContent = useErpForCharts ? `${basisMeta.label} 공급가 기준 (원)` : '당사 구매액 기준 (원)';
@@ -104,7 +112,7 @@ function renderSalesPage() {
     dailyDowType.push(holidayName ? 'holiday' : isSun ? 'sun' : isSat ? 'sat' : 'weekday');
     dayLabels.push([d+'일', holidayName ? DOW[dow]+'🔴' : DOW[dow]]);
     daySalesData.push(useErpForCharts
-      ? Math.round(allOrders.filter(e=>e.date===ds).reduce((s,e)=>s+(parseFloat(e.supply)||0),0))
+      ? (ds > today ? 0 : Math.round(allOrders.filter(e=>e.date===ds).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
       : allEntries.filter(e=>e.date===ds).reduce((s,e)=>s+(e.ourPurchase||0),0));
     dailyBarColors.push(isRed ? '#D94040CC' : '#2B72C8CC');
   }
