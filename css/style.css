@@ -62,6 +62,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .user-info{flex:1;min-width:0;}
 .user-name{font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .user-role{font-size:10px;color:rgba(255,255,255,.5);margin-top:1px;}
+.sidebar-sync-stamp{margin:-2px 14px 10px;padding:0 2px;color:#fff;font-size:11px;font-weight:700;line-height:1.35;text-align:center;white-space:normal;}
+.sidebar-sync-stamp.is-empty{color:rgba(255,255,255,.68);font-weight:600;}
 .role-badge-admin{background:var(--amber);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;}
 .role-badge-manager{background:var(--blue);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;}
 .role-badge-planner{background:var(--purple);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;}

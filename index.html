@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260518-erp-trigger">
+<link rel="stylesheet" href="css/style.css?v=20260522-sidebar-sync-time">
 </head>
 <body>
 
@@ -134,6 +134,7 @@
       <div class="user-role" id="sb-role"></div>
     </div>
   </div>
+  <div class="sidebar-sync-stamp is-empty" id="erp-sidebar-updated-at" aria-live="polite">데이터 업데이트 확인 중</div>
   <nav class="nav">
     <div class="basis-toggle" id="order-basis-toggle">
       <button type="button" id="basis-order-btn" onclick="setOrderBasis('order')">주문기준</button>
@@ -1497,7 +1498,7 @@
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/storage.js?v=20260521-erp-runtime"></script>
 <script src="js/state.js?v=20260511-login"></script>
-<script src="js/products-grades-erp.js?v=20260522-unified-refresh"></script>
+<script src="js/products-grades-erp.js?v=20260522-sidebar-sync-time"></script>
 <script src="js/core-auth-nav.js?v=20260521-erp-runtime"></script>
 <script src="js/journals-weekly-monthly.js?v=20260511-login"></script>
 <script src="js/dashboard-records-users.js?v=20260521-sales-mtd"></script>

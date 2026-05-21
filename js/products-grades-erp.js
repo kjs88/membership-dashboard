@@ -881,6 +881,32 @@ function erpGetNextAutoSyncText() {
   return `다음 ${erpFormatLocalTime(nextAt)}`;
 }
 
+function erpFormatSidebarUpdatedAt(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
+function erpUpdateSidebarSyncStamp(meta = erpReadSyncMeta()) {
+  const el = document.getElementById('erp-sidebar-updated-at');
+  if (!el) return;
+  const syncedAt = meta?.syncedAt ? erpFormatSidebarUpdatedAt(meta.syncedAt) : '';
+  el.textContent = syncedAt ? `데이터 업데이트 ${syncedAt}` : '데이터 업데이트 -';
+  el.classList.toggle('is-empty', !syncedAt);
+}
+
 function erpRefreshSyncStatus() {
   const meta = erpReadSyncMeta();
   const stateEl = document.getElementById('erp-sync-state');
@@ -892,6 +918,7 @@ function erpRefreshSyncStatus() {
     if (orderEl) orderEl.textContent = (allOrderOrders || []).length ? `${allOrderOrders.length.toLocaleString()}건 저장됨` : '-';
     if (shipEl) shipEl.textContent = (allShipOrders || []).length ? `${allShipOrders.length.toLocaleString()}건 저장됨` : '-';
     if (autoEl) autoEl.textContent = erpGetNextAutoSyncText();
+    erpUpdateSidebarSyncStamp(null);
     return;
   }
   const syncedAt = meta.syncedAt ? new Date(meta.syncedAt) : null;
@@ -899,6 +926,7 @@ function erpRefreshSyncStatus() {
   if (orderEl) orderEl.textContent = `${Number(meta.orderCount || 0).toLocaleString()}건`;
   if (shipEl) shipEl.textContent = `${Number(meta.shipCount || 0).toLocaleString()}건`;
   if (autoEl) autoEl.textContent = erpGetNextAutoSyncText();
+  erpUpdateSidebarSyncStamp(meta);
 }
 
 function erpRenderSyncPreview(parsedOrder, parsedShip, label = 'API 동기화 미리보기') {
