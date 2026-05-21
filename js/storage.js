@@ -67,6 +67,31 @@ function setPlainStorage(key, val) {
   }
 }
 
+function setErpRuntimeData(parsedOrder, parsedShip, payload = {}) {
+  const order = Array.isArray(parsedOrder) ? parsedOrder : [];
+  const ship = Array.isArray(parsedShip) ? parsedShip : [];
+  window.__erpRemoteData = {
+    order,
+    ship,
+    meta: {
+      source: payload.source || 'amarans-playwright',
+      syncedAt: payload.syncedAt || new Date().toISOString(),
+      orderCount: payload.orderCount || order.length,
+      shipCount: payload.shipCount || ship.length,
+    },
+  };
+  allOrderOrders = order;
+  allShipOrders = ship;
+  try {
+    localStorage.removeItem('sj-orders-order');
+    localStorage.removeItem('sj-orders-ship');
+    localStorage.removeItem('sj-orders');
+    localStorage.setItem('sj-erp-sync-meta', JSON.stringify(window.__erpRemoteData.meta));
+  } catch (err) {
+    console.warn('[storage:erp:meta]', err);
+  }
+}
+
 // 앱 진입 시 Firebase /data + erp/latest 전체를 localStorage에 동기화
 async function syncFromFirebase() {
   const base = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
@@ -106,17 +131,7 @@ async function syncFromFirebase() {
       if (payload && typeof erpExtractApiRows === 'function') {
         const parsedOrder = erpNormalizeApiRows(erpExtractApiRows(payload, 'order'), 'order');
         const parsedShip  = erpNormalizeApiRows(erpExtractApiRows(payload, 'ship'),  'ship');
-        if (parsedOrder.length) {
-          const existing = JSON.parse(localStorage.getItem('sj-orders-order') || '[]');
-          const merged = typeof erpMergeByDate === 'function' ? erpMergeByDate(existing, parsedOrder) : parsedOrder;
-          localStorage.setItem('sj-orders-order', JSON.stringify(merged));
-        }
-        if (parsedShip.length) {
-          const existing = JSON.parse(localStorage.getItem('sj-orders-ship') || localStorage.getItem('sj-orders') || '[]');
-          const merged = typeof erpMergeByDate === 'function' ? erpMergeByDate(existing, parsedShip) : parsedShip;
-          localStorage.setItem('sj-orders-ship', JSON.stringify(merged));
-          localStorage.setItem('sj-orders', JSON.stringify(merged));
-        }
+        if (parsedOrder.length || parsedShip.length) setErpRuntimeData(parsedOrder, parsedShip, payload);
       }
     }
   } catch (e) { console.warn('[storage:syncFromFirebase erp/latest]', e); }

@@ -664,16 +664,36 @@ function erpMergeByDate(existing, parsed) {
 }
 
 function erpSaveRows(parsedOrder, parsedShip, sourceLabel = 'ERP') {
-  const existingOrder = getShared('sj-orders-order', []);
-  const existingShip = getShared('sj-orders-ship', getShared('sj-orders', []));
+  const runtimeOrder = window.__erpRemoteData?.order || [];
+  const runtimeShip = window.__erpRemoteData?.ship || [];
+  const existingOrder = runtimeOrder.length ? runtimeOrder : getShared('sj-orders-order', []);
+  const existingShip = runtimeShip.length ? runtimeShip : getShared('sj-orders-ship', getShared('sj-orders', []));
 
   const mergedOrder = parsedOrder.length ? erpMergeByDate(existingOrder, parsedOrder) : existingOrder;
   const mergedShip = parsedShip.length ? erpMergeByDate(existingShip, parsedShip) : existingShip;
-  setShared('sj-orders-order', mergedOrder);
-  setShared('sj-orders-ship', mergedShip);
-  setShared('sj-orders', mergedShip);
   allOrderOrders = mergedOrder;
   allShipOrders = mergedShip;
+  window.__erpRemoteData = {
+    order: mergedOrder,
+    ship: mergedShip,
+    meta: {
+      source: sourceLabel,
+      syncedAt: new Date().toISOString(),
+      orderCount: mergedOrder.length,
+      shipCount: mergedShip.length,
+    },
+  };
+  if (sourceLabel === 'manual-xlsx') {
+    setShared('sj-orders-order', mergedOrder);
+    setShared('sj-orders-ship', mergedShip);
+    setShared('sj-orders', mergedShip);
+  } else {
+    try {
+      localStorage.removeItem('sj-orders-order');
+      localStorage.removeItem('sj-orders-ship');
+      localStorage.removeItem('sj-orders');
+    } catch (_) {}
+  }
   applyOrderBasis();
   rerenderOrderBasisPages();
 

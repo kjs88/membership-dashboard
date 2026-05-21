@@ -3,8 +3,13 @@
 function loadAndRender() {
   allEntries = getShared('sj-entries-v4', []);
   loadOrderBasisPreference();
-  allShipOrders = getShared('sj-orders-ship', getShared('sj-orders', []));
-  allOrderOrders = getShared('sj-orders-order', []);
+  if (window.__erpRemoteData) {
+    allShipOrders = window.__erpRemoteData.ship || [];
+    allOrderOrders = window.__erpRemoteData.order || [];
+  } else {
+    allShipOrders = getShared('sj-orders-ship', getShared('sj-orders', []));
+    allOrderOrders = getShared('sj-orders-order', []);
+  }
   applyOrderBasis();
   allUsers   = getShared('sj-users-v6', []);
   targets    = getShared('sj-targets-v4', {});

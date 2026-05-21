@@ -83,7 +83,8 @@ function getOrderBasisMeta(basis = orderBasis) {
 }
 
 function loadOrderBasisPreference() {
-  orderBasis = 'order';
+  const savedBasis = localStorage.getItem('sj-order-basis');
+  orderBasis = ORDER_BASIS_META[savedBasis] ? savedBasis : 'ship';
   setPlainStorage('sj-order-basis', orderBasis);
 }
 
