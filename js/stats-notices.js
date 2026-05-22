@@ -49,7 +49,8 @@ function renderStats() {
 
     // ── 월별 매출 추이 ──
     const months = [];
-    for (let i=5;i>=0;i--) { const d=new Date();d.setMonth(d.getMonth()-i);months.push({y:d.getFullYear(),m:d.getMonth(),label:(d.getMonth()+1)+'월'}); }
+    const currentYear = new Date().getFullYear();
+    for (let i=0; i<12; i++) months.push({ y: currentYear, m: i, label: (i+1)+'월' });
     if (useErp) {
       const monthSales = months.map(m => {
         const ym = m.y+'-'+String(m.m+1).padStart(2,'0');
@@ -60,32 +61,11 @@ function renderStats() {
       });
       if (typeof rc === 'function') rc('chart-stats-monthly','bar',months.map(m=>m.label),monthSales,'#E8900A');
       const subEl = document.getElementById('stats-chart-sub');
-      if (subEl) subEl.textContent = `${basisMeta.label} 최근 6개월 매출(원)`;
+      if (subEl) subEl.textContent = `${basisMeta.label} ${currentYear}년 1~12월 매출(원)`;
     } else {
       if (typeof rc === 'function') rc('chart-stats-monthly','bar',months.map(m=>m.label),months.map(()=>0),'#E8900A');
       const subEl = document.getElementById('stats-chart-sub');
       if (subEl) subEl.textContent = 'ERP 데이터가 없습니다';
-    }
-
-    // ── 영업사원별 매출 비중 (매출 많은순) ──
-    const personMap = {};
-    salesUsers.forEach(u => personMap[u.name] = { sales: 0, qty: 0 });
-    if (useErp) {
-      allOrders.forEach(o => {
-        if (!o.person || !personMap[o.person]) return;
-        personMap[o.person].sales += (parseFloat(o.supply)||0);
-        personMap[o.person].qty += (o.qty||0);
-      });
-    }
-    const personArr = Object.entries(personMap)
-      .map(([n,v])=>({name:n, sales:v.sales, qty:v.qty}))
-      .sort((a,b)=>b.sales-a.sales);
-    const COLORS = ['#009E6A','#2B72C8','#E8900A','#D94040','#7856C8','#26c6da','#43A047','#9E9E9E'];
-    if (typeof rc === 'function') {
-      rc('chart-stats-deal','doughnut',
-         personArr.map(p=>p.name),
-         personArr.map(p=>Math.round(p.sales)),
-         personArr.map((p,i)=>{const u=allUsers.find(u=>u.name===p.name);return u?u.color:COLORS[i%COLORS.length];}));
     }
 
     // ── 일별 매출/출고수량 ──
