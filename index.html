@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260522-product-category-grid">
+<link rel="stylesheet" href="css/style.css?v=20260523-product-filter-compact">
 </head>
 <body>
 
@@ -1015,35 +1015,31 @@
     </div>
     <!-- 필터 바 -->
     <div class="product-filter-panel">
-      <div class="product-filter-row">
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
-          <div class="drp-wrap" id="drp-prod">
-            <div class="drp-trigger" onclick="drpOpen('prod')">
-              <span class="drp-trigger-icon">📅</span>
-              <span class="drp-trigger-text" id="drp-prod-label">기간 선택</span>
-            </div>
-            <div class="drp-dropdown" id="drp-prod-dropdown"></div>
+      <div class="product-period-filter">
+        <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
+        <div class="drp-wrap" id="drp-prod">
+          <div class="drp-trigger" onclick="drpOpen('prod')">
+            <span class="drp-trigger-icon">📅</span>
+            <span class="drp-trigger-text" id="drp-prod-label">기간 선택</span>
           </div>
-          <input type="hidden" id="prod-date-from" /><input type="hidden" id="prod-date-to" />
+          <div class="drp-dropdown" id="drp-prod-dropdown"></div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:260px">
-          <div style="font-size:11px;font-weight:600;color:var(--text2)">영업사원</div>
-          <div id="prod-person-filter" class="stats-person-btns"></div>
-        </div>
-        <div class="product-search-filter">
-          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">검색</div>
-          <input id="prod-search" class="form-input" style="font-size:12px;padding:6px 10px;width:100%" placeholder="품목명 검색..." oninput="renderProducts()" />
-        </div>
+        <input type="hidden" id="prod-date-from" /><input type="hidden" id="prod-date-to" />
       </div>
-      <div class="product-filter-row product-filter-row-category">
-        <div class="product-category-filter">
-          <div class="product-category-head">
-            <div style="font-size:11px;font-weight:600;color:var(--text2)">품목군</div>
-            <button type="button" class="stats-person-btn" id="prod-category-all-btn" onclick="setProductCategory('all')">전체</button>
-          </div>
-          <div id="prod-category-filter" class="stats-person-btns product-category-btns"></div>
+      <div class="product-person-filter">
+        <div style="font-size:11px;font-weight:600;color:var(--text2)">영업사원</div>
+        <div id="prod-person-filter" class="stats-person-btns"></div>
+      </div>
+      <div class="product-category-filter">
+        <div class="product-category-head">
+          <div style="font-size:11px;font-weight:600;color:var(--text2)">품목군</div>
+          <button type="button" class="stats-person-btn" id="prod-category-all-btn" onclick="setProductCategory('all')">전체</button>
         </div>
+        <div id="prod-category-filter" class="stats-person-btns product-category-btns"></div>
+      </div>
+      <div class="product-search-filter">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">검색</div>
+        <input id="prod-search" class="form-input" style="font-size:12px;padding:6px 10px;width:100%" placeholder="품목명 검색..." oninput="renderProducts()" />
       </div>
     </div>
     <!-- 요약 카드 -->
@@ -1494,7 +1490,7 @@
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/storage.js?v=20260521-erp-runtime"></script>
 <script src="js/state.js?v=20260511-login"></script>
-<script src="js/products-grades-erp.js?v=20260522-product-category-grid"></script>
+<script src="js/products-grades-erp.js?v=20260523-product-filter-compact"></script>
 <script src="js/core-auth-nav.js?v=20260521-erp-runtime"></script>
 <script src="js/journals-weekly-monthly.js?v=20260511-login"></script>
 <script src="js/dashboard-records-users.js?v=20260521-sales-mtd"></script>
