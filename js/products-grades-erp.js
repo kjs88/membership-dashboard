@@ -401,7 +401,7 @@ function renderGrade() {
   }
 
   const hdr = document.getElementById('grade-sales-header');
-  if (hdr) hdr.textContent = (dateFrom || dateTo) ? `${dateFrom||''}~${dateTo||'현재'} 매출(원)` : `${getOrderBasisMeta().label} 전체 매출(원)`;
+  if (hdr) hdr.textContent = (dateFrom || dateTo) ? `${dateFrom||''}~${dateTo||'현재'} 매출(만원)` : `${getOrderBasisMeta().label} 전체 매출(만원)`;
 
   // 수동 등급 데이터
   let manualGrades = getShared('sj-manual-grades', {});
