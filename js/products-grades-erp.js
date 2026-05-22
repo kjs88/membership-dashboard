@@ -379,7 +379,7 @@ function renderGrade() {
   const dateFrom = document.getElementById('grade-date-from')?.value || '';
   const dateTo   = document.getElementById('grade-date-to')?.value   || '';
 
-  // ERP 기반(원단위) → 만원 단위로 변환해서 집계
+  // ERP 기반(원단위) 집계
   const useErp = allOrders && allOrders.length > 0;
   const salesMap = {};
   if (useErp) {
@@ -388,7 +388,7 @@ function renderGrade() {
       if (dateFrom && d < dateFrom) return;
       if (dateTo   && d > dateTo)   return;
       const k = o.client || '(미입력)';
-      salesMap[k] = (salesMap[k] || 0) + Math.round((parseFloat(o.supply) || 0) / 10000);
+      salesMap[k] = (salesMap[k] || 0) + Math.round(parseFloat(o.supply) || 0);
     });
   } else {
     allEntries.forEach(e => {
@@ -401,7 +401,7 @@ function renderGrade() {
   }
 
   const hdr = document.getElementById('grade-sales-header');
-  if (hdr) hdr.textContent = (dateFrom || dateTo) ? `${dateFrom||''}~${dateTo||'현재'} 매출(만원)` : `${getOrderBasisMeta().label} 전체 매출(만원)`;
+  if (hdr) hdr.textContent = (dateFrom || dateTo) ? `${dateFrom||''}~${dateTo||'현재'} 매출(원)` : `${getOrderBasisMeta().label} 전체 매출(원)`;
 
   // 수동 등급 데이터
   let manualGrades = getShared('sj-manual-grades', {});
