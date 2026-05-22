@@ -1,6 +1,7 @@
 // PRODUCTS PAGE
 // ════════════════════════════════════
 let productPersonId = 'all';
+let productCategoryId = 'all';
 
 function _calcPeriodRange(mode) {
   const now = new Date();
@@ -136,33 +137,37 @@ function setProductPerson(id) {
   renderProducts();
 }
 
+function renderProductCategoryFilter(categories) {
+  const filterEl = document.getElementById('prod-category-filter');
+  if (!filterEl) return;
+  if (productCategoryId !== 'all' && !categories.includes(productCategoryId)) {
+    productCategoryId = 'all';
+  }
+  const btns = [{id:'all', name:'전체'}, ...categories.map(c=>({id:c, name:c}))];
+  filterEl.innerHTML = btns.map(b =>
+    `<button type="button" class="stats-person-btn${productCategoryId===b.id?' active':''}" onclick="setProductCategory('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
+  ).join('');
+}
+
+function setProductCategory(id) {
+  productCategoryId = id || 'all';
+  renderProducts();
+}
+
 function renderProducts() {
   updateOrderBasisUI();
   const salesUsers = allUsers.filter(u => u.role === 'user');
   renderProductPersonFilter(salesUsers);
   const personF = productPersonId || 'all';
-  let catF      = document.getElementById('prod-filter-category')?.value || 'all';
+  const cats = [...new Set((allOrders || []).map(o => o.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  renderProductCategoryFilter(cats);
+  const catF = productCategoryId || 'all';
   const sortV   = document.getElementById('prod-sort')?.value || 'supply-desc';
   const searchV = (document.getElementById('prod-search')?.value || '').toLowerCase();
 
   // 날짜 필터 (prod-date-from / prod-date-to)
   const dateFrom = document.getElementById('prod-date-from')?.value || '';
   const dateTo   = document.getElementById('prod-date-to')?.value || '';
-
-  // 대분류 필터 옵션 동적 갱신
-  const cSel = document.getElementById('prod-filter-category');
-  if (cSel) {
-    const curCat = cSel.value || 'all';
-    cSel.innerHTML = '<option value="all">전체</option>';
-    const cats = [...new Set(allOrders.map(o => o.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
-    cats.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c; opt.textContent = c;
-      cSel.appendChild(opt);
-    });
-    cSel.value = cats.includes(curCat) ? curCat : 'all';
-    catF = cSel.value || 'all';
-  }
 
   // ── 품목별 집계 (ERP allOrders 기반) ──
   const tbody = document.getElementById('prod-tbody');

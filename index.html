@@ -1014,31 +1014,33 @@
       <div class="section-title-lg">📦 제품별 현황</div>
     </div>
     <!-- 필터 바 -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
-        <div class="drp-wrap" id="drp-prod">
-          <div class="drp-trigger" onclick="drpOpen('prod')">
-            <span class="drp-trigger-icon">📅</span>
-            <span class="drp-trigger-text" id="drp-prod-label">기간 선택</span>
+    <div class="product-filter-panel">
+      <div class="product-filter-row">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
+          <div class="drp-wrap" id="drp-prod">
+            <div class="drp-trigger" onclick="drpOpen('prod')">
+              <span class="drp-trigger-icon">📅</span>
+              <span class="drp-trigger-text" id="drp-prod-label">기간 선택</span>
+            </div>
+            <div class="drp-dropdown" id="drp-prod-dropdown"></div>
           </div>
-          <div class="drp-dropdown" id="drp-prod-dropdown"></div>
+          <input type="hidden" id="prod-date-from" /><input type="hidden" id="prod-date-to" />
         </div>
-        <input type="hidden" id="prod-date-from" /><input type="hidden" id="prod-date-to" />
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:260px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2)">영업사원</div>
+          <div id="prod-person-filter" class="stats-person-btns"></div>
+        </div>
+        <div class="product-search-filter">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">검색</div>
+          <input id="prod-search" class="form-input" style="font-size:12px;padding:6px 10px;width:100%" placeholder="품목명 검색..." oninput="renderProducts()" />
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:260px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2)">영업사원</div>
-        <div id="prod-person-filter" class="stats-person-btns"></div>
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">품목군</div>
-        <select id="prod-filter-category" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderProducts()">
-          <option value="all">전체</option>
-        </select>
-      </div>
-      <div style="margin-left:auto">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">검색</div>
-        <input id="prod-search" class="form-input" style="font-size:12px;padding:6px 10px;width:180px" placeholder="품목명 검색..." oninput="renderProducts()" />
+      <div class="product-filter-row product-filter-row-category">
+        <div class="product-category-filter">
+          <div style="font-size:11px;font-weight:600;color:var(--text2)">품목군</div>
+          <div id="prod-category-filter" class="stats-person-btns product-category-btns"></div>
+        </div>
       </div>
     </div>
     <!-- 요약 카드 -->
@@ -1489,7 +1491,7 @@
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/storage.js?v=20260521-erp-runtime"></script>
 <script src="js/state.js?v=20260511-login"></script>
-<script src="js/products-grades-erp.js?v=20260522-product-person-buttons"></script>
+<script src="js/products-grades-erp.js?v=20260522-product-category-buttons"></script>
 <script src="js/core-auth-nav.js?v=20260521-erp-runtime"></script>
 <script src="js/journals-weekly-monthly.js?v=20260511-login"></script>
 <script src="js/dashboard-records-users.js?v=20260521-sales-mtd"></script>
