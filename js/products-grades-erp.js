@@ -1,5 +1,7 @@
 // PRODUCTS PAGE
 // ════════════════════════════════════
+let productPersonId = 'all';
+
 function _calcPeriodRange(mode) {
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth();
@@ -114,9 +116,31 @@ function updateGradeMemo(name, val) {
 // ════════════════════════════════════
 // PRODUCTS PAGE
 // ════════════════════════════════════
+function renderProductPersonFilter(salesUsers) {
+  const filterEl = document.getElementById('prod-person-filter');
+  if (!filterEl) return;
+  const ordered = [...salesUsers].sort((a,b) =>
+    (a.createdAt||'').localeCompare(b.createdAt||'')
+  );
+  if (productPersonId !== 'all' && !ordered.some(u => u.id === productPersonId)) {
+    productPersonId = 'all';
+  }
+  const btns = [{id:'all', name:'전체'}, ...ordered.map(u=>({id:u.id, name:u.name}))];
+  filterEl.innerHTML = btns.map(b =>
+    `<button type="button" class="stats-person-btn${productPersonId===b.id?' active':''}" onclick="setProductPerson('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
+  ).join('');
+}
+
+function setProductPerson(id) {
+  productPersonId = id || 'all';
+  renderProducts();
+}
+
 function renderProducts() {
   updateOrderBasisUI();
-  const personF = document.getElementById('prod-filter-person')?.value || 'all';
+  const salesUsers = allUsers.filter(u => u.role === 'user');
+  renderProductPersonFilter(salesUsers);
+  const personF = productPersonId || 'all';
   let catF      = document.getElementById('prod-filter-category')?.value || 'all';
   const sortV   = document.getElementById('prod-sort')?.value || 'supply-desc';
   const searchV = (document.getElementById('prod-search')?.value || '').toLowerCase();
@@ -124,16 +148,6 @@ function renderProducts() {
   // 날짜 필터 (prod-date-from / prod-date-to)
   const dateFrom = document.getElementById('prod-date-from')?.value || '';
   const dateTo   = document.getElementById('prod-date-to')?.value || '';
-
-  // 영업사원 필터 옵션 동적 갱신
-  const pSel = document.getElementById('prod-filter-person');
-  if (pSel && pSel.options.length <= 1) {
-    allUsers.filter(u => u.role === 'user').forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.id; opt.textContent = u.name;
-      pSel.appendChild(opt);
-    });
-  }
 
   // 대분류 필터 옵션 동적 갱신
   const cSel = document.getElementById('prod-filter-category');
