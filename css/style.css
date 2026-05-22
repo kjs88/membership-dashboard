@@ -134,7 +134,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .product-filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
 .product-filter-row-category{align-items:flex-start;}
 .product-category-filter{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;}
-.product-category-btns{gap:7px 10px;align-content:flex-start;}
+.product-category-head{display:flex;align-items:center;gap:8px;}
+.product-category-head .stats-person-btn{padding:5px 12px;font-size:12px;}
+.product-category-btns{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:7px 6px;align-content:flex-start;}
+.product-category-btns .stats-person-btn{width:100%;padding-left:6px;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .product-search-filter{width:190px;margin-left:auto;flex:0 0 190px;}
 .stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
 .sales-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
@@ -467,6 +470,7 @@ td.tm{color:var(--text);font-weight:500;}
   .stats-kpi-row{grid-template-columns:repeat(2,1fr);}
   .chart-grid{grid-template-columns:1fr;}
   .chart-grid-3{grid-template-columns:1fr;}
+  .product-category-btns{grid-template-columns:repeat(3,minmax(0,1fr));}
   .product-search-filter{width:100%;flex:1 1 100%;margin-left:0;}
   .sales-kpi-row{flex-wrap:wrap;}
   .sales-kpi-card{min-width:calc(50% - 8px);}

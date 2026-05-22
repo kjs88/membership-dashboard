@@ -2,6 +2,31 @@
 // ════════════════════════════════════
 let productPersonId = 'all';
 let productCategoryId = 'all';
+const PRODUCT_CATEGORY_ORDER = [
+  '전동침대',
+  '수동휠체어',
+  '이동변기',
+  '목욕의자',
+  '안전손잡이',
+  '미끄럼방지용품 매트리스',
+  '미끄럼방지용품 양말',
+  '요실금팬티',
+  '간이변기',
+  '욕창예방방석',
+  '욕창예방매트리스',
+  '이동욕조',
+  '지팡이',
+  '자세변환용구',
+  '성인용보행기',
+  '경사로',
+  '구강세척기(마우스피스형)',
+  '비급여',
+];
+const PRODUCT_CATEGORY_LABELS = {
+  '구강세척기(마우스피스형)': '구강세척기',
+  '미끄럼방지용품 매트리스': '미끄럼방지매트',
+  '미끄럼방지용품 양말': '미끄럼방지양말',
+};
 
 function _calcPeriodRange(mode) {
   const now = new Date();
@@ -143,9 +168,15 @@ function renderProductCategoryFilter(categories) {
   if (productCategoryId !== 'all' && !categories.includes(productCategoryId)) {
     productCategoryId = 'all';
   }
-  const btns = [{id:'all', name:'전체'}, ...categories.map(c=>({id:c, name:c}))];
+  const allBtn = document.getElementById('prod-category-all-btn');
+  if (allBtn) allBtn.classList.toggle('active', productCategoryId === 'all');
+  const ordered = [
+    ...PRODUCT_CATEGORY_ORDER.filter(c => categories.includes(c)),
+    ...categories.filter(c => !PRODUCT_CATEGORY_ORDER.includes(c)),
+  ];
+  const btns = ordered.map(c=>({id:c, name:PRODUCT_CATEGORY_LABELS[c] || c, title:c}));
   filterEl.innerHTML = btns.map(b =>
-    `<button type="button" class="stats-person-btn${productCategoryId===b.id?' active':''}" onclick="setProductCategory('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
+    `<button type="button" class="stats-person-btn${productCategoryId===b.id?' active':''}" title="${escHtml(b.title)}" onclick="setProductCategory('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
   ).join('');
 }
 
