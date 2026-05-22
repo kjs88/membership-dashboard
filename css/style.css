@@ -133,11 +133,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .product-filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;display:grid;grid-template-columns:200px 210px minmax(0,1fr);grid-template-areas:"period person category" "search . category";gap:8px 10px;align-items:start;}
 .product-period-filter{grid-area:period;display:flex;flex-direction:column;gap:6px;}
 .product-person-filter{grid-area:person;display:flex;flex-direction:column;gap:6px;}
-.product-category-filter{grid-area:category;display:flex;flex-direction:column;gap:6px;min-width:0;}
-.product-category-head{display:flex;align-items:center;gap:8px;}
-.product-category-head .stats-person-btn{padding:5px 12px;font-size:12px;}
-.product-category-btns{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:5px 4px;align-content:flex-start;}
-.product-category-btns .stats-person-btn{width:100%;padding:5px 1px;font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.product-category-filter{grid-area:category;display:flex;flex-direction:row;align-items:flex-start;gap:8px;min-width:0;}
+.product-category-all-btn{flex-shrink:0;padding:5px 12px;font-size:12px;align-self:stretch;}
+.product-category-btns{flex:1;min-width:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;align-content:flex-start;}
+.product-category-btns .stats-person-btn{width:100%;padding:5px 2px;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .product-search-filter{grid-area:search;width:100%;}
 .product-filter-panel .drp-trigger{min-width:0;width:100%;}
 .stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
