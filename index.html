@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260523-category-fix">
+<link rel="stylesheet" href="css/style.css?v=20260523-search-merge">
 </head>
 <body>
 
@@ -1028,7 +1028,10 @@
       </div>
       <div class="product-person-filter">
         <div style="font-size:11px;font-weight:600;color:var(--text2)">영업사원</div>
-        <div id="prod-person-filter" class="stats-person-btns"></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div id="prod-person-filter" class="stats-person-btns"></div>
+          <input id="prod-search" class="form-input product-search-input" placeholder="상품명 검색..." oninput="renderProducts()" />
+        </div>
       </div>
       <div class="product-category-filter">
         <div class="product-category-left">
@@ -1036,10 +1039,6 @@
           <button type="button" class="stats-person-btn product-category-all-btn" id="prod-category-all-btn" onclick="setProductCategory('all')">전체</button>
         </div>
         <div id="prod-category-filter" class="stats-person-btns product-category-btns"></div>
-      </div>
-      <div class="product-search-filter">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">검색</div>
-        <input id="prod-search" class="form-input" style="font-size:12px;padding:6px 10px;width:100%" placeholder="품목명 검색..." oninput="renderProducts()" />
       </div>
     </div>
     <!-- 요약 카드 -->
