@@ -112,7 +112,7 @@ function saveGradeSettings() {
     if (!gradeTiers[i]) return;
     gradeTiers[i].name  = row.querySelector('.gt-name').value.trim() || gradeTiers[i].name;
     gradeTiers[i].color = row.querySelector('.gt-color').value;
-    gradeTiers[i].min   = parseFloat(row.querySelector('.gt-min').value) || 0;
+    gradeTiers[i].min   = parseFloat((row.querySelector('.gt-min').value || '').replace(/,/g, '')) || 0;
   });
   gradeTiers.sort((a, b) => b.min - a.min);
   setShared('sj-grade-tiers', gradeTiers);
@@ -375,7 +375,7 @@ function renderGradeSettings() {
       <input type="color" class="gt-color" value="${safeColor(t.color)}" style="width:32px;height:32px;border:none;border-radius:4px;cursor:pointer;padding:0;background:none" />
       <input class="gt-name form-input" value="${escHtml(t.name)}" placeholder="등급명" style="width:100px;font-weight:600" />
       <span style="font-size:12px;color:var(--text2);white-space:nowrap">월 매출</span>
-      <input class="gt-min form-input" type="number" value="${t.min}" placeholder="0" style="width:150px;font-family:var(--mono);text-align:right" />
+      <input class="gt-min form-input" type="text" inputmode="numeric" value="${Number(t.min||0).toLocaleString()}" placeholder="0" oninput="fmtComma(this)" style="width:150px;font-family:var(--mono);text-align:right" />
       <span style="font-size:12px;color:var(--text2)">원 이상</span>
       <button class="btn-sm btn-danger" onclick="removeGradeTier(${i})" style="margin-left:auto;padding:4px 10px">삭제</button>
     </div>`).join('');
@@ -419,27 +419,50 @@ function renderChurnRisk() {
   risk.sort((a, b) => b.prev - a.prev);
   if (!risk.length) { card.style.display = 'none'; return; }
   const lostCnt = risk.filter(r => r.lost).length;
-  const show = risk.slice(0, 12);
+  _churnList = risk;
+  _churnPage = 1;
   card.style.display = 'block';
   card.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
       <span style="font-size:15px">⚠️</span>
       <span style="font-size:14px;font-weight:700;color:var(--red)">이탈위험 거래처 ${risk.length}곳</span>
-      <span style="font-size:11px;color:var(--text2)">최근 60일 매출 중단/급감 · 거래중단 ${lostCnt}곳</span>
+      <span style="font-size:11px;color:var(--text2)">거래중단 ${lostCnt}곳 · 급감 ${risk.length - lostCnt}곳</span>
       <button class="btn-sm btn-ghost" style="margin-left:auto;padding:3px 10px;font-size:11px" onclick="this.closest('#grade-churn-card').style.display='none'">닫기</button>
     </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5">
+      기준: 직전 60일 매출 <strong>30만원 이상</strong> 거래처 중 · <strong style="color:var(--red)">거래중단</strong> = 최근 60일 매출 0원 · <strong style="color:var(--amber)">급감</strong> = 직전 대비 <strong>50% 이상</strong> 감소
+    </div>
+    <div id="grade-churn-body"></div>`;
+  churnRenderPage();
+}
+
+let _churnList = [], _churnPage = 1;
+function churnRenderPage() {
+  const body = document.getElementById('grade-churn-body');
+  if (!body) return;
+  const PAGE = 10;
+  const list = _churnList;
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE));
+  const p = Math.max(1, Math.min(_churnPage, totalPages));
+  _churnPage = p;
+  const slice = list.slice((p - 1) * PAGE, p * PAGE);
+  body.innerHTML = `
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px">
-      <thead><tr>${['거래처','이전 60일','최근 60일','감소율',''].map((h,i)=>`<th style="padding:7px 10px;text-align:${i===0?'left':i===4?'center':'right'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
-      <tbody>${show.map(r=>`<tr style="border-bottom:1px solid var(--border)">
+      <thead><tr>${['거래처','직전 60일','최근 60일','감소율','상태'].map((h,i)=>`<th style="padding:7px 10px;text-align:${i===0?'left':i===4?'center':'right'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+      <tbody>${slice.map(r=>`<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:7px 10px;font-weight:500">${escHtml(r.name)}</td>
-        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text2)">${Math.round(r.prev).toLocaleString()}</td>
-        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${r.rec?'var(--text)':'var(--red)'};font-weight:600">${Math.round(r.rec).toLocaleString()}</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text2)">${Math.round(r.prev).toLocaleString()}원</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${r.rec?'var(--text)':'var(--red)'};font-weight:600">${Math.round(r.rec).toLocaleString()}원</td>
         <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--red);font-weight:700">▼${r.drop}%</td>
         <td style="padding:7px 10px;text-align:center">${r.lost?'<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">거래중단</span>':'<span style="background:var(--amber-l);color:var(--amber);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">급감</span>'}</td>
       </tr>`).join('')}</tbody>
     </table></div>
-    ${risk.length>show.length?`<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:8px">외 ${risk.length-show.length}곳 더 (이전 매출 큰 순 12곳 표시)</div>`:''}`;
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px">
+      <span style="font-size:11px;color:var(--text3)">${(p-1)*PAGE+1}–${Math.min(p*PAGE,list.length)} / 총 ${list.length}곳 (이전 매출 큰 순)</span>
+      <div style="display:flex;gap:4px">${renderPageBtns(p, totalPages, 'churnGoPage')}</div>
+    </div>`;
 }
+function churnGoPage(p) { _churnPage = p; churnRenderPage(); }
 
 function renderGrade() {
   updateOrderBasisUI();
