@@ -423,20 +423,23 @@ function renderChurnRisk() {
   _churnPage = 1;
   card.style.display = 'block';
   card.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+    <div onclick="toggleChurnBody()" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none">
       <span style="font-size:15px">⚠️</span>
       <span style="font-size:14px;font-weight:700;color:var(--red)">이탈위험 거래처 ${risk.length}곳</span>
       <span style="font-size:11px;color:var(--text2)">거래중단 ${lostCnt}곳 · 급감 ${risk.length - lostCnt}곳</span>
-      <button class="btn-sm btn-ghost" style="margin-left:auto;padding:3px 10px;font-size:11px" onclick="this.closest('#grade-churn-card').style.display='none'">닫기</button>
+      <span id="grade-churn-arrow" style="margin-left:auto;font-size:13px;color:var(--red);transition:transform .2s;font-weight:700">▼</span>
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5">
-      기준: 직전 60일 매출 <strong>30만원 이상</strong> 거래처 중 · <strong style="color:var(--red)">거래중단</strong> = 최근 60일 매출 0원 · <strong style="color:var(--amber)">급감</strong> = 직전 대비 <strong>50% 이상</strong> 감소
-    </div>
-    <div id="grade-churn-body"></div>`;
+    <div id="grade-churn-collapse">
+      <div style="font-size:11px;color:var(--text3);margin:8px 0 10px;line-height:1.5">
+        기준: 직전 60일 매출 <strong>30만원 이상</strong> 거래처 중 · <strong style="color:var(--red)">거래중단</strong> = 최근 60일 매출 0원 · <strong style="color:var(--amber)">급감</strong> = 직전 대비 <strong>50% 이상</strong> 감소
+      </div>
+      <div id="grade-churn-body"></div>
+    </div>`;
   churnRenderPage();
+  applyChurnCollapse();
 }
 
-let _churnList = [], _churnPage = 1;
+let _churnList = [], _churnPage = 1, _churnCollapsed = false;
 function churnRenderPage() {
   const body = document.getElementById('grade-churn-body');
   if (!body) return;
@@ -463,6 +466,13 @@ function churnRenderPage() {
     </div>`;
 }
 function churnGoPage(p) { _churnPage = p; churnRenderPage(); }
+function applyChurnCollapse() {
+  const c = document.getElementById('grade-churn-collapse');
+  const a = document.getElementById('grade-churn-arrow');
+  if (c) c.style.display = _churnCollapsed ? 'none' : 'block';
+  if (a) a.style.transform = _churnCollapsed ? '' : 'rotate(180deg)';
+}
+function toggleChurnBody() { _churnCollapsed = !_churnCollapsed; applyChurnCollapse(); }
 
 function renderGrade() {
   updateOrderBasisUI();
