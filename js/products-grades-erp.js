@@ -4,7 +4,7 @@ let productPersonId = 'all';
 let productCategoryId = 'all';
 // 제품/등급 페이지네이션·정렬 상태 (clients.js에서 이동)
 let _prodSortCol = 'sales', _prodSortDir = 'desc';
-let _prodPage = 1, _prodList = [];
+let _prodPage = 1, _prodList = [], _prodHasPrev = false;
 let _gradePage = 1, _gradeList = [];
 const PRODUCT_CATEGORY_ORDER = [
   '전동침대',
@@ -232,7 +232,29 @@ function renderProducts() {
     if (o.client) map[key].clients.add(o.client);
   });
 
-  let list = Object.values(map).map(r => ({ name: r.name, category: r.category, qty: r.qty, sales: r.sales, clientCount: r.clients.size }));
+  // ── 전기간(직전 동일 길이) 매출 집계 — 증감 컬럼용 ──
+  const prevMap = {};
+  _prodHasPrev = false;
+  if (dateFrom && dateTo) {
+    const d1 = new Date(dateFrom), d2 = new Date(dateTo);
+    const lenDays = Math.round((d2 - d1) / 86400000) + 1;
+    const pTo = new Date(d1.getTime() - 86400000);
+    const pFrom = new Date(pTo.getTime() - (lenDays - 1) * 86400000);
+    const f = d => d.toISOString().slice(0, 10);
+    const prevFrom = f(pFrom), prevTo = f(pTo);
+    _prodHasPrev = true;
+    const pName = personF !== 'all' ? (allUsers.find(u => u.id === personF)?.name || personF) : null;
+    allOrders.forEach(o => {
+      if (!o.date || o.date < prevFrom || o.date > prevTo) return;
+      if (pName && o.person !== pName) return;
+      if (catF !== 'all' && (o.category || '') !== catF) return;
+      const productName = o.product || '(품명 없음)';
+      if (searchV && !productName.toLowerCase().includes(searchV)) return;
+      prevMap[productName] = (prevMap[productName] || 0) + (o.supply || 0);
+    });
+  }
+
+  let list = Object.values(map).map(r => ({ name: r.name, category: r.category, qty: r.qty, sales: r.sales, clientCount: r.clients.size, prevSales: prevMap[r.name] || 0 }));
 
   // 헤더 클릭 정렬
   const col = _prodSortCol, dir = _prodSortDir;
@@ -277,6 +299,17 @@ function renderProducts() {
   prodRenderPage();
 }
 
+// 전기간 대비 증감 셀 (직전 동일 길이 기간 매출 대비)
+function prodDeltaCell(r) {
+  if (!_prodHasPrev) return '<span style="color:var(--text3)">-</span>';
+  const prev = r.prevSales || 0;
+  if (prev === 0) return r.sales > 0 ? '<span style="color:var(--blue);font-weight:700">신규</span>' : '<span style="color:var(--text3)">-</span>';
+  const pct = Math.round((r.sales - prev) / prev * 100);
+  if (pct === 0) return '<span style="color:var(--text3)">0%</span>';
+  const up = pct > 0;
+  return `<span style="color:${up ? 'var(--green-dark)' : 'var(--red)'};font-weight:700">${up ? '▲' : '▼'}${Math.abs(pct)}%</span>`;
+}
+
 function prodRenderPage() {
   const PAGE = 30;
   const list = _prodList;
@@ -297,6 +330,7 @@ function prodRenderPage() {
       <td style="padding:9px 14px;font-size:12px;color:var(--text2)">${escHtml(r.category)}</td>
       <td style="padding:9px 14px;text-align:right;font-family:var(--mono)">${r.qty.toLocaleString()}</td>
       <td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:var(--green-dark);font-weight:600">${r.sales.toLocaleString()}</td>
+      <td style="padding:9px 14px;text-align:right;font-family:var(--mono);font-size:12px">${prodDeltaCell(r)}</td>
       <td style="padding:9px 14px;text-align:right">
         <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
           <div style="width:70px;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
@@ -354,8 +388,62 @@ function removeGradeTier(i) {
   renderGrade();
 }
 
+// 이탈위험 거래처: 직전 60일엔 매출이 있었으나 최근 60일에 중단/급감(-50%↓)한 거래처
+function renderChurnRisk() {
+  const card = document.getElementById('grade-churn-card');
+  if (!card) return;
+  const orders = (typeof allOrders !== 'undefined' ? allOrders : []);
+  if (!orders.length) { card.style.display = 'none'; return; }
+  const DAY = 86400000;
+  const fmt = d => d.toISOString().slice(0, 10);
+  const now = Date.now();
+  const recentFrom = fmt(new Date(now - 60 * DAY));
+  const priorFrom = fmt(new Date(now - 120 * DAY));
+  const recentMap = {}, priorMap = {};
+  orders.forEach(o => {
+    const d = o.date || ''; const k = o.client || '';
+    if (!d || !k) return;
+    const amt = parseFloat(o.supply) || 0;
+    if (d >= recentFrom) recentMap[k] = (recentMap[k] || 0) + amt;
+    else if (d >= priorFrom) priorMap[k] = (priorMap[k] || 0) + amt;
+  });
+  const FLOOR = 300000; // 이전 60일 매출 30만원 이상만 표시 (노이즈 제거)
+  const risk = [];
+  Object.keys(priorMap).forEach(k => {
+    const prev = priorMap[k], rec = recentMap[k] || 0;
+    if (prev < FLOOR) return;
+    if (rec === 0 || rec <= prev * 0.5) {
+      risk.push({ name: k, prev, rec, drop: Math.round((1 - rec / prev) * 100), lost: rec === 0 });
+    }
+  });
+  risk.sort((a, b) => b.prev - a.prev);
+  if (!risk.length) { card.style.display = 'none'; return; }
+  const lostCnt = risk.filter(r => r.lost).length;
+  const show = risk.slice(0, 12);
+  card.style.display = 'block';
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:15px">⚠️</span>
+      <span style="font-size:14px;font-weight:700;color:var(--red)">이탈위험 거래처 ${risk.length}곳</span>
+      <span style="font-size:11px;color:var(--text2)">최근 60일 매출 중단/급감 · 거래중단 ${lostCnt}곳</span>
+      <button class="btn-sm btn-ghost" style="margin-left:auto;padding:3px 10px;font-size:11px" onclick="this.closest('#grade-churn-card').style.display='none'">닫기</button>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px">
+      <thead><tr>${['거래처','이전 60일','최근 60일','감소율',''].map((h,i)=>`<th style="padding:7px 10px;text-align:${i===0?'left':i===4?'center':'right'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+      <tbody>${show.map(r=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:7px 10px;font-weight:500">${escHtml(r.name)}</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text2)">${Math.round(r.prev).toLocaleString()}</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${r.rec?'var(--text)':'var(--red)'};font-weight:600">${Math.round(r.rec).toLocaleString()}</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--red);font-weight:700">▼${r.drop}%</td>
+        <td style="padding:7px 10px;text-align:center">${r.lost?'<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">거래중단</span>':'<span style="background:var(--amber-l);color:var(--amber);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">급감</span>'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    ${risk.length>show.length?`<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:8px">외 ${risk.length-show.length}곳 더 (이전 매출 큰 순 12곳 표시)</div>`:''}`;
+}
+
 function renderGrade() {
   updateOrderBasisUI();
+  renderChurnRisk();
   // 등급 필터 옵션 갱신
   const gSel = document.getElementById('grade-filter-grade');
   const curGf = gSel?.value || 'all';

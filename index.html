@@ -199,6 +199,7 @@
           </div>
           <div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:2px" id="sh-sales-target-label"></div>
           <div class="sales-kpi-sub" id="sh-month-sub" style="color:rgba(255,255,255,.6)">데이터 연동 대기</div>
+          <div id="sh-month-forecast" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.82);margin-top:3px"></div>
         </div>
         <div class="sales-kpi">
           <div class="kpi-accent" style="background:var(--blue)"></div>
@@ -1059,6 +1060,7 @@
               <th data-col="category" style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('category')">품목군 <span id="prod-sort-category"></span></th>
               <th data-col="qty" id="prod-qty-header" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('qty')"><span id="prod-qty-header-label">출고수량</span> <span id="prod-sort-qty"></span></th>
               <th data-col="sales"    style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('sales')">공급가 합계(원) <span id="prod-sort-sales"></span></th>
+              <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap" title="직전 동일 기간 대비 매출 증감">전기간比</th>
               <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap">비중</th>
               <th data-col="clientCount" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('clientCount')">거래처 수 <span id="prod-sort-clientCount"></span></th>
             </tr>
@@ -1105,6 +1107,8 @@
       <input type="hidden" id="grade-date-from" /><input type="hidden" id="grade-date-to" />
       <button class="btn-sm btn-primary" onclick="renderGrade()" style="padding:5px 16px">🔍 조회</button>
     </div>
+    <!-- 이탈위험 거래처 알림 -->
+    <div id="grade-churn-card" style="display:none;background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);padding:12px 16px;margin-bottom:16px"></div>
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <select id="grade-filter-grade" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderGrade()">
         <option value="all">전체 등급</option>
@@ -1430,9 +1434,11 @@
     </div>
     <div class="client-detail-tabs">
       <div class="client-detail-tab active" onclick="switchClientTab('info',this)">기본 정보</div>
+      <div class="client-detail-tab" onclick="switchClientTab('erp',this)">ERP 매출</div>
       <div class="client-detail-tab" onclick="switchClientTab('visits',this)">방문 이력</div>
     </div>
     <div class="client-detail-panel active" id="cd-panel-info"></div>
+    <div class="client-detail-panel" id="cd-panel-erp"></div>
     <div class="client-detail-panel" id="cd-panel-visits"></div>
     <div class="modal-footer">
       <button class="btn-sm btn-ghost" onclick="closeModal('modal-client-detail')">닫기</button>
@@ -1489,11 +1495,11 @@
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/storage.js?v=20260521-erp-runtime"></script>
 <script src="js/state.js?v=20260511-login"></script>
-<script src="js/products-grades-erp.js?v=20260523-cleanup"></script>
+<script src="js/products-grades-erp.js?v=20260523-features"></script>
 <script src="js/core-auth-nav.js?v=20260521-erp-runtime"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
-<script src="js/dashboard-records-users.js?v=20260523-cleanup"></script>
-<script src="js/clients.js?v=20260523-cleanup"></script>
+<script src="js/dashboard-records-users.js?v=20260523-features"></script>
+<script src="js/clients.js?v=20260523-features"></script>
 <script src="js/daily-entry.js?v=20260523-cleanup"></script>
 <script src="js/stats-notices.js?v=20260523-cleanup"></script>
 <script src="js/bootstrap-datepicker.js?v=20260521-erp-runtime"></script>

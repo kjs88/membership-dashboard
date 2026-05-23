@@ -121,6 +121,18 @@ function renderSalesPage() {
   const passedWorkdays = dailyDowType.filter((t,i) => { const ds = ym+'-'+String(i+1).padStart(2,'0'); return t === 'weekday' && ds <= today; }).length;
   const wdEl = document.getElementById('sh-workdays-label');
   if (wdEl) wdEl.textContent = `영업일 ${workdays}일 (경과 ${passedWorkdays}일)`;
+  // 월말 매출 예측 (경과 영업일 run-rate)
+  const fcEl = document.getElementById('sh-month-forecast');
+  if (fcEl) {
+    if (useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays) {
+      const forecast = Math.round(monthSales / passedWorkdays * workdays);
+      let s = `📈 예상 월말 ${forecast.toLocaleString()}원`;
+      if (targets.salesTarget) s += ` · 목표 ${Math.min(Math.round(forecast / targets.salesTarget * 100), 999)}%`;
+      fcEl.textContent = s;
+    } else {
+      fcEl.textContent = '';
+    }
+  }
   rcDaily('chart-sales-daily', dayLabels, daySalesData, dailyBarColors, dailyDowType);
 
   const salesByInst = {};

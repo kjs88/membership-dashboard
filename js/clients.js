@@ -474,6 +474,58 @@ async function deleteClient(id) {
   showToast('거래처가 삭제됐습니다.', 'success');
 }
 
+// 거래처 상세 - ERP 매출 탭 (allOrders에서 거래처명 일치분 집계)
+function renderClientErpPanel(c) {
+  const el = document.getElementById('cd-panel-erp');
+  if (!el) return;
+  const meta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고기준' };
+  const rows = (typeof allOrders !== 'undefined' ? allOrders : []).filter(o => o.client === c.name);
+  if (!rows.length) {
+    el.innerHTML = `<div style="padding:28px;text-align:center;color:var(--text3)">이 거래처의 ERP 매출 데이터가 없습니다.<br><span style="font-size:11px">(${escHtml(meta.label)} · ERP 거래처명이 정확히 일치할 때 표시됩니다)</span></div>`;
+    return;
+  }
+  const totSales = rows.reduce((s,o)=>s+(parseFloat(o.supply)||0),0);
+  const totQty = rows.reduce((s,o)=>s+(o.qty||0),0);
+  const dates = rows.map(o=>o.date).filter(Boolean).sort();
+  const lastDate = dates[dates.length-1] || '-';
+  const now = new Date();
+  const months = [];
+  for (let i=11;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); months.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:(d.getMonth()+1)+'월'}); }
+  const monthSales = months.map(m => rows.filter(o=>(o.date||'').startsWith(m.ym)).reduce((s,o)=>s+(parseFloat(o.supply)||0),0));
+  const maxM = Math.max(1, ...monthSales);
+  const barChart = months.map((m,i) => {
+    const v = monthSales[i];
+    const h = Math.round(v/maxM*60);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px">
+      <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${v?Math.round(v/10000):''}</div>
+      <div style="width:62%;height:${h}px;background:${v?'var(--blue)':'var(--border)'};border-radius:3px 3px 0 0;min-height:2px"></div>
+      <div style="font-size:10px;color:var(--text3)">${m.label}</div>
+    </div>`;
+  }).join('');
+  const pmap = {};
+  rows.forEach(o => { const k=o.product||'(품명없음)'; if(!pmap[k]) pmap[k]={qty:0,sales:0}; pmap[k].qty+=(o.qty||0); pmap[k].sales+=(parseFloat(o.supply)||0); });
+  const plist = Object.entries(pmap).map(([name,v])=>({name,qty:v.qty,sales:v.sales})).sort((a,b)=>b.sales-a.sales).slice(0,10);
+  const prodTable = plist.map(p=>`<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:7px 10px;font-size:12px">${escHtml(p.name)}</td>
+    <td style="padding:7px 10px;text-align:right;font-family:var(--mono);font-size:12px">${p.qty.toLocaleString()}</td>
+    <td style="padding:7px 10px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--green-dark);font-weight:600">${Math.round(p.sales).toLocaleString()}</td>
+    <td style="padding:7px 10px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--blue)">${totSales?Math.round(p.sales/totSales*100):0}%</td>
+  </tr>`).join('');
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div class="detail-chip"><div class="detail-label">${escHtml(meta.label)} 총 매출</div><div class="detail-value" style="font-size:14px;color:var(--green-dark);font-weight:700">${Math.round(totSales).toLocaleString()}원</div></div>
+      <div class="detail-chip"><div class="detail-label">총 수량</div><div class="detail-value" style="font-size:14px">${totQty.toLocaleString()}개</div></div>
+      <div class="detail-chip"><div class="detail-label">최근 거래일</div><div class="detail-value" style="font-size:13px">${escHtml(lastDate)}</div></div>
+    </div>
+    <div class="detail-label" style="margin-bottom:6px">월별 매출 추이 <span style="font-weight:400;color:var(--text3)">(만원 · 최근 12개월)</span></div>
+    <div style="display:flex;align-items:flex-end;gap:4px;height:92px;margin-bottom:18px;padding:0 4px">${barChart}</div>
+    <div class="detail-label" style="margin-bottom:6px">품목별 매출 TOP 10</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>${['품목','수량','매출(원)','비중'].map((h,i)=>`<th style="padding:7px 10px;text-align:${i?'right':'left'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+      <tbody>${prodTable}</tbody>
+    </table>`;
+}
+
 function openClientDetail(id) {
   const c = allClients.find(x=>String(x.id)===String(id)); if(!c)return;
   viewingClientId = id;
@@ -516,6 +568,8 @@ function openClientDetail(id) {
           <td style="padding:9px 10px;font-size:11px;color:var(--text2);max-width:180px">${escHtml((e.meeting||'').substring(0,40))}${e.meeting?.length>40?'…':''}</td>
         </tr>`).join('')}</tbody>
       </table>`;
+  // ERP 매출 탭
+  renderClientErpPanel(c);
   // 탭 초기화
   document.querySelectorAll('.client-detail-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.client-detail-panel').forEach(p=>p.classList.remove('active'));
