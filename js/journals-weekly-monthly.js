@@ -579,8 +579,6 @@ function moSaveReports() {
   setShared('sj-monthly-reports-' + currentUser.id, allMonthlyReports);
 }
 
-function moInit() { moPlanInit(); } // kept for backward compat
-
 // ── 영업계획 board ──
 function moPlanInit() {
   moLoadReports();

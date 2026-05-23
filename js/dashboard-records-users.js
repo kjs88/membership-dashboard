@@ -767,6 +767,12 @@ function rejectSignup(id) {
 // ════════════════════════════════════
 // ADMIN: TARGETS
 // ════════════════════════════════════
+// 숫자 입력에 천단위 콤마 자동 표시 (저장 시 saveTargets에서 콤마 제거)
+function fmtComma(input) {
+  const raw = (input.value || '').replace(/[^0-9]/g, '');
+  input.value = raw ? Number(raw).toLocaleString() : '';
+}
+
 function renderTargets() {
   document.getElementById('t-visit').value = targets.visitTarget||'';
   document.getElementById('t-sales').value = targets.salesTarget ? targets.salesTarget.toLocaleString() : '';

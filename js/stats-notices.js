@@ -121,32 +121,6 @@ function renderStats() {
   } catch(e) { console.error('[renderStats]', e); }
 }
 
-function statsErpTable(orders) {
-  if (!orders.length) return '<div style="padding:48px;text-align:center;color:var(--text3)">ERP 데이터가 없습니다</div>';
-  const basisMeta = getOrderBasisMeta();
-  const sorted = [...orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-    <thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
-      <th style="padding:9px 14px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">${basisMeta.dateLabel}</th>
-      <th style="padding:9px 14px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">거래처</th>
-      <th style="padding:9px 14px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">품목</th>
-      <th style="padding:9px 14px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">대분류</th>
-      <th style="padding:9px 14px;text-align:right;color:var(--text3);font-size:10px;font-weight:700">${basisMeta.qtyLabel}</th>
-      <th style="padding:9px 14px;text-align:right;color:var(--text3);font-size:10px;font-weight:700">공급가(원)</th>
-      <th style="padding:9px 14px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">담당자</th>
-    </tr></thead>
-    <tbody>${sorted.map((o,i)=>`<tr style="border-bottom:1px solid var(--border);${i%2?'background:var(--surface2)':''}">
-      <td style="padding:9px 14px;color:var(--text2)">${escHtml(o.date||'-')}</td>
-      <td style="padding:9px 14px;font-weight:500">${escHtml(o.client||'-')}</td>
-      <td style="padding:9px 14px;color:var(--text2)">${escHtml(o.product||'-')}</td>
-      <td style="padding:9px 14px;color:var(--text3)">${escHtml(o.category||'-')}</td>
-      <td style="padding:9px 14px;text-align:right;font-family:var(--mono)">${(o.qty||0).toLocaleString()}</td>
-      <td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:var(--green-dark);font-weight:600">${(parseFloat(o.supply)||0).toLocaleString()}</td>
-      <td style="padding:9px 14px;color:var(--text2)">${escHtml(o.person||'-')}</td>
-    </tr>`).join('')}</tbody>
-  </table></div>`;
-}
-
 function setStatsPerson(id, el) {
   statsPersonId = id;
   renderStats();

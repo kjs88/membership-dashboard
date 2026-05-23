@@ -246,13 +246,12 @@ function parseAndImportClientCSV(text) {
     }
   }
 
-  // 오버레이 저장
+  // 오버레이 저장 (setShared는 동기 함수)
   const overrides = allClients.filter(c => c._modified || (c.code||'').startsWith('A'));
-  setShared('sj-clients', overrides).then(() => {
-    updateClientBadge();
-    renderClients();
-    showToast('업로드 완료 — 추가 ' + added + '개, 수정 ' + updated + '개, 건너뜀 ' + skipped + '개', 'success');
-  });
+  setShared('sj-clients', overrides);
+  updateClientBadge();
+  renderClients();
+  showToast('업로드 완료 — 추가 ' + added + '개, 수정 ' + updated + '개, 건너뜀 ' + skipped + '개', 'success');
 }
 
 // ════════════════════════════════════
@@ -544,12 +543,7 @@ function deleteClientFromDetail() {
 // ── 거래처 페이지네이션 상태 ──
 var _clientPage = 1;
 var _clientPageSize = 30;
-var _prodSortCol = 'sales';   // 기본: 공급가 높은순
-var _prodSortDir = 'desc';    // desc | asc | null(원래대로=공급가desc)
-var _prodPage = 1;
-var _prodList = [];
-var _gradePage = 1;
-var _gradeList = [];
+// _prodSortCol/_prodPage/_prodList/_gradePage/_gradeList → products-grades-erp.js로 이동
 
 function renderPageBtns(cur, total, fnName) {
   if (total <= 1) return '';
@@ -750,20 +744,26 @@ function deleteSelectedClients() {
   const ids = getSelectedClientIds();
   if (!ids.length) return;
   if (!confirm(ids.length + '개 거래처를 삭제하시겠습니까?')) return;
+  // 단건 삭제(deleteClient)와 동일하게 _deleted 오버레이로 영구 반영
+  const delRecords = [];
   ids.forEach(id => {
+    const dc = allClients.find(c => String(c.id) === id);
+    if (dc) delRecords.push({ ...dc, _deleted: true, _modified: true });
     const idx = allClients.findIndex(c => String(c.id) === id);
     if (idx !== -1) allClients.splice(idx, 1);
   });
+  const overrides = [...allClients.filter(c => c._modified || (c.code||'').startsWith('A')), ...delRecords];
+  setShared('sj-clients', overrides);
   _clientSelectedIds.clear();
   renderClients();
+  updateClientBadge();
   showToast(ids.length + '개 거래처가 삭제되었습니다.', 'success');
-  if (typeof saveClientsOverlay === 'function') saveClientsOverlay();
 }
 
 function exportClients() {
   const cols = ['거래처코드','거래처명','거래처유형','거래가능성','지역','연락처','담당영업사원','병행업종','당사구매액(원)','타사구매액(원)','총방문횟수','첫방문일','최근방문일','업력','메모'];
   const rows = allClients.map(c=>[c.code,c.name,c.clientType,c.dealPossibility,c.region,c.contact,c.assignedPerson,c.sideBusiness,c.ourPurchase,c.otherPurchase,c.visitCount,c.firstVisit,c.lastVisit,c.experience,c.memo]);
-  const csv = [cols,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join(' ');
+  const csv = [cols,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

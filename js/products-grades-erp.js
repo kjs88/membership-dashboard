@@ -2,6 +2,10 @@
 // ════════════════════════════════════
 let productPersonId = 'all';
 let productCategoryId = 'all';
+// 제품/등급 페이지네이션·정렬 상태 (clients.js에서 이동)
+let _prodSortCol = 'sales', _prodSortDir = 'desc';
+let _prodPage = 1, _prodList = [];
+let _gradePage = 1, _gradeList = [];
 const PRODUCT_CATEGORY_ORDER = [
   '전동침대',
   '수동휠체어',
@@ -95,18 +99,11 @@ let gradeTiers = (() => {
   {id:'g4', name:'C등급', color:'#9AB0AA', min:0},
   ];
 })();
-let gradeOverrides = getShared('sj-grade-overrides', {}); // {clientName: gradeId|'auto'}
 
 function getAutoGrade(sales) {
   const tiers = [...gradeTiers].sort((a,b)=>b.min-a.min);
   for (const t of tiers) { if (sales >= t.min) return t; }
   return tiers[tiers.length-1] || null;
-}
-
-
-function addGradeTier() {
-  gradeTiers.push({id:'g'+Date.now(), name:'새등급', color:'#7856C8', min:0});
-  renderGradeSettings(); renderGrade();
 }
 
 function saveGradeSettings() {
@@ -333,6 +330,7 @@ function addGradeTier() {
   gradeTiers.push({ id: 'g'+Date.now(), name: '신규등급', color: '#999999', min: 0 });
   setShared('sj-grade-tiers', gradeTiers);
   renderGradeSettings();
+  renderGrade();
 }
 
 function renderGradeSettings() {
@@ -354,10 +352,6 @@ function removeGradeTier(i) {
   setShared('sj-grade-tiers', gradeTiers);
   renderGradeSettings();
   renderGrade();
-}
-
-function getClientGrade(salesAmt) {
-  return getAutoGrade(salesAmt);
 }
 
 function renderGrade() {
@@ -519,7 +513,6 @@ function setManualGrade(name, grade) {
 // ERP API 연동 / 수동 업로드
 // ════════════════════════════════════
 let erpParsedByBasis = { order: [], ship: [] };
-const ERP_SYNC_ENDPOINT = '/.netlify/functions/erp-sync';
 const ERP_TRIGGER_SYNC_ENDPOINT = '/.netlify/functions/erp-trigger-sync';
 const ERP_REMOTE_DATA_PATH = 'erp/latest';
 const ERP_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000;
@@ -1128,38 +1121,6 @@ async function erpRunUnifiedRefresh() {
       btn.disabled = false;
       btn.textContent = originalText || '새로고침';
     }
-  }
-}
-
-async function erpSyncFromApi(options = {}) {
-  const silent = options.silent === true;
-  const sourceLabel = options.auto ? 'amarans-api-auto' : 'amarans-api';
-  if (!silent) erpSetStatus('info', '아마란스 API에서 데이터를 가져오는 중입니다.');
-  try {
-    const res = await fetch(ERP_SYNC_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ basis: 'both' }),
-    });
-    const payload = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(payload.message || payload.error || `ERP API 동기화 실패 (${res.status})`);
-
-    const parsedOrder = erpNormalizeApiRows(erpExtractApiRows(payload, 'order'), 'order');
-    const parsedShip = erpNormalizeApiRows(erpExtractApiRows(payload, 'ship'), 'ship');
-    if (!parsedOrder.length || !parsedShip.length) {
-      throw new Error(`API 응답에서 주문/출고 데이터를 모두 찾지 못했습니다. 주문 ${parsedOrder.length}건, 출고 ${parsedShip.length}건`);
-    }
-
-    erpSaveRows(parsedOrder, parsedShip, options.auto ? sourceLabel : (payload.source || sourceLabel));
-    erpRenderSyncPreview(parsedOrder, parsedShip, 'API 동기화 결과');
-    if (!silent) {
-      erpSetStatus('ok', `동기화 완료 · 주문 <strong>${parsedOrder.length.toLocaleString()}건</strong> / 출고 <strong>${parsedShip.length.toLocaleString()}건</strong>`);
-      showToast('ERP API 데이터가 반영되었습니다.', 'success');
-    }
-    return { ok: true, orderCount: parsedOrder.length, shipCount: parsedShip.length };
-  } catch (err) {
-    if (!silent) erpSetStatus('error', `ERP API 동기화 오류: ${err.message}`);
-    return { ok: false, error: err.message };
   }
 }
 
