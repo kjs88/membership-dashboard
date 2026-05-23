@@ -375,7 +375,7 @@ function renderGradeSettings() {
       <input type="color" class="gt-color" value="${safeColor(t.color)}" style="width:32px;height:32px;border:none;border-radius:4px;cursor:pointer;padding:0;background:none" />
       <input class="gt-name form-input" value="${escHtml(t.name)}" placeholder="등급명" style="width:100px;font-weight:600" />
       <span style="font-size:12px;color:var(--text2);white-space:nowrap">월 매출</span>
-      <input class="gt-min form-input" type="number" value="${t.min}" placeholder="0" style="width:90px;font-family:var(--mono)" />
+      <input class="gt-min form-input" type="number" value="${t.min}" placeholder="0" style="width:150px;font-family:var(--mono);text-align:right" />
       <span style="font-size:12px;color:var(--text2)">원 이상</span>
       <button class="btn-sm btn-danger" onclick="removeGradeTier(${i})" style="margin-left:auto;padding:4px 10px">삭제</button>
     </div>`).join('');

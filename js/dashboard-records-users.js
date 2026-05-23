@@ -31,6 +31,38 @@ function renderDashboard() {
   if (dashActive)  renderDashPage();
 }
 
+// 월말 매출 예측용 페이싱 비율: 과거 월들이 'curDay까지 누적한 매출 / 그 달 전체 매출'의 평균.
+// 월초 매출이 크고 월말로 갈수록 줄어드는 패턴이면 이 비율이 (선형 경과비율보다) 커져서 과대추정을 막아준다.
+// 반환: 0~1 누적비율 g (데이터 부족 시 null → 호출부에서 선형 fallback)
+function forecastMonthByPacing(ym, todayStr) {
+  if (!allOrders || !allOrders.length) return null;
+  const curDay = parseInt(todayStr.slice(8, 10), 10);
+  if (!curDay) return null;
+  const byMonth = {}; // 'YYYY-MM' -> { day: sales }
+  allOrders.forEach(o => {
+    const d = o.date || '';
+    if (d.length < 10) return;
+    const m = d.slice(0, 7), day = parseInt(d.slice(8, 10), 10);
+    if (!byMonth[m]) byMonth[m] = {};
+    byMonth[m][day] = (byMonth[m][day] || 0) + (parseFloat(o.supply) || 0);
+  });
+  const histMonths = Object.keys(byMonth).filter(m => m < ym).sort().slice(-6); // 최근 완료 6개월
+  const fracs = [];
+  histMonths.forEach(m => {
+    const days = byMonth[m];
+    const total = Object.values(days).reduce((s, v) => s + v, 0);
+    if (total <= 0) return;
+    const [yy, mm] = m.split('-').map(Number);
+    const monthLen = new Date(yy, mm, 0).getDate();
+    const upto = Math.min(curDay, monthLen);
+    let cum = 0;
+    for (let d = 1; d <= upto; d++) cum += (days[d] || 0);
+    fracs.push(cum / total);
+  });
+  if (!fracs.length) return null;
+  return fracs.reduce((s, v) => s + v, 0) / fracs.length;
+}
+
 function renderSalesPage() {
   const fmtYmd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const now = new Date();
@@ -121,16 +153,24 @@ function renderSalesPage() {
   const passedWorkdays = dailyDowType.filter((t,i) => { const ds = ym+'-'+String(i+1).padStart(2,'0'); return t === 'weekday' && ds <= today; }).length;
   const wdEl = document.getElementById('sh-workdays-label');
   if (wdEl) wdEl.textContent = `영업일 ${workdays}일 (경과 ${passedWorkdays}일)`;
-  // 월말 매출 예측 (경과 영업일 run-rate)
+  // 월말 매출 예측 (과거 월별 페이싱 반영 — 월초 집중/월말 감소 패턴 보정, 데이터 부족 시 선형 fallback)
   const fcEl = document.getElementById('sh-month-forecast');
   if (fcEl) {
     if (useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays) {
-      const forecast = Math.round(monthSales / passedWorkdays * workdays);
+      const pace = forecastMonthByPacing(ym, today);
+      const usePace = pace && pace >= 0.05;
+      const forecast = usePace
+        ? Math.round(monthSales / pace)
+        : Math.round(monthSales / passedWorkdays * workdays);
       let s = `📈 예상 월말 ${forecast.toLocaleString()}원`;
       if (targets.salesTarget) s += ` · 목표 ${Math.min(Math.round(forecast / targets.salesTarget * 100), 999)}%`;
       fcEl.textContent = s;
+      fcEl.title = usePace
+        ? `과거 매출 페이싱 반영 (이번달 ${today.slice(8,10)}일까지 보통 누적 ${Math.round(pace*100)}% 시점)`
+        : '경과 영업일 기준 단순 추정';
     } else {
       fcEl.textContent = '';
+      fcEl.title = '';
     }
   }
   rcDaily('chart-sales-daily', dayLabels, daySalesData, dailyBarColors, dailyDowType);
