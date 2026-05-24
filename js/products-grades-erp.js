@@ -636,7 +636,7 @@ function setManualGrade(name, grade) {
 let erpParsedByBasis = { order: [], ship: [] };
 const ERP_TRIGGER_SYNC_ENDPOINT = '/.netlify/functions/erp-trigger-sync';
 const ERP_REMOTE_DATA_PATH = 'erp/latest';
-const ERP_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000;
+const ERP_AUTO_SYNC_INTERVAL_MS = 10 * 60 * 1000;
 const ERP_AUTO_SYNC_CHECK_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
 const ERP_AUTO_SYNC_LOCK_MS = 10 * 60 * 1000;
@@ -1153,6 +1153,21 @@ async function erpRefreshFromRemote(options = {}) {
     return { ok: false, error: message };
   }
 
+  const todayYmd = erpGetKstParts().ymd;
+  const needDailyFull = options.force === true || erpReadAutoSyncMeta()?.lastFullYmd !== todayYmd;
+  if (!needDailyFull) {
+    try {
+      const tsRes = await fetch(`${url.replace(/\.json$/, '/syncedAt.json')}?_=${Date.now()}`, { method: 'GET', cache: 'no-store' });
+      if (tsRes.ok) {
+        const remoteSyncedAt = await tsRes.json().catch(() => null);
+        if (remoteSyncedAt && !erpIsNewerRemoteSync(remoteSyncedAt, erpReadSyncMeta()?.syncedAt || '')) {
+          erpRefreshSyncStatus();
+          return { ok: true, cached: true, syncedAt: erpReadSyncMeta()?.syncedAt || '' };
+        }
+      }
+    } catch (_) {}
+  }
+
   if (!silent) erpSetStatus('info', 'Firebase에서 최신 ERP 데이터를 불러오는 중입니다.');
   try {
     const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`, {
@@ -1177,6 +1192,7 @@ async function erpRefreshFromRemote(options = {}) {
       setPlainStorage('sj-erp-sync-meta', JSON.stringify(meta));
       erpRefreshSyncStatus();
     }
+    erpWriteAutoSyncMeta({ lastFullYmd: todayYmd });
     erpRenderSyncPreview(parsedOrder, parsedShip, 'Firebase 최신 ERP 데이터');
 
     if (!silent) {
@@ -1236,7 +1252,7 @@ async function erpRunUnifiedRefresh() {
     btn.textContent = '새로고침 중...';
   }
   try {
-    return await erpTriggerCollectorAndRefresh();
+    return await erpRefreshFromRemote({ force: true });
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -1277,7 +1293,7 @@ function erpShouldAutoSync() {
   const syncMeta = erpReadSyncMeta();
   const lastSynced = syncMeta?.syncedAt ? erpParseSyncDate(syncMeta.syncedAt).getTime() : 0;
   if (Number.isFinite(lastSynced) && lastSynced && now - lastSynced < ERP_AUTO_SYNC_INTERVAL_MS) {
-    return { ok: false, reason: '1시간 미도래' };
+    return { ok: false, reason: '수집 주기 미도래' };
   }
   return { ok: true };
 }
