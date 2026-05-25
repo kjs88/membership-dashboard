@@ -84,6 +84,8 @@ function renderStats() {
       startDate = new Date(_now.getFullYear(), _now.getMonth(), 1);
       endDate = new Date(_now.getFullYear(), _now.getMonth()+1, 0);
     }
+    // 일별 차트는 월 전체(말일까지) 표시
+    endDate = new Date(endDate.getFullYear(), endDate.getMonth()+1, 0);
     const DOW = ['일','월','화','수','목','금','토'];
     const HOLI = {'01-01':'신정','03-01':'삼일절','05-05':'어린이날','06-06':'현충일','08-15':'광복절','10-03':'개천절','10-09':'한글날','12-25':'크리스마스'};
     const LUNAR = {'2026-02-16':'설','2026-02-17':'설','2026-02-18':'설','2026-05-24':'부처님','2026-09-24':'추석','2026-09-25':'추석','2026-09-26':'추석'};
