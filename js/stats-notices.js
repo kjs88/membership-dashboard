@@ -100,7 +100,7 @@ function renderStats() {
       const isRed = LUNAR[ds]||HOLI[mmdd]||dow===0||dow===6;
       // 라벨: 기간이 한 달 안이면 "일+요일", 더 길면 "월/일"
       const labelMain = totalDays > 31 ? (dt.getMonth()+1)+'/'+dt.getDate() : dt.getDate()+'일';
-      dLabels.push([labelMain, DOW[dow]+(isRed?'🔴':'')]);
+      dLabels.push([labelMain, DOW[dow]]);
       dDows.push(LUNAR[ds]?'holiday':dow===0?'sun':dow===6?'sat':'weekday');
       dColors.push(isRed?'#D94040CC':'#2B72C8CC');
       const dayOrders = O.filter(o=>o.date===ds);

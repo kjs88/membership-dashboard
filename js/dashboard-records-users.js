@@ -142,7 +142,7 @@ function renderSalesPage() {
     const holidayName = LUNAR_HOLIDAYS[ds] || (HOLIDAYS[mmdd] ? HOLIDAYS[mmdd] : null);
     const isSun = dow === 0, isSat = dow === 6, isRed = holidayName || isSun || isSat;
     dailyDowType.push(holidayName ? 'holiday' : isSun ? 'sun' : isSat ? 'sat' : 'weekday');
-    dayLabels.push([d+'일', holidayName ? DOW[dow]+'🔴' : DOW[dow]]);
+    dayLabels.push([d+'일', DOW[dow]]);
     daySalesData.push(useErpForCharts
       ? (ds > today ? 0 : Math.round(allOrders.filter(e=>e.date===ds).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
       : allEntries.filter(e=>e.date===ds).reduce((s,e)=>s+(e.ourPurchase||0),0));
@@ -291,7 +291,7 @@ function renderDashPage() {
       const ds=d.toISOString().split('T')[0];
       const dow=d.getDay(); const mmdd=ds.slice(5);
       const isRed=LUNAR[ds]||HOLIDAYS[mmdd]||dow===0||dow===6;
-      dLabels.push([ds.slice(8)+'일', DOW[dow]+(isRed?'🔴':'')]);
+      dLabels.push([ds.slice(8)+'일', DOW[dow]]);
       dData.push(pool.filter(e=>e.date===ds).length);
       dColors.push(isRed?'#D94040CC':'#2B72C8CC');
       dDows.push(LUNAR[ds]?'holiday':dow===0?'sun':dow===6?'sat':'weekday');
