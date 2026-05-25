@@ -132,14 +132,12 @@ function renderSalesPage() {
   const daysInMonth = new Date(parseInt(ym.split('-')[0]), parseInt(ym.split('-')[1]), 0).getDate();
   const dayLabels = [], daySalesData = [], dailyBarColors = [];
   const DOW = ['일','월','화','수','목','금','토'];
-  const HOLIDAYS = {'01-01':'신정','03-01':'삼일절','05-05':'어린이날','06-06':'현충일','08-15':'광복절','10-03':'개천절','10-09':'한글날','12-25':'크리스마스'};
-  const LUNAR_HOLIDAYS = {'2025-01-28':'설연휴','2025-01-29':'설날','2025-01-30':'설연휴','2025-05-05':'어린이날/부처님오신날','2025-10-05':'추석연휴','2025-10-06':'추석','2025-10-07':'추석연휴','2026-02-16':'설연휴','2026-02-17':'설날','2026-02-18':'설연휴','2026-05-24':'부처님오신날','2026-09-24':'추석연휴','2026-09-25':'추석','2026-09-26':'추석연휴'};
   const dailyDowType = [];
   for (let d=1; d<=daysInMonth; d++) {
     const ds = ym + '-' + String(d).padStart(2,'0');
     const dow = new Date(ds).getDay();
     const mmdd = ds.slice(5);
-    const holidayName = LUNAR_HOLIDAYS[ds] || (HOLIDAYS[mmdd] ? HOLIDAYS[mmdd] : null);
+    const holidayName = krHolidayName(ds);
     const isSun = dow === 0, isSat = dow === 6, isRed = holidayName || isSun || isSat;
     dailyDowType.push(holidayName ? 'holiday' : isSun ? 'sun' : isSat ? 'sat' : 'weekday');
     dayLabels.push([d+'일', DOW[dow]]);
@@ -283,18 +281,16 @@ function renderDashPage() {
 
     // 일별 방문 차트 (최근 14일)
     const DOW=['일','월','화','수','목','금','토'];
-    const HOLIDAYS={'01-01':'신정','03-01':'삼일절','05-05':'어린이날','06-06':'현충일','08-15':'광복절','10-03':'개천절','10-09':'한글날','12-25':'크리스마스'};
-    const LUNAR={'2026-02-16':'설','2026-02-17':'설','2026-02-18':'설','2026-05-24':'부처님','2026-09-24':'추석','2026-09-25':'추석','2026-09-26':'추석'};
     const dLabels=[], dData=[], dColors=[], dDows=[];
     for(let i=13;i>=0;i--){
       const d=new Date(now); d.setDate(d.getDate()-i);
       const ds=d.toISOString().split('T')[0];
       const dow=d.getDay(); const mmdd=ds.slice(5);
-      const isRed=LUNAR[ds]||HOLIDAYS[mmdd]||dow===0||dow===6;
+      const hol=krHolidayName(ds), isRed=hol||dow===0||dow===6;
       dLabels.push([ds.slice(8)+'일', DOW[dow]]);
       dData.push(pool.filter(e=>e.date===ds).length);
       dColors.push(isRed?'#D94040CC':'#2B72C8CC');
-      dDows.push(LUNAR[ds]?'holiday':dow===0?'sun':dow===6?'sat':'weekday');
+      dDows.push(hol?'holiday':dow===0?'sun':dow===6?'sat':'weekday');
     }
     if (typeof rcDaily === 'function') rcDaily('chart-daily', dLabels, dData, dColors, dDows);
 

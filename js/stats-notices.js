@@ -87,8 +87,6 @@ function renderStats() {
     // 일별 차트는 월 전체(말일까지) 표시
     endDate = new Date(endDate.getFullYear(), endDate.getMonth()+1, 0);
     const DOW = ['일','월','화','수','목','금','토'];
-    const HOLI = {'01-01':'신정','03-01':'삼일절','05-05':'어린이날','06-06':'현충일','08-15':'광복절','10-03':'개천절','10-09':'한글날','12-25':'크리스마스'};
-    const LUNAR = {'2026-02-16':'설','2026-02-17':'설','2026-02-18':'설','2026-05-24':'부처님','2026-09-24':'추석','2026-09-25':'추석','2026-09-26':'추석'};
     const dayMs = 86400000;
     const totalDays = Math.round((endDate - startDate) / dayMs) + 1;
     const dLabels=[], dSales=[], dQty=[], dColors=[], dDows=[];
@@ -97,11 +95,11 @@ function renderStats() {
       const ds = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
       const dow = dt.getDay();
       const mmdd = ds.slice(5);
-      const isRed = LUNAR[ds]||HOLI[mmdd]||dow===0||dow===6;
+      const hol = krHolidayName(ds), isRed = hol||dow===0||dow===6;
       // 라벨: 기간이 한 달 안이면 "일+요일", 더 길면 "월/일"
       const labelMain = totalDays > 31 ? (dt.getMonth()+1)+'/'+dt.getDate() : dt.getDate()+'일';
       dLabels.push([labelMain, DOW[dow]]);
-      dDows.push(LUNAR[ds]?'holiday':dow===0?'sun':dow===6?'sat':'weekday');
+      dDows.push(hol?'holiday':dow===0?'sun':dow===6?'sat':'weekday');
       dColors.push(isRed?'#D94040CC':'#2B72C8CC');
       const dayOrders = O.filter(o=>o.date===ds);
       dSales.push(Math.round(dayOrders.reduce((s,o)=>s+(parseFloat(o.supply)||0),0)));
