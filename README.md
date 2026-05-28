@@ -8,6 +8,24 @@
 - Repository: `kjs88/membership-dashboard`
 - Deploy source: GitHub Pages, `main` branch root
 
+## 원클릭 작업
+
+다른 PC에서 처음 세팅할 때는 PowerShell에서 아래 한 줄만 실행합니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Join-Path $env:TEMP 'membership-dashboard-setup.ps1'; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/kjs88/membership-dashboard/main/scripts/setup-workspace.ps1' -OutFile $p; & $p"
+```
+
+이 명령은 `C:\Users\사용자명\Downloads\dashboard_fixed_v9_app`에 저장소를 clone 또는 pull 하고, 로컬 확인용 서버를 연 뒤 브라우저를 띄웁니다.
+
+처음 한 번은 GitHub 로그인이 필요할 수 있습니다. GitHub CLI(`gh`)가 설치되어 있으면 로그인 화면을 열고, 없으면 `git push` 시점에 브라우저 인증이 뜰 수 있습니다.
+
+작업 폴더 안에서는 아래 파일을 더블클릭해서 쓰면 됩니다.
+
+- `start-local.cmd`: 로컬 서버 실행 후 브라우저 열기
+- `deploy.cmd`: 수정분을 커밋, 푸시, GitHub Pages 상태 확인
+- `stop-local.cmd`: 로컬 서버 종료
+
 ## 운영 구조
 
 1. `index.html`과 정적 파일은 GitHub Pages에서 서빙합니다.
@@ -22,11 +40,13 @@
 
 Netlify 배포는 사용하지 않습니다.
 
-수정 후 아래 순서로 반영합니다.
+수정 후 자동 배포는 `deploy.cmd` 더블클릭으로 처리합니다. 내부 동작은 아래와 같습니다.
 
 ```powershell
-git add .
-git commit -m "변경 내용"
+git diff --check
+git add -A
+git commit -m "update: dashboard YYYY-MM-DD HH:mm"
+git pull --rebase origin main
 git push origin main
 ```
 
@@ -79,10 +99,15 @@ git push origin main
 - `js/stats-notices.js`: 실적 분석, 공지사항, 재방문 화면
 - `.github/workflows/amarans-sync.yml`: 아마란스 자동/수동 수집
 - `scripts/amarans_api_v10.py`: 아마란스 Playwright 수집기
+- `scripts/setup-workspace.ps1`: 다른 PC 최초 세팅
+- `scripts/start-local.ps1`: 로컬 서버 실행
+- `scripts/deploy.ps1`: 커밋/푸시/배포 확인
 
 ## 로컬 실행
 
-정적 파일이라 `index.html`을 직접 열어도 동작합니다. 브라우저 보안/CORS 이슈가 있으면 간단한 로컬 서버로 확인합니다.
+원클릭 실행은 `start-local.cmd`를 더블클릭합니다.
+
+직접 실행하려면:
 
 ```powershell
 python -m http.server 8000

@@ -17,5 +17,5 @@ __pycache__/
 js/erp-data.js
 downloads/api/
 
-# Netlify local metadata
-.netlify/
+# Local helper state
+.local-server.pid
