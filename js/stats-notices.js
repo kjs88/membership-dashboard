@@ -118,7 +118,150 @@ function renderStats() {
     }
 
     if (typeof genReport === 'function') genReport(reportMode, null);
+    if (typeof renderStatsAbc === 'function') renderStatsAbc();
   } catch(e) { console.error('[renderStats]', e); }
+}
+
+function renderStatsAbc() {
+  const summaryEl = document.getElementById('stats-abc-summary');
+  const tableEl = document.getElementById('stats-abc-table');
+  const subEl = document.getElementById('stats-abc-sub');
+  const canvas = document.getElementById('chart-stats-abc');
+  if (!summaryEl || !tableEl || !canvas) return;
+
+  if (charts['chart-stats-abc']) { charts['chart-stats-abc'].destroy(); delete charts['chart-stats-abc']; }
+  if (!allOrders || !allOrders.length) {
+    summaryEl.innerHTML = '<div style="color:var(--text3);padding:12px">ERP 데이터가 없습니다.</div>';
+    tableEl.innerHTML = '';
+    if (subEl) subEl.textContent = '';
+    return;
+  }
+
+  const basisMeta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고' };
+  const dateFrom = document.getElementById('stats-date-from')?.value || '';
+  const dateTo = document.getElementById('stats-date-to')?.value || '';
+  const inRange = d => (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
+  const personName = statsPersonId === 'all' ? null : (allUsers.find(u=>u.id===statsPersonId)?.name || null);
+  const catSel = document.getElementById('stats-abc-category');
+  const limitSel = document.getElementById('stats-abc-limit');
+
+  if (catSel && catSel.options.length <= 1) {
+    const cats = [...new Set(allOrders.map(o => (o.category||'').trim()).filter(Boolean))].sort();
+    cats.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; catSel.appendChild(opt); });
+  }
+  const catFilter = catSel?.value || '';
+  const limit = parseInt(limitSel?.value || '50', 10);
+
+  const filtered = allOrders.filter(o => {
+    if (!o.product) return false;
+    if (statsPersonId !== 'all' && o.person !== personName) return false;
+    if (!inRange(o.date || '')) return false;
+    if (catFilter && (o.category||'').trim() !== catFilter) return false;
+    return true;
+  });
+
+  const byProduct = {};
+  filtered.forEach(o => {
+    const k = o.product;
+    if (!byProduct[k]) byProduct[k] = { name: k, category: (o.category||'').trim(), supply: 0, qty: 0, count: 0 };
+    byProduct[k].supply += parseFloat(o.supply) || 0;
+    byProduct[k].qty += parseFloat(o.qty) || 0;
+    byProduct[k].count += 1;
+  });
+  const items = Object.values(byProduct).filter(i => i.supply > 0).sort((a,b) => b.supply - a.supply);
+  const total = items.reduce((s,i) => s + i.supply, 0);
+
+  const fmt = d => d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0');
+  const _now = new Date();
+  const defStart = new Date(_now.getFullYear(), _now.getMonth(), 1);
+  const defEnd = new Date(_now.getFullYear(), _now.getMonth()+1, 0);
+  const startDate = dateFrom ? new Date(dateFrom) : defStart;
+  const endDate = dateTo ? new Date(dateTo) : defEnd;
+  const periodLabel = (dateFrom||dateTo) ? `${fmt(startDate)} ~ ${fmt(endDate)}` : `${startDate.getFullYear()}년 ${startDate.getMonth()+1}월`;
+  if (subEl) subEl.textContent = `${periodLabel} · ${basisMeta.label} 기준 · ${catFilter || '전체 대분류'} · 총 ${items.length}개 품목`;
+
+  if (!items.length || total <= 0) {
+    summaryEl.innerHTML = '<div style="color:var(--text3);padding:12px">선택한 기간에 해당 데이터가 없습니다.</div>';
+    tableEl.innerHTML = '';
+    return;
+  }
+
+  let cum = 0;
+  items.forEach(it => {
+    it.share = it.supply / total * 100;
+    cum += it.share;
+    it.cumShare = cum;
+    it.grade = it.cumShare <= 80 ? 'A' : it.cumShare <= 95 ? 'B' : 'C';
+  });
+
+  const grades = [
+    {g:'A', label:'A등급 (~80%)', color:'#D94040'},
+    {g:'B', label:'B등급 (80~95%)', color:'#E8900A'},
+    {g:'C', label:'C등급 (95~100%)', color:'#43A047'},
+  ];
+  summaryEl.innerHTML = grades.map(({g,label,color}) => {
+    const arr = items.filter(i => i.grade===g);
+    const sum = arr.reduce((s,i)=>s+i.supply, 0);
+    const pct = total ? (sum/total*100) : 0;
+    return `<div style="flex:1;min-width:170px;border:1px solid var(--border);border-left:4px solid ${color};border-radius:6px;padding:10px 12px;background:var(--surface)">
+      <div style="font-size:11px;color:var(--text2);font-weight:600">${label}</div>
+      <div style="font-size:18px;font-weight:700;color:${color};margin:2px 0">${arr.length}개 품목</div>
+      <div style="font-size:12px;color:var(--text2)">${Math.round(sum).toLocaleString()}원 (${pct.toFixed(1)}%)</div>
+    </div>`;
+  }).join('');
+
+  const shown = limit > 0 ? items.slice(0, limit) : items;
+  const labels = shown.map(i => i.name);
+  const barData = shown.map(i => Math.round(i.supply));
+  const lineData = shown.map(i => i.cumShare);
+  const barColors = shown.map(i => i.grade==='A' ? '#D94040CC' : i.grade==='B' ? '#E8900ACC' : '#43A047CC');
+
+  charts['chart-stats-abc'] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { type:'bar', label:'매출(원)', data: barData, backgroundColor: barColors, borderWidth: 0, yAxisID:'y', order: 2 },
+        { type:'line', label:'누적 %', data: lineData, borderColor:'#2B72C8', backgroundColor:'#2B72C822', yAxisID:'y1', tension:0.2, pointRadius:2, borderWidth:2, order: 1 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const it = shown[ctx.dataIndex];
+              if (ctx.dataset.type === 'line') return ` 누적 ${ctx.parsed.y.toFixed(1)}%`;
+              return ` 매출 ${Math.round(ctx.parsed.y).toLocaleString()}원 (점유 ${it.share.toFixed(1)}%, 수량 ${it.qty.toLocaleString()}, ${it.grade})`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxRotation: 60, minRotation: 60, autoSkip: false } },
+        y: { position: 'left', ticks: { font: { size: 10 }, callback: v => (v/10000).toLocaleString()+'만' }, title: { display: true, text: '매출(만원)', font: { size: 10 } } },
+        y1: { position: 'right', min: 0, max: 100, grid: { display: false }, ticks: { font: { size: 10 }, callback: v => v+'%' }, title: { display: true, text: '누적 %', font: { size: 10 } } },
+      },
+    },
+  });
+
+  tableEl.innerHTML = shown.map((it, i) => {
+    const gColor = it.grade==='A'?'#D94040':it.grade==='B'?'#E8900A':'#43A047';
+    return `<tr style="border-top:1px solid var(--border);text-align:center">
+      <td style="padding:6px 6px;font-family:var(--mono)">${i+1}</td>
+      <td style="padding:6px 8px;text-align:left">${escHtml(it.name)}</td>
+      <td style="padding:6px 6px;color:var(--text2)">${escHtml(it.category||'-')}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${Math.round(it.supply).toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${it.qty.toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${it.share.toFixed(1)}%</td>
+      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${it.cumShare.toFixed(1)}%</td>
+      <td style="padding:6px 6px;color:${gColor};font-weight:700">${it.grade}</td>
+    </tr>`;
+  }).join('');
 }
 
 function setStatsPerson(id, el) {
