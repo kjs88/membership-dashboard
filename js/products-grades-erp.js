@@ -305,6 +305,7 @@ function renderProdAbc() {
   const tableEl = document.getElementById('prod-abc-table');
   const subEl = document.getElementById('prod-abc-sub');
   const canvas = document.getElementById('chart-prod-abc');
+  const insightEl = document.getElementById('prod-abc-insights');
   if (!summaryEl || !tableEl || !canvas) return;
 
   if (charts['chart-prod-abc']) { charts['chart-prod-abc'].destroy(); delete charts['chart-prod-abc']; }
@@ -312,6 +313,7 @@ function renderProdAbc() {
     summaryEl.innerHTML = '<div style="color:var(--text3);padding:12px">ERP 데이터가 없습니다.</div>';
     tableEl.innerHTML = '';
     if (subEl) subEl.textContent = '';
+    if (insightEl) insightEl.innerHTML = '';
     return;
   }
 
@@ -357,6 +359,7 @@ function renderProdAbc() {
   if (!items.length || total <= 0) {
     summaryEl.innerHTML = '<div style="color:var(--text3);padding:12px">선택한 기간에 해당 데이터가 없습니다.</div>';
     tableEl.innerHTML = '';
+    if (insightEl) insightEl.innerHTML = '';
     return;
   }
 
@@ -383,6 +386,113 @@ function renderProdAbc() {
       <div style="font-size:12px;color:var(--text2)">${Math.round(sum).toLocaleString()}원 (${pct.toFixed(1)}%)</div>
     </div>`;
   }).join('');
+
+  if (insightEl) {
+    const insights = [];
+    const aArr = items.filter(i => i.grade === 'A');
+    const cArr = items.filter(i => i.grade === 'C');
+    const aSharePct = items.length ? (aArr.length / items.length * 100) : 0;
+    const cSharePct = items.length ? (cArr.length / items.length * 100) : 0;
+    const cSalesPct = total ? (cArr.reduce((s,i)=>s+i.supply,0) / total * 100) : 0;
+    const top1 = items[0];
+    const top3Sum = items.slice(0,3).reduce((s,i)=>s+i.share, 0);
+
+    if (aSharePct < 10) {
+      insights.push({ color:'#D94040', bg:'#FEF2F2', title:'⚠ 매우 집중된 구조',
+        text:`상위 ${aArr.length}개 품목(전체의 ${aSharePct.toFixed(1)}%)이 매출의 80%를 담당. 핵심 품목 이슈 시 타격 큼.`,
+        action:'A등급 안전재고 강화 + 백업 공급선 확보 + 결품 모니터링 강화' });
+    } else if (aSharePct > 25) {
+      insights.push({ color:'#2B72C8', bg:'#EFF6FF', title:'🌐 분산 구조',
+        text:`상위 ${aArr.length}개 품목(전체의 ${aSharePct.toFixed(1)}%)이 매출의 80% — 매출이 잘 분산됨. 안정적이나 집중 효과는 낮음.`,
+        action:'A 중에서도 핵심 5~10개 식별해 영업 자원 집중 권장' });
+    } else {
+      insights.push({ color:'#43A047', bg:'#F0FDF4', title:'✓ 표준 파레토 구조',
+        text:`상위 ${aArr.length}개 품목(전체의 ${aSharePct.toFixed(1)}%)이 매출의 80%. 일반적 도매 패턴.`,
+        action:'현 구조 유지 + A등급 안정 관리' });
+    }
+
+    if (top1 && top1.share >= 25) {
+      insights.push({ color:'#D94040', bg:'#FEF2F2', title:'⚠ 단일 품목 의존도',
+        text:`1위 "${escHtml(top1.name)}"이 매출의 ${top1.share.toFixed(1)}% 차지. 이 품목 이슈 시 큰 손실.`,
+        action:'대체 품목 영업 강화 + 1위 품목 최우선 안전재고 + 가격 변동 최소화' });
+    } else if (top3Sum >= 50) {
+      insights.push({ color:'#E8900A', bg:'#FFFBEB', title:'⚠ 상위 3개 품목 쏠림',
+        text:`상위 3개 품목이 매출의 ${top3Sum.toFixed(1)}%. 일부 결품 시 전체 매출 영향 큼.`,
+        action:'상위 3개 결품 방지 최우선 + B등급 품목 신규 거래처 영업 확대' });
+    }
+
+    if (cSharePct >= 60 && cSalesPct < 10) {
+      insights.push({ color:'#7856C8', bg:'#FAF5FF', title:'🔄 롱테일 — SKU 단순화 기회',
+        text:`C등급 ${cArr.length}개 품목(전체의 ${cSharePct.toFixed(1)}%)이 매출 ${cSalesPct.toFixed(1)}%만 기여. 관리 비용 대비 효율 낮음.`,
+        action:'하위 품목 단종 후보 식별 + 특정 거래처 전용 여부 확인 + 묶음 판매 검토' });
+    }
+
+    if (catF === 'all' && items.length > 0) {
+      const byCat = {};
+      items.forEach(it => { const c = it.category || '미분류'; byCat[c] = (byCat[c]||0) + it.supply; });
+      const catRanked = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+      if (catRanked.length > 1) {
+        const topCatPct = total ? (catRanked[0][1] / total * 100) : 0;
+        if (topCatPct >= 50) {
+          const others = catRanked.slice(1,3).map(c=>c[0]).join(', ');
+          insights.push({ color:'#2B72C8', bg:'#EFF6FF', title:'🏷 카테고리 편중',
+            text:`'${escHtml(catRanked[0][0])}' 카테고리가 매출의 ${topCatPct.toFixed(1)}%. 한 카테고리 의존.`,
+            action:`다른 카테고리(${escHtml(others)}) 영업 확대 검토` });
+        }
+      }
+    }
+
+    if (!insights.length) {
+      insights.push({ color:'#43A047', bg:'#F0FDF4', title:'✓ 균형잡힌 매출 구조',
+        text:'특별한 쏠림이나 이상 신호가 없습니다.',
+        action:'현 영업 전략 유지 + 정기 모니터링' });
+    }
+
+    const insightHtml = insights.map(i => `
+      <div style="border-left:3px solid ${i.color};background:${i.bg};padding:10px 14px;margin-bottom:6px;border-radius:4px">
+        <div style="font-size:13px;font-weight:700;color:${i.color}">${i.title}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5">${i.text}</div>
+        <div style="font-size:11px;color:var(--text);margin-top:6px"><strong style="color:${i.color}">→ 권장 액션:</strong> ${i.action}</div>
+      </div>`).join('');
+
+    const actionGridHtml = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
+        <div style="border:1px solid var(--border);border-top:3px solid #D94040;border-radius:4px;padding:10px 12px;background:var(--surface)">
+          <div style="font-size:12px;font-weight:700;color:#D94040;margin-bottom:6px">A등급 (핵심) 영업 전략</div>
+          <ul style="font-size:11px;margin:0;padding-left:16px;color:var(--text2);line-height:1.7">
+            <li>결품 절대 방지, 안전재고 +20% 이상</li>
+            <li>핵심 거래처 우선 배정·VIP 관리</li>
+            <li>가격 변동 최소화 (충성도 유지)</li>
+            <li>대체 공급선 확보 (백업)</li>
+          </ul>
+        </div>
+        <div style="border:1px solid var(--border);border-top:3px solid #E8900A;border-radius:4px;padding:10px 12px;background:var(--surface)">
+          <div style="font-size:12px;font-weight:700;color:#E8900A;margin-bottom:6px">B등급 (성장 후보) 영업 전략</div>
+          <ul style="font-size:11px;margin:0;padding-left:16px;color:var(--text2);line-height:1.7">
+            <li>신규 거래처 추천 후보 (검증된 품목)</li>
+            <li>묶음·크로스셀로 A 승격 시도</li>
+            <li>마케팅·프로모션 확대 검토</li>
+            <li>가격 탄력 테스트 가능</li>
+          </ul>
+        </div>
+        <div style="border:1px solid var(--border);border-top:3px solid #43A047;border-radius:4px;padding:10px 12px;background:var(--surface)">
+          <div style="font-size:12px;font-weight:700;color:#43A047;margin-bottom:6px">C등급 (꼬리) 영업 전략</div>
+          <ul style="font-size:11px;margin:0;padding-left:16px;color:var(--text2);line-height:1.7">
+            <li>단종 후보 식별 (SKU 단순화)</li>
+            <li>특정 거래처 전용 여부 확인</li>
+            <li>묶음·번들 구성으로 활용</li>
+            <li>재고 최소화·주문 생산 전환</li>
+          </ul>
+        </div>
+      </div>`;
+
+    insightEl.innerHTML = `
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <span>💡</span><span>인사이트 & 영업 전략</span>
+      </div>
+      ${insightHtml}
+      ${actionGridHtml}`;
+  }
 
   const shown = limit > 0 ? items.slice(0, limit) : items;
   const labels = shown.map(i => i.name);
