@@ -1042,6 +1042,13 @@
         <div id="prod-category-filter" class="stats-person-btns product-category-btns"></div>
       </div>
     </div>
+    <!-- 탭 네비게이션 -->
+    <div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:16px">
+      <button class="prod-tab-btn" data-tab="overview" onclick="showProdTab('overview')" style="padding:10px 20px;border:none;background:transparent;font-size:14px;font-weight:700;cursor:pointer;border-bottom:3px solid var(--blue);color:var(--blue);margin-bottom:-2px">📋 품목 현황</button>
+      <button class="prod-tab-btn" data-tab="inventory" onclick="showProdTab('inventory')" style="padding:10px 20px;border:none;background:transparent;font-size:14px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;color:var(--text2);margin-bottom:-2px">📊 재고 분석</button>
+    </div>
+    <!-- Tab 1: 품목 현황 -->
+    <div id="prod-tab-overview">
     <!-- 요약 카드 -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
       <div class="kpi-card"><div class="kpi-label">품목 수</div><div class="kpi-value" id="prod-sum-items" style="font-size:26px">0</div><div class="kpi-sub">종</div></div>
@@ -1074,6 +1081,9 @@
         <div style="display:flex;gap:4px" id="prod-page-btns"></div>
       </div>
     </div>
+    </div>
+    <!-- Tab 2: 재고 분석 -->
+    <div id="prod-tab-inventory" style="display:none">
     <!-- ── 품목 ABC / 파레토 분석 ── -->
     <div class="chart-card" style="margin-top:16px;margin-bottom:16px">
       <div class="chart-card-title">📊 품목 ABC / 파레토 분석</div>
@@ -1086,6 +1096,9 @@
           <option value="100">상위 100</option>
           <option value="0">전체</option>
         </select>
+        <label style="font-size:12px;color:var(--text2);font-weight:600;margin-left:6px">리드타임</label>
+        <input type="number" id="prod-abc-leadtime" value="7" min="1" max="60" onchange="renderProdAbc()" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px;text-align:center" title="발주 후 입고까지 걸리는 일수"/>
+        <span style="font-size:12px;color:var(--text2)">일 (발주 후 입고까지)</span>
         <span style="font-size:11px;color:var(--text3);margin-left:6px">기간·영업사원·품목군·검색은 위 필터를 따릅니다.</span>
       </div>
       <div id="prod-abc-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
@@ -1095,19 +1108,21 @@
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead style="background:var(--surface);position:sticky;top:0;z-index:1">
             <tr style="text-align:center">
-              <th style="padding:8px 6px;border-bottom:1px solid var(--border);width:50px">순위</th>
+              <th style="padding:8px 4px;border-bottom:1px solid var(--border);width:40px">순위</th>
               <th style="padding:8px 6px;border-bottom:1px solid var(--border);text-align:left">품명</th>
-              <th style="padding:8px 6px;border-bottom:1px solid var(--border)">품목군</th>
+              <th style="padding:8px 4px;border-bottom:1px solid var(--border)">품목군</th>
+              <th style="padding:8px 4px;border-bottom:1px solid var(--border)" title="선택 기간 일평균 출고수량">일평균</th>
+              <th style="padding:8px 4px;border-bottom:1px solid var(--border);background:#FEF2F2" title="평소 절대 이하로 떨어지면 안 되는 최소 재고 (등급별 안전일수 적용)">안전재고</th>
+              <th style="padding:8px 4px;border-bottom:1px solid var(--border);background:#FEF2F2" title="한 번 발주 시 권장 수량 (등급별 발주주기 적용)">권장 발주</th>
+              <th style="padding:8px 4px;border-bottom:1px solid var(--border);background:#FEF2F2" title="이 수량 이하면 즉시 발주 권장 (리드타임 + 안전재고)">발주점</th>
               <th style="padding:8px 6px;border-bottom:1px solid var(--border)">매출(원)</th>
-              <th style="padding:8px 6px;border-bottom:1px solid var(--border)">수량</th>
-              <th style="padding:8px 6px;border-bottom:1px solid var(--border)">점유율</th>
-              <th style="padding:8px 6px;border-bottom:1px solid var(--border)">누적%</th>
-              <th style="padding:8px 6px;border-bottom:1px solid var(--border);width:60px">등급</th>
+              <th style="padding:8px 4px;border-bottom:1px solid var(--border);width:50px">등급</th>
             </tr>
           </thead>
           <tbody id="prod-abc-table"></tbody>
         </table>
       </div>
+    </div>
     </div>
   </div>
 
@@ -1530,7 +1545,7 @@
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/storage.js?v=20260521-erp-runtime"></script>
 <script src="js/state.js?v=20260525-holidays"></script>
-<script src="js/products-grades-erp.js?v=20260525-abc-insights"></script>
+<script src="js/products-grades-erp.js?v=20260525-tabs-stock"></script>
 <script src="js/core-auth-nav.js?v=20260525-rename"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
 <script src="js/dashboard-records-users.js?v=20260525-holidays"></script>

@@ -182,6 +182,21 @@ function setProductCategory(id) {
   renderProducts();
 }
 
+function showProdTab(id) {
+  const tabs = document.querySelectorAll('.prod-tab-btn');
+  tabs.forEach(b => {
+    const isActive = b.dataset.tab === id;
+    b.style.borderBottom = isActive ? '3px solid var(--blue)' : '3px solid transparent';
+    b.style.color = isActive ? 'var(--blue)' : 'var(--text2)';
+    b.style.fontWeight = isActive ? '700' : '600';
+  });
+  const ov = document.getElementById('prod-tab-overview');
+  const inv = document.getElementById('prod-tab-inventory');
+  if (ov) ov.style.display = id === 'overview' ? '' : 'none';
+  if (inv) inv.style.display = id === 'inventory' ? '' : 'none';
+  if (id === 'inventory' && typeof renderProdAbc === 'function') renderProdAbc();
+}
+
 function renderProducts() {
   updateOrderBasisUI();
   const salesUsers = allUsers.filter(u => u.role === 'user');
@@ -533,17 +548,29 @@ function renderProdAbc() {
     },
   });
 
+  const today = new Date(); today.setHours(0,0,0,0);
+  const effEnd = endDate > today ? today : endDate;
+  const daysInPeriod = Math.max(1, Math.round((effEnd - startDate) / 86400000) + 1);
+  const leadTime = Math.max(1, parseInt(document.getElementById('prod-abc-leadtime')?.value || '7', 10));
+  const stockParams = { A: { safetyDays:10, orderCycle:7 }, B: { safetyDays:5, orderCycle:14 }, C: { safetyDays:3, orderCycle:30 } };
+
   tableEl.innerHTML = shown.map((it, i) => {
     const gColor = it.grade==='A'?'#D94040':it.grade==='B'?'#E8900A':'#43A047';
+    const p = stockParams[it.grade];
+    const avgDaily = it.qty / daysInPeriod;
+    const safetyStock = Math.ceil(avgDaily * p.safetyDays);
+    const orderQty = Math.ceil(avgDaily * p.orderCycle);
+    const reorderPt = Math.ceil(avgDaily * leadTime + safetyStock);
     return `<tr style="border-top:1px solid var(--border);text-align:center">
-      <td style="padding:6px 6px;font-family:var(--mono)">${i+1}</td>
+      <td style="padding:6px 4px;font-family:var(--mono)">${i+1}</td>
       <td style="padding:6px 8px;text-align:left">${escHtml(it.name)}</td>
-      <td style="padding:6px 6px;color:var(--text2)">${escHtml(it.category||'-')}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${Math.round(it.supply).toLocaleString()}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${it.qty.toLocaleString()}</td>
-      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${it.share.toFixed(1)}%</td>
-      <td style="padding:6px 8px;text-align:right;font-family:var(--mono)">${it.cumShare.toFixed(1)}%</td>
-      <td style="padding:6px 6px;color:${gColor};font-weight:700">${it.grade}</td>
+      <td style="padding:6px 4px;color:var(--text2);font-size:11px">${escHtml(it.category||'-')}</td>
+      <td style="padding:6px 4px;text-align:right;font-family:var(--mono)">${avgDaily.toFixed(1)}</td>
+      <td style="padding:6px 4px;text-align:right;font-family:var(--mono);background:#FEF2F2;color:#D94040;font-weight:700">${safetyStock.toLocaleString()}</td>
+      <td style="padding:6px 4px;text-align:right;font-family:var(--mono);background:#FEF2F2">${orderQty.toLocaleString()}</td>
+      <td style="padding:6px 4px;text-align:right;font-family:var(--mono);background:#FEF2F2">${reorderPt.toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;font-family:var(--mono);color:var(--text2);font-size:11px">${Math.round(it.supply).toLocaleString()}</td>
+      <td style="padding:6px 4px;color:${gColor};font-weight:700">${it.grade}</td>
     </tr>`;
   }).join('');
 }
