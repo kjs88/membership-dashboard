@@ -1,4 +1,4 @@
-"""
+﻿"""
 Amarans v3 (hybrid) - 출고/주문현황 다운로더
 
 전략:
@@ -1057,11 +1057,11 @@ PowerShell을 '관리자 권한'으로 열고 아래 명령을 한 번만 실행
 [System.Environment]::SetEnvironmentVariable('AMARANS_PASSWORD','너의비밀번호','User')
 [System.Environment]::SetEnvironmentVariable('AMARANS_FIREBASE_DB_URL','{FIREBASE_DB_URL}','User')
 
-# 2) 09시~21시 매시 정각 자동 실행
+# 2) 09시~21시 5분마다 자동 실행
 #    스크립트 내부에서 21시 이후, 주말, 2026년 한국 공휴일은 자동 스킵
 $action = New-ScheduledTaskAction -Execute 'python' -Argument '"{script_path}" --auto --recent 60'
 $trigger = New-ScheduledTaskTrigger -Daily -At 9am
-$trigger.Repetition = (New-ScheduledTaskTrigger -Once -At 9am -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Hours 12)).Repetition
+$trigger.Repetition = (New-ScheduledTaskTrigger -Once -At 9am -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Hours 12)).Repetition
 Register-ScheduledTask -TaskName 'Amarans_Sync' -Action $action -Trigger $trigger -RunLevel Limited
 
 # 등록 확인:

@@ -1,4 +1,4 @@
-name: 아마란스 ERP 동기화
+﻿name: 아마란스 ERP 동기화
 
 on:
   workflow_dispatch:
@@ -12,8 +12,8 @@ on:
           - recent60
           - full
   schedule:
-    # KST 09:00-20:50 평일 10분 간격 (recent). Korean holidays are skipped in the script.
-    - cron: '*/10 0-11 * * 1-5'
+    # KST 09:00-20:55 weekdays every 5 minutes (recent). Korean holidays are skipped in the script.
+    - cron: '*/5 0-11 * * 1-5'
     # KST 08:00 평일 전체 수집 (full). UTC 23:00 = 익일 KST 08:00 이므로 요일 0-4.
     - cron: '0 23 * * 0-4'
 
