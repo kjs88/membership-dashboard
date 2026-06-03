@@ -144,7 +144,6 @@
     <div class="nav-item active" onclick="showPage('sales',this)" id="nav-sales"><span class="nav-icon">💰</span>대시보드</div>
     <div class="nav-item" onclick="showPage('stats',this)" id="nav-stats"><span class="nav-icon">📈</span>실적 분석</div>
     <div class="nav-item" onclick="showPage('products',this)" id="nav-products"><span class="nav-icon">📦</span>품목별 분석</div>
-    <div class="nav-item" onclick="showPage('project',this)" id="nav-project"><span class="nav-icon">🗂</span>프로젝트 관리</div>
     <div class="nav-item" onclick="showPage('dash',this)" id="nav-dash"><span class="nav-icon">📋</span>영업현황</div>
     <div class="nav-label" data-roles="admin,user" id="nav-journal-label">영업 일지</div>
     <div class="nav-group" data-roles="admin,user" id="nav-journal-group">
@@ -159,6 +158,8 @@
     <div class="nav-label" data-roles="admin,manager,planner" id="nav-clients-label">거래처 관리</div>
     <div class="nav-item" data-roles="admin,manager,planner" onclick="showPage('grade',this)" id="nav-grade"><span class="nav-icon">⭐</span>거래처 등급</div>
     <div class="nav-item" data-roles="admin,manager,planner" onclick="showPage('clients',this)" id="nav-clients" style="display:none"><span class="nav-icon">🏢</span>거래처 DB<span class="nav-badge" id="client-badge">0</span></div>
+    <div class="nav-label" id="nav-project-label">프로젝트</div>
+    <div class="nav-item" onclick="showPage('project',this)" id="nav-project"><span class="nav-icon">🗂</span>프로젝트 관리</div>
     <div class="nav-label" data-roles="admin,planner" style="display:none">관리/설정</div>
     <div class="nav-item admin-only" onclick="showPage('users',this)" id="nav-users" style="display:none"><span class="nav-icon">👥</span>계정 관리</div>
     <div class="nav-item" data-roles="admin,planner" onclick="showPage('targets',this)" id="nav-targets" style="display:none"><span class="nav-icon">◎</span>목표 설정</div>
@@ -1129,7 +1130,7 @@
 
   <!-- ── PROJECT PAGE ── -->
   <div id="page-project" class="page" style="padding:0">
-    <iframe src="project-tracker.html?v=20260525-init" style="width:100%;height:calc(100vh - 100px);min-height:700px;border:none;background:#0f1115;border-radius:8px;display:block"></iframe>
+    <iframe src="project-tracker.html?v=20260603-menu-tone" style="width:100%;height:calc(100vh - 100px);min-height:700px;border:none;background:var(--bg);border-radius:8px;display:block"></iframe>
   </div>
 
   <!-- ── GRADE PAGE ── -->
