@@ -316,7 +316,7 @@ td.tm{color:var(--text);font-weight:500;}
 .admin-stat-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.04em;margin-bottom:8px;}
 .admin-stat-value{font-size:28px;font-weight:700;font-family:var(--mono);color:var(--text);}
 
-.user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);display:flex;align-items:flex-start;gap:14px;margin-bottom:10px;flex-wrap:wrap;}
 .user-card-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
 .user-card-info{flex:1;min-width:0;}
 .user-card-name{font-size:14px;font-weight:600;color:var(--text);}
@@ -325,6 +325,15 @@ td.tm{color:var(--text);font-weight:500;}
 .user-card-count{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--green-dark);}
 .user-card-label{font-size:10px;color:var(--text3);}
 .user-card-actions{display:flex;gap:6px;}
+.user-menu-settings{flex:0 0 100%;margin-left:54px;border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px;}
+.user-menu-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.user-menu-toolbar label{font-size:11px;font-weight:700;color:var(--text2);}
+.user-menu-role{width:118px;font-size:12px;padding:6px 9px;}
+.user-menu-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;}
+.user-menu-check{display:flex;align-items:center;gap:5px;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;user-select:none;}
+.user-menu-check input{width:13px;height:13px;accent-color:var(--green);flex-shrink:0;}
+.user-menu-check span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-menu-fixed{font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center;display:none;}
 .modal-overlay.open{display:flex;}

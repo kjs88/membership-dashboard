@@ -139,6 +139,58 @@ const DEFAULT_USERS = [
 ];
 const SEED_ENTRIES = [];
 
+const MENU_ACCESS_ITEMS = [
+  { key:'sales',   label:'대시보드',     page:'sales',   nav:'nav-sales' },
+  { key:'stats',   label:'실적 분석',    page:'stats',   nav:'nav-stats' },
+  { key:'products',label:'품목별 분석',  page:'products',nav:'nav-products' },
+  { key:'project', label:'프로젝트 관리',page:'project', nav:'nav-project' },
+  { key:'dash',    label:'영업현황',     page:'dash',    nav:'nav-dash' },
+  { key:'journal', label:'영업 일지',    page:'input',   nav:'nav-journal-group', labelId:'nav-journal-label' },
+  { key:'grade',   label:'거래처 등급',  page:'grade',   nav:'nav-grade' },
+  { key:'clients', label:'거래처 DB',    page:'clients', nav:'nav-clients' },
+  { key:'users',   label:'계정 관리',    page:'users',   nav:'nav-users' },
+  { key:'targets', label:'목표 설정',    page:'targets', nav:'nav-targets' },
+  { key:'erp',     label:'ERP API 연동', page:null,      nav:'nav-erp-upload' },
+];
+
+const MENU_ACCESS_DEFAULTS = {
+  admin:   MENU_ACCESS_ITEMS.map(m => m.key),
+  manager: ['sales','stats','products','project','dash','grade','clients'],
+  planner: ['sales','stats','products','project','dash','grade','clients','targets','erp'],
+  user:    ['sales','stats','products','project','dash','journal'],
+};
+
+function getDefaultMenuAccess(role) {
+  return [...(MENU_ACCESS_DEFAULTS[role] || MENU_ACCESS_DEFAULTS.user)];
+}
+
+function normalizeMenuAccess(menuAccess, role) {
+  const valid = new Set(MENU_ACCESS_ITEMS.map(m => m.key));
+  const source = Array.isArray(menuAccess) ? menuAccess : getDefaultMenuAccess(role);
+  return [...new Set(source.filter(key => valid.has(key)))];
+}
+
+function getUserMenuAccess(user = currentUser) {
+  if (!user) return [];
+  if (user.role === 'admin') return getDefaultMenuAccess('admin');
+  return normalizeMenuAccess(user.menuAccess, user.role);
+}
+
+function userCanAccessMenu(key, user = currentUser) {
+  return getUserMenuAccess(user).includes(key);
+}
+
+function menuKeyForPage(pageName) {
+  if (['input','weekly','mo-plan','mo-settle'].includes(pageName)) return 'journal';
+  const item = MENU_ACCESS_ITEMS.find(m => m.page === pageName);
+  return item ? item.key : null;
+}
+
+function userCanOpenPage(pageName, user = currentUser) {
+  const key = menuKeyForPage(pageName);
+  return !key || userCanAccessMenu(key, user);
+}
+
 // ════════════════════════════════════
 // AUTH
 // ════════════════════════════════════
@@ -191,10 +243,14 @@ function ensureUsers() {
   if (allUsers.length === 0 || hasStale) {
     allUsers = DEFAULT_USERS.map(d => {
       const existing = allUsers.find(u => u.id === d.id);
-      return existing ? { ...d, password: existing.password } : d;
+      return existing ? { ...d, password: existing.password, menuAccess: normalizeMenuAccess(existing.menuAccess, d.role) } : { ...d, menuAccess: getDefaultMenuAccess(d.role) };
     });
   } else {
-    allUsers = allUsers.map(u => { const def = DEFAULT_USERS.find(d => d.id === u.id); return def ? { ...u, color: def.color } : u; });
+    allUsers = allUsers.map(u => {
+      const def = DEFAULT_USERS.find(d => d.id === u.id);
+      const merged = def ? { ...u, color: def.color } : u;
+      return { ...merged, menuAccess: normalizeMenuAccess(merged.menuAccess, merged.role) };
+    });
   }
   setShared('sj-users-v6', allUsers);
 }
@@ -213,6 +269,36 @@ function arrangeJournalNavForRole(role) {
     nav.insertBefore(journalLabel, journalGroup);
   }
 }
+
+function setNavDisplay(id, visible) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = visible ? '' : 'none';
+}
+
+function applyCurrentUserMenuAccess() {
+  const u = currentUser;
+  if (!u) return;
+  const can = key => userCanAccessMenu(key, u);
+
+  MENU_ACCESS_ITEMS.forEach(item => {
+    if (item.nav) setNavDisplay(item.nav, can(item.key));
+    if (item.labelId) setNavDisplay(item.labelId, can(item.key));
+  });
+
+  const clientsVisible = can('grade') || can('clients');
+  const adminVisible = can('users') || can('targets') || can('erp');
+  setNavDisplay('nav-clients-label', clientsVisible);
+  setNavDisplay('nav-project-label', can('project'));
+  setNavDisplay('nav-admin-label', adminVisible);
+
+  const active = document.querySelector('.page.active');
+  const activeName = active?.id?.replace(/^page-/, '');
+  if (activeName && !userCanOpenPage(activeName, u)) {
+    const next = MENU_ACCESS_ITEMS.find(item => item.page && can(item.key));
+    if (next?.page) showPage(next.page);
+  }
+}
+
 function initUI() {
   const u = currentUser;
   if (!u) return;
@@ -242,6 +328,7 @@ function initUI() {
     el.style.display = allowed.includes(u.role) ? '' : 'none';
   });
   arrangeJournalNavForRole(u.role);
+  applyCurrentUserMenuAccess();
   const dateEl = document.getElementById('f-date');
   if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   setTimeout(()=>{ if(getShared('sj-draft-'+currentUser?.id, null)) loadDraft(); }, 500);
@@ -284,6 +371,10 @@ function renderPageByName(name) {
 }
 
 function showPage(name, el) {
+  if (currentUser && !userCanOpenPage(name, currentUser)) {
+    if (typeof showToast === 'function') showToast('접근 권한이 없는 메뉴입니다.', 'error');
+    return;
+  }
   const page = document.getElementById('page-' + name);
   if (!page) {
     console.warn('[showPage] missing page:', name);

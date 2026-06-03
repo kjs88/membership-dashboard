@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260523-search-merge">
+<link rel="stylesheet" href="css/style.css?v=20260604-menu-access">
 </head>
 <body>
 
@@ -100,15 +100,6 @@
           <label class="login-label">비밀번호 확인</label>
           <input class="login-input" id="su-pw-confirm" type="password" placeholder="비밀번호 확인" onkeydown="if(event.key==='Enter')submitSignup()" />
         </div>
-        <div class="login-group">
-          <label class="login-label">직군</label>
-          <select class="login-input" id="su-role">
-            <option value="user">영업사원</option>
-            <option value="manager">영업관리</option>
-            <option value="planner">기획</option>
-            <option value="admin">관리자</option>
-          </select>
-        </div>
         <button class="login-btn" onclick="submitSignup()">신청하기</button>
         <div class="login-err" id="signup-err"></div>
         <div class="login-hint">
@@ -160,10 +151,10 @@
     <div class="nav-item" data-roles="admin,manager,planner" onclick="showPage('clients',this)" id="nav-clients" style="display:none"><span class="nav-icon">🏢</span>거래처 DB<span class="nav-badge" id="client-badge">0</span></div>
     <div class="nav-label" id="nav-project-label">프로젝트</div>
     <div class="nav-item" onclick="showPage('project',this)" id="nav-project"><span class="nav-icon">🗂</span>프로젝트 관리</div>
-    <div class="nav-label" data-roles="admin,planner" style="display:none">관리/설정</div>
+    <div class="nav-label" data-roles="admin,planner" id="nav-admin-label" style="display:none">관리/설정</div>
     <div class="nav-item admin-only" onclick="showPage('users',this)" id="nav-users" style="display:none"><span class="nav-icon">👥</span>계정 관리</div>
     <div class="nav-item" data-roles="admin,planner" onclick="showPage('targets',this)" id="nav-targets" style="display:none"><span class="nav-icon">◎</span>목표 설정</div>
-    <div class="nav-item" data-roles="admin,planner" onclick="openModal('modal-erp-upload')" style="display:none"><span class="nav-icon">↻</span>ERP API 연동</div>
+    <div class="nav-item" data-roles="admin,planner" onclick="openModal('modal-erp-upload')" id="nav-erp-upload" style="display:none"><span class="nav-icon">↻</span>ERP API 연동</div>
     <div class="nav-label">계정</div>
     <div class="nav-item" onclick="openModal('modal-change-pw')"><span class="nav-icon">🔑</span>비밀번호 변경</div>
   </nav>
@@ -1553,9 +1544,9 @@
 <script src="js/storage.js?v=20260521-erp-runtime"></script>
 <script src="js/state.js?v=20260525-holidays"></script>
 <script src="js/products-grades-erp.js?v=20260525-tabs-stock"></script>
-<script src="js/core-auth-nav.js?v=20260525-project"></script>
+<script src="js/core-auth-nav.js?v=20260604-menu-access"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
-<script src="js/dashboard-records-users.js?v=20260525-holidays"></script>
+<script src="js/dashboard-records-users.js?v=20260604-menu-access"></script>
 <script src="js/clients.js?v=20260523-features"></script>
 <script src="js/daily-entry.js?v=20260523-cleanup"></script>
 <script src="js/stats-notices.js?v=20260525-abc-move"></script>
