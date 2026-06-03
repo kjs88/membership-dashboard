@@ -257,7 +257,7 @@ const PAGE_TITLES = {
   'mo-plan':'영업계획', 'mo-settle':'월간결산', records:'방문 기록',
   users:'계정 관리', targets:'목표 설정', stats:'실적 분석', revisit:'재방문 관리',
   notice:'공지사항', 'notice-view':'공지사항', clients:'거래처 관리',
-  products:'품목별 분석', grade:'거래처 등급'
+  products:'품목별 분석', project:'프로젝트 관리', grade:'거래처 등급'
 };
 
 const PAGE_RENDERERS = {
