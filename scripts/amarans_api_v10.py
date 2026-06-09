@@ -40,7 +40,8 @@ def now_kst_iso():
 
 
 TARGET_YEAR = int(os.environ.get("AMARANS_YEAR", str(now_kst().year)))
-CUSTOMER_GROUPS = ["V10002", "V10003", "V10004", "V10005"]
+# [임시 탐색] 유통사(도도매/유통사) 거래처분류 코드 확인용 — 전체 그룹 수집
+CUSTOMER_GROUPS = []  # ["V10002", "V10003", "V10004", "V10005"]
 ITEM_GROUPS = ["TM00", "TP00"]
 
 # 한 번에 받을 최대 행수. 이 값에 도달하면 자동 경고. 부족하면 더 늘려라.
@@ -374,10 +375,12 @@ def to_dashboard_format(rows, job):
             skipped_grp += 1
             continue
         cust_cls = _safe_str(r.get("tradeGrpNm", "")).strip()
+        cust_cd = _safe_str(r.get("tradeGrpCd", "")).strip()
         match = re.search(r"도매\((.+?)\)", cust_cls)
         person = match.group(1) if match else _safe_str(r.get("empNm", ""))
         channel = classify_channel(cust_cls, person)
-        cls_counts[cust_cls or "(빈값)"] = cls_counts.get(cust_cls or "(빈값)", 0) + 1
+        cls_key = f"{cust_cls or '(빈값)'} [{cust_cd or '?'}]"
+        cls_counts[cls_key] = cls_counts.get(cls_key, 0) + 1
         chan_counts[channel] = chan_counts.get(channel, 0) + 1
 
         date_str = format_date(r.get(df["date"], ""))
