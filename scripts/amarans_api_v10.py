@@ -339,12 +339,24 @@ def merge_by_key(existing, new_rows, key_fields):
     return list(by_key.values()), added, updated
 
 
+# 대시보드에 포함할 계정구분(acctNm) — "상품"만 사용, 부품/제품 등 제외
+ACCT_KEEP = {"상품"}
+
+
 def to_dashboard_format(rows, job):
     """erpParseRows와 동일한 형식으로 변환."""
     df = job["dashboard_fields"]
     basis = job["slug"]
     result = []
+    acct_counts = {}
+    skipped_acct = 0
     for r in rows:
+        # 계정구분 필터: 상품만 (부품 등 제외)
+        acct = _safe_str(r.get("acctNm", "")).strip()
+        acct_counts[acct or "(빈값)"] = acct_counts.get(acct or "(빈값)", 0) + 1
+        if ACCT_KEEP and acct not in ACCT_KEEP:
+            skipped_acct += 1
+            continue
         cust_cls = _safe_str(r.get("tradeGrpNm", ""))
         match = re.search(r"도매\((.+?)\)", cust_cls)
         person = match.group(1) if match else _safe_str(r.get("empNm", ""))
@@ -367,6 +379,7 @@ def to_dashboard_format(rows, job):
             "region": _safe_str(r.get("areaNm", "")),
             "orderNo": _safe_str(r.get(df["no"], "")),
         })
+    print(f"   [{basis}] 계정구분 분포: {acct_counts} | 상품만 유지({len(result)}건), 제외 {skipped_acct}건")
     return result
 
 
