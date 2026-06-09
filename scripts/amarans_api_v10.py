@@ -349,11 +349,14 @@ def to_dashboard_format(rows, job):
     basis = job["slug"]
     result = []
     acct_counts = {}
+    grp_counts = {}
     skipped_acct = 0
     for r in rows:
-        # 계정구분 필터: 상품만 (부품 등 제외)
+        # 진단: 계정구분/품목군 분포 확인 (부품 구분 필드 찾기)
         acct = _safe_str(r.get("acctNm", "")).strip()
+        grp = _safe_str(r.get("itemgrpNm", "")).strip()
         acct_counts[acct or "(빈값)"] = acct_counts.get(acct or "(빈값)", 0) + 1
+        grp_counts[grp or "(빈값)"] = grp_counts.get(grp or "(빈값)", 0) + 1
         if ACCT_KEEP and acct not in ACCT_KEEP:
             skipped_acct += 1
             continue
@@ -380,6 +383,7 @@ def to_dashboard_format(rows, job):
             "orderNo": _safe_str(r.get(df["no"], "")),
         })
     print(f"   [{basis}] 계정구분 분포: {acct_counts} | 상품만 유지({len(result)}건), 제외 {skipped_acct}건")
+    print(f"   [{basis}] 품목군(itemgrpNm) 분포: {grp_counts}")
     return result
 
 
