@@ -40,8 +40,9 @@ def now_kst_iso():
 
 
 TARGET_YEAR = int(os.environ.get("AMARANS_YEAR", str(now_kst().year)))
-# [임시 탐색] 유통사(도도매/유통사) 거래처분류 코드 확인용 — 전체 그룹 수집
-CUSTOMER_GROUPS = []  # ["V10002", "V10003", "V10004", "V10005"]
+# 거래처분류(고객분류) 그룹 코드. 빈 리스트 = 전체 그룹 수집 후 채널(사업소/유통사)만 보관.
+# (유통사 그룹 코드가 응답에 노출되지 않아 코드 필터 대신 전체 수집 → 처리 단계에서 필터)
+CUSTOMER_GROUPS = []
 ITEM_GROUPS = ["TM00", "TP00"]
 
 # 한 번에 받을 최대 행수. 이 값에 도달하면 자동 경고. 부족하면 더 늘려라.
@@ -344,14 +345,18 @@ def merge_by_key(existing, new_rows, key_fields):
 ITEMGRP_KEEP = {"상품"}
 
 # 채널 분류 (고객분류=tradeGrpNm 기준)
-#  - 사업소(office): 도매(이기현/장재순/이민우/안성종) → person 이 아래 이름 중 하나
-#  - 유통사(dist): 고객분류 == "도도매/유통사"
+#  - 사업소(office): 도매(이기현/장재순/이민우/안성종)
+#  - 유통사(dist): 고객분류 == "도매(도도매/유통사)"  (person 추출 시 "도도매/유통사")
+#  - 그 외(소매, 도매(기타) 등): other → 대시보드 제외
 OFFICE_PERSONS = {"이기현", "장재순", "이민우", "안성종"}
-DIST_GROUP = "도도매/유통사"
+DIST_PERSON = "도도매/유통사"
+
+# 대시보드에 보관할 채널 (사업소 + 유통사만)
+CHANNEL_KEEP = {"office", "dist"}
 
 
 def classify_channel(cust_cls, person):
-    if cust_cls == DIST_GROUP:
+    if person == DIST_PERSON or cust_cls == "도매(도도매/유통사)":
         return "dist"
     if person in OFFICE_PERSONS:
         return "office"
@@ -364,9 +369,9 @@ def to_dashboard_format(rows, job):
     basis = job["slug"]
     result = []
     grp_counts = {}
-    cls_counts = {}
     chan_counts = {}
     skipped_grp = 0
+    skipped_chan = 0
     for r in rows:
         # 품목군 필터: 상품만 (부품 제외)
         grp = _safe_str(r.get("itemgrpNm", "")).strip()
@@ -375,13 +380,14 @@ def to_dashboard_format(rows, job):
             skipped_grp += 1
             continue
         cust_cls = _safe_str(r.get("tradeGrpNm", "")).strip()
-        cust_cd = _safe_str(r.get("tradeGrpCd", "")).strip()
         match = re.search(r"도매\((.+?)\)", cust_cls)
         person = match.group(1) if match else _safe_str(r.get("empNm", ""))
         channel = classify_channel(cust_cls, person)
-        cls_key = f"{cust_cls or '(빈값)'} [{cust_cd or '?'}]"
-        cls_counts[cls_key] = cls_counts.get(cls_key, 0) + 1
         chan_counts[channel] = chan_counts.get(channel, 0) + 1
+        # 채널 필터: 사업소 + 유통사만 (소매·기타 제외)
+        if channel not in CHANNEL_KEEP:
+            skipped_chan += 1
+            continue
 
         date_str = format_date(r.get(df["date"], ""))
         client = _safe_str(r.get("trNm", ""))
@@ -403,9 +409,8 @@ def to_dashboard_format(rows, job):
             "region": _safe_str(r.get("areaNm", "")),
             "orderNo": _safe_str(r.get(df["no"], "")),
         })
-    print(f"   [{basis}] 품목군 분포: {grp_counts} | 상품만 유지({len(result)}건), 부품 등 제외 {skipped_grp}건")
-    print(f"   [{basis}] 고객분류 분포: {cls_counts}")
-    print(f"   [{basis}] 채널 분포: {chan_counts}")
+    print(f"   [{basis}] 품목군 분포: {grp_counts} | 상품만 유지, 부품 등 제외 {skipped_grp}건")
+    print(f"   [{basis}] 채널 분포: {chan_counts} | 사업소+유통사 {len(result)}건 보관, 소매/기타 {skipped_chan}건 제외")
     return result
 
 

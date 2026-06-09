@@ -91,7 +91,7 @@ function renderSalesPage() {
   //  · 유통사: 고객분류 == "도도매/유통사" (수집 시 channel='dist'로 표시)
   const OFFICE_PERSONS = ['이기현','장재순','이민우','안성종'];
   const isOffice = o => o.channel ? o.channel === 'office' : OFFICE_PERSONS.includes((o.person||'').trim());
-  const isDist   = o => o.channel ? o.channel === 'dist'   : (o.custClass||'').trim() === '도도매/유통사';
+  const isDist   = o => o.channel ? o.channel === 'dist'   : ((o.person||'').trim() === '도도매/유통사' || (o.custClass||'').trim() === '도매(도도매/유통사)');
   const sumSupply = arr => Math.round(arr.reduce((s,e)=>s+(parseFloat(e.supply)||0),0));
 
   const erpMonthOffice = erpMonth.filter(isOffice);
