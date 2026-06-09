@@ -131,11 +131,11 @@ function setOrderBasis(basis) {
 // INIT DATA
 // ════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'admin', name:'관리자', password:'1234', role:'admin', color:'#009E6A', createdAt:'2026-01-01' },
-  { id:'lee1',  name:'이기현', password:'1234', role:'user',  color:'#7856C8', createdAt:'2026-01-02' },
-  { id:'jang1', name:'장재순', password:'1234', role:'user',  color:'#E53935', createdAt:'2026-01-03' },
-  { id:'lee2',  name:'이민우', password:'1234', role:'user',  color:'#2B72C8', createdAt:'2026-01-04' },
-  { id:'ahn1',  name:'안성종', password:'1234', role:'user',  color:'#43A047', createdAt:'2026-01-05' },
+  { id:'admin', name:'관리자', password:'1234', color:'#009E6A', createdAt:'2026-01-01' },
+  { id:'lee1',  name:'이기현', password:'1234',  color:'#7856C8', createdAt:'2026-01-02' },
+  { id:'jang1', name:'장재순', password:'1234',  color:'#E53935', createdAt:'2026-01-03' },
+  { id:'lee2',  name:'이민우', password:'1234',  color:'#2B72C8', createdAt:'2026-01-04' },
+  { id:'ahn1',  name:'안성종', password:'1234',  color:'#43A047', createdAt:'2026-01-05' },
 ];
 const SEED_ENTRIES = [];
 
@@ -160,20 +160,41 @@ const MENU_ACCESS_DEFAULTS = {
   user:    ['sales','stats','products','project','dash','journal'],
 };
 
-function getDefaultMenuAccess(role) {
-  return [...(MENU_ACCESS_DEFAULTS[role] || MENU_ACCESS_DEFAULTS.user)];
+function getDefaultMenuAccess(profile = 'user') {
+  return [...(MENU_ACCESS_DEFAULTS[profile] || MENU_ACCESS_DEFAULTS.user)];
 }
 
-function normalizeMenuAccess(menuAccess, role) {
+function normalizeMenuAccess(menuAccess, profile = 'user') {
   const valid = new Set(MENU_ACCESS_ITEMS.map(m => m.key));
-  const source = Array.isArray(menuAccess) ? menuAccess : getDefaultMenuAccess(role);
+  const source = Array.isArray(menuAccess) ? menuAccess : getDefaultMenuAccess(profile);
   return [...new Set(source.filter(key => valid.has(key)))];
+}
+
+function getLegacyMenuProfile(user) {
+  if (!user) return 'user';
+  return user['role'] || (user.id === 'admin' ? 'admin' : 'user');
+}
+
+function stripLegacyRole(user) {
+  const copy = { ...user };
+  delete copy['role'];
+  return copy;
 }
 
 function getUserMenuAccess(user = currentUser) {
   if (!user) return [];
-  if (user.role === 'admin') return getDefaultMenuAccess('admin');
-  return normalizeMenuAccess(user.menuAccess, user.role);
+  if (user.id === 'admin') return getDefaultMenuAccess('admin');
+  return normalizeMenuAccess(user.menuAccess, getLegacyMenuProfile(user));
+}
+
+function isAdminUser(user = currentUser) {
+  if (!user) return false;
+  return user.id === 'admin' || getUserMenuAccess(user).includes('users');
+}
+
+function isSalesUserAccount(user) {
+  if (!user || isAdminUser(user)) return false;
+  return getUserMenuAccess(user).includes('journal');
 }
 
 function userCanAccessMenu(key, user = currentUser) {
@@ -243,31 +264,18 @@ function ensureUsers() {
   if (allUsers.length === 0 || hasStale) {
     allUsers = DEFAULT_USERS.map(d => {
       const existing = allUsers.find(u => u.id === d.id);
-      return existing ? { ...d, password: existing.password, menuAccess: normalizeMenuAccess(existing.menuAccess, d.role) } : { ...d, menuAccess: getDefaultMenuAccess(d.role) };
+      return existing
+        ? stripLegacyRole({ ...d, password: existing.password, menuAccess: normalizeMenuAccess(existing.menuAccess, getLegacyMenuProfile(existing)) })
+        : { ...d, menuAccess: getDefaultMenuAccess(d.id === 'admin' ? 'admin' : 'user') };
     });
   } else {
     allUsers = allUsers.map(u => {
       const def = DEFAULT_USERS.find(d => d.id === u.id);
       const merged = def ? { ...u, color: def.color } : u;
-      return { ...merged, menuAccess: normalizeMenuAccess(merged.menuAccess, merged.role) };
+      return stripLegacyRole({ ...merged, menuAccess: normalizeMenuAccess(merged.menuAccess, getLegacyMenuProfile(merged)) });
     });
   }
   setShared('sj-users-v6', allUsers);
-}
-
-function arrangeJournalNavForRole(role) {
-  const nav = document.querySelector('.nav');
-  const journalLabel = document.getElementById('nav-journal-label');
-  const journalGroup = document.getElementById('nav-journal-group');
-  const clientsLabel = document.getElementById('nav-clients-label');
-  if (!nav || !journalLabel || !journalGroup) return;
-  if (role === 'admin') {
-    nav.appendChild(journalLabel);
-    nav.appendChild(journalGroup);
-  } else if (clientsLabel) {
-    nav.insertBefore(journalGroup, clientsLabel);
-    nav.insertBefore(journalLabel, journalGroup);
-  }
 }
 
 function setNavDisplay(id, visible) {
@@ -310,24 +318,11 @@ function initUI() {
   }
   const nameEl = document.getElementById('sb-name');
   if (nameEl) nameEl.textContent = u.name || '';
-  const roleEl = document.getElementById('sb-role');
-  if (roleEl) roleEl.innerHTML = ({
-    admin:   '<span class="role-badge-admin">관리자</span>',
-    manager: '<span class="role-badge-manager">영업관리</span>',
-    planner: '<span class="role-badge-planner">기획</span>',
-    user:    '<span class="role-badge-user">영업사원</span>'
-  })[u.role] || '<span class="role-badge-user">영업사원</span>';
-  if (u.role === 'admin') {
+  if (isAdminUser(u)) {
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
   } else {
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
   }
-  // data-roles 속성 기반 가시성 제어 (admin-only보다 우선)
-  document.querySelectorAll('[data-roles]').forEach(el => {
-    const allowed = el.getAttribute('data-roles').split(',').map(s => s.trim());
-    el.style.display = allowed.includes(u.role) ? '' : 'none';
-  });
-  arrangeJournalNavForRole(u.role);
   applyCurrentUserMenuAccess();
   const dateEl = document.getElementById('f-date');
   if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];

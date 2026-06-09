@@ -4,21 +4,19 @@ function renderStats() {
   try {
     const basisMeta = getOrderBasisMeta();
     updateOrderBasisUI();
-    const salesUsers = allUsers.filter(u=>u.role==='user');
-    // 영업사원 버튼 그룹 (회원가입 순서 = createdAt 오름차순)
+    // 영업사원 버튼 그룹 (ERP 고객분류 도매(이름) 기준)
+    const personNames = erpPersonNames();
     const filterEl = document.getElementById('stats-person-filter');
     if (filterEl) {
-      const ordered = [...salesUsers].sort((a,b) =>
-        (a.createdAt||'').localeCompare(b.createdAt||'')
-      );
-      const btns = [{id:'all', name:'전체'}, ...ordered.map(u=>({id:u.id, name:u.name}))];
+      if (statsPersonId !== 'all' && !personNames.includes(statsPersonId)) statsPersonId = 'all';
+      const btns = [{id:'all', name:'전체'}, ...personNames.map(n=>({id:n, name:n}))];
       filterEl.innerHTML = btns.map(b =>
         `<button type="button" class="stats-person-btn${statsPersonId===b.id?' active':''}" onclick="setStatsPerson('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
       ).join('');
     }
 
     const useErp = allOrders && allOrders.length > 0;
-    const personName = statsPersonId==='all' ? null : (allUsers.find(u=>u.id===statsPersonId)?.name||null);
+    const personName = statsPersonId==='all' ? null : statsPersonId;
     // 기간 필터
     const dateFrom = document.getElementById('stats-date-from')?.value || '';
     const dateTo   = document.getElementById('stats-date-to')?.value || '';
@@ -130,9 +128,9 @@ function genReport(mode, el) {
   reportMode = mode;
   if (el) { document.querySelectorAll('#report-week-btn,#report-month-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
   const basisMeta = getOrderBasisMeta();
-  const E = statsPersonId==='all' ? allEntries : allEntries.filter(e=>e.personId===statsPersonId);
+  const personName = statsPersonId==='all' ? null : statsPersonId;
+  const E = statsPersonId==='all' ? allEntries : allEntries.filter(e=>(allUsers.find(u=>u.id===e.personId)?.name)===personName);
   const useErp = allOrders && allOrders.length > 0;
-  const personName = statsPersonId==='all' ? null : (allUsers.find(u=>u.id===statsPersonId)?.name||null);
   const O = useErp ? (statsPersonId==='all' ? allOrders : allOrders.filter(o=>o.person===personName)) : [];
 
   const now = new Date();
@@ -157,7 +155,7 @@ function genReport(mode, el) {
     ? Math.round(filteredO.reduce((s,o)=>s+(parseFloat(o.supply)||0),0)/10000)
     : filtered.reduce((s,e)=>s+(e.ourPurchase||0),0);
   const qty = useErp ? filteredO.reduce((s,o)=>s+(o.qty||0),0) : 0;
-  const personLabel = statsPersonId==='all' ? '팀 전체' : (allUsers.find(u=>u.id===statsPersonId)?.name||statsPersonId);
+  const personLabel = statsPersonId==='all' ? '팀 전체' : statsPersonId;
   const regions = [...new Set(filtered.map(e=>e.region).filter(Boolean))];
   const modeLabel = mode==='week' ? '주간' : '월간';
   const divider = '─'.repeat(40);
@@ -217,7 +215,7 @@ function renderRevisit() {
   const eom = new Date(new Date().getFullYear(),new Date().getMonth()+1,0).toISOString().split('T')[0];
 
   const fv = document.getElementById('rv-filter')?.value||'upcoming';
-  let pool = currentUser?.role==='admin' ? [...allRevisits] : allRevisits.filter(r=>r.personId===currentUser?.id);
+  let pool = isAdminUser(currentUser) ? [...allRevisits] : allRevisits.filter(r=>r.personId===currentUser?.id);
   if (fv==='upcoming') pool = pool.filter(r=>!r.done&&r.date>=today);
   else if (fv==='done') pool = pool.filter(r=>r.done);
   pool.sort((a,b)=>a.date.localeCompare(b.date));
@@ -308,7 +306,7 @@ function editNotice(id) {
 }
 
 function renderNoticeManage() {
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = isAdminUser(currentUser);
   const listEl = document.getElementById('notice-manage-list');
   const detEl = document.getElementById('notice-detail');
   if (!listEl) return;
@@ -354,7 +352,7 @@ function renderNoticeManage() {
 
 function showNoticeDetail(id) {
   const n = allNotices.find(n=>String(n.id)===String(id)); if (!n) return;
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = isAdminUser(currentUser);
   const det = document.getElementById('notice-detail');
   if (!det) return;
   const noticeId = escInlineJs(n.id);

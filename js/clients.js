@@ -384,7 +384,7 @@ function openAddClientModal() {
 
   // 담당자 목록 채우기
   const sel = document.getElementById('cf-person');
-  sel.innerHTML = '<option value="">선택</option>' + allUsers.filter(u=>u.role==='user').map(u=>`<option value="${escHtml(u.id)}">${escHtml(u.name)}</option>`).join('');
+  sel.innerHTML = '<option value="">선택</option>' + allUsers.filter(isSalesUserAccount).map(u=>`<option value="${escHtml(u.id)}">${escHtml(u.name)}</option>`).join('');
   openModal('modal-client-form');
 }
 
@@ -408,7 +408,7 @@ function openEditClientModal(id) {
   document.getElementById('cf-exp').value = c.experience||'';
   document.getElementById('cf-memo').value = c.memo||'';
   const sel = document.getElementById('cf-person');
-  sel.innerHTML = '<option value="">선택</option>' + allUsers.filter(u=>u.role==='user').map(u=>`<option value="${escHtml(u.id)}"${u.id===c.assignedPersonId?' selected':''}>${escHtml(u.name)}</option>`).join('');
+  sel.innerHTML = '<option value="">선택</option>' + allUsers.filter(isSalesUserAccount).map(u=>`<option value="${escHtml(u.id)}"${u.id===c.assignedPersonId?' selected':''}>${escHtml(u.name)}</option>`).join('');
   openModal('modal-client-form');
 }
 
@@ -765,7 +765,7 @@ function updateClientActionBar() {
   if (bar) bar.classList.toggle('show', count > 0);
   if (label) label.textContent = count + '개 선택됨';
   const delBtn = document.getElementById('client-delete-btn');
-  if (delBtn) delBtn.style.display = (count > 0 && currentUser && currentUser.role === 'admin') ? '' : 'none';
+  if (delBtn) delBtn.style.display = (count > 0 && isAdminUser(currentUser)) ? '' : 'none';
 }
 
 function clearClientSelection() {

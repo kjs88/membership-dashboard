@@ -219,7 +219,7 @@ function renderDashPage() {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     const ym = today.slice(0,7);
-    const isAdmin = currentUser?.role === 'admin';
+    const isAdmin = isAdminUser(currentUser);
     const pool = isAdmin ? allEntries : allEntries.filter(e => e.personId === currentUser?.id);
     const monthEntries = pool.filter(e => (e.date||'').startsWith(ym));
     const todayCount = pool.filter(e => e.date === today).length;
@@ -561,7 +561,7 @@ function tbl(entries, showActions) {
   if (!entries.length) return '<div class="empty-state"><div style="font-size:28px;margin-bottom:8px">📋</div>기록이 없습니다</div>';
   const dc={'○':'do','△':'dd','×':'dx'};
   const tc={'기존 거래처':'te','신규거래처':'tn','휴면거래처':'td2','거래 재개':'tr2'};
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = isAdminUser(currentUser);
   return `<table><thead><tr><th>날짜</th><th>영업사원</th><th>기관명</th><th>유형</th><th>거래가능성</th><th>구매액</th><th>지역</th><th>미팅 요약</th>${isAdmin&&showActions?'<th>관리</th>':''}</tr></thead><tbody>`+
   entries.map(e=>{
     const entryId = escInlineJs(e.id);
@@ -586,7 +586,7 @@ function renderRecords() {
   const fd = document.getElementById('filter-deal').value;
 
   // non-admin sees only own entries
-  let pool = currentUser?.role === 'admin' ? [...allEntries] : allEntries.filter(e=>e.personId===currentUser?.id);
+  let pool = isAdminUser(currentUser) ? [...allEntries] : allEntries.filter(e=>e.personId===currentUser?.id);
   let f = pool.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   if (q) f = f.filter(e=>(e.institution||'').toLowerCase().includes(q)||(e.person||'').toLowerCase().includes(q));
   if (fp) f = f.filter(e=>e.person===fp);
@@ -649,24 +649,14 @@ function renderUsers() {
   const colors = ['#009E6A','#2B72C8','#7856C8','#E8900A','#D94040','#26c6da'];
   const userEntryCount = {};
   allEntries.forEach(e=>{ userEntryCount[e.personId] = (userEntryCount[e.personId]||0)+1; });
-  const roleLabels = { user:'영업사원', manager:'영업관리', planner:'기획', admin:'관리자' };
-  const roleSelectHtml = u => `
-    <label>역할</label>
-    <select class="form-select user-menu-role" onchange="updateUserRole('${escInlineJs(u.id)}', this.value)" ${u.id==='admin'?'disabled':''}>
-      <option value="user"${u.role==='user'?' selected':''}>영업사원</option>
-      <option value="manager"${u.role==='manager'?' selected':''}>영업관리</option>
-      <option value="planner"${u.role==='planner'?' selected':''}>기획</option>
-      <option value="admin"${u.role==='admin'?' selected':''}>관리자</option>
-    </select>`;
   const menuSettingsHtml = u => {
-    if (u.role === 'admin') {
+    if (u.id === 'admin') {
       return `<div class="user-menu-fixed">관리자 계정은 전체 메뉴를 항상 사용할 수 있습니다.</div>`;
     }
     const access = new Set(getUserMenuAccess(u));
     return `
       <div class="user-menu-toolbar">
-        ${roleSelectHtml(u)}
-        <button class="btn-sm btn-ghost" onclick="setUserMenuPreset('${escInlineJs(u.id)}','role')">역할 기본값</button>
+        <button class="btn-sm btn-ghost" onclick="setUserMenuPreset('${escInlineJs(u.id)}','default')">기본 메뉴</button>
         <button class="btn-sm btn-ghost" onclick="setUserMenuPreset('${escInlineJs(u.id)}','all')">전체 메뉴</button>
       </div>
       <div class="user-menu-grid">
@@ -683,18 +673,12 @@ function renderUsers() {
     const uname = escHtml(u.name || '');
     const unameJs = escInlineJs(u.name || '');
     const color = /^#[0-9a-f]{6}$/i.test(u.color || '') ? u.color : '#009E6A';
-    const roleBadges = {
-      admin:   '<span class="role-badge-admin" style="font-size:10px">관리자</span>',
-      manager: '<span class="role-badge-manager" style="font-size:10px">영업관리</span>',
-      planner: '<span class="role-badge-planner" style="font-size:10px">기획</span>',
-      user:    ''
-    };
     return `
     <div class="user-card">
       <div class="user-card-avatar" style="background:${color}22;color:${color}">${escHtml((u.name||'').slice(0,1))}</div>
       <div class="user-card-info">
-        <div class="user-card-name">${uname} ${roleBadges[u.role]||''}</div>
-        <div class="user-card-meta">ID: ${escHtml(u.id)} · 가입일: ${escHtml(u.createdAt||'-')} · 역할: ${escHtml(roleLabels[u.role]||u.role||'-')}</div>
+        <div class="user-card-name">${uname}</div>
+        <div class="user-card-meta">ID: ${escHtml(u.id)} · 가입일: ${escHtml(u.createdAt||'-')}</div>
       </div>
       <div class="user-card-stats">
         <div class="user-card-count">${userEntryCount[u.id]||0}</div>
@@ -705,7 +689,6 @@ function renderUsers() {
         ${u.id!=='admin'?`<button class="btn-sm btn-danger" onclick="deleteUser('${uid}')">삭제</button>`:''}
       </div>
       <div class="user-menu-settings">
-        ${u.role === 'admin' ? `<div class="user-menu-toolbar">${roleSelectHtml(u)}</div>` : ''}
         ${menuSettingsHtml(u)}
       </div>
     </div>`;
@@ -717,56 +700,39 @@ function addUser() {
   const name = document.getElementById('nu-name').value.trim();
   const id   = document.getElementById('nu-id').value.trim();
   const pw   = document.getElementById('nu-pw').value;
-  const role = document.getElementById('nu-role').value;
-  if (!name||!id||!pw) { showToast('모든 항목을 입력하세요.','error'); return; }
+  if (!name||!id||!pw) { showToast('모든 항목을 입력하세요','error'); return; }
   if (allUsers.find(u=>u.id===id)) { showToast('이미 존재하는 아이디입니다.','error'); return; }
   const colors = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
-  allUsers.push({ id, name, password: pw, role, menuAccess: getDefaultMenuAccess(role), color: colors[allUsers.length % colors.length], createdAt: new Date().toISOString().split('T')[0] });
+  allUsers.push({ id, name, password: pw, menuAccess: getDefaultMenuAccess('user'), color: colors[allUsers.length % colors.length], createdAt: new Date().toISOString().split('T')[0] });
   setShared('sj-users-v6', allUsers);
   ['nu-name','nu-id','nu-pw'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('nu-role').value='user';
   closeModal('modal-add-user');
   renderUsers();
-  showToast(`${name} 계정이 추가되었습니다.`, 'success');
+  showToast(`${name} 계정을 추가했습니다.`, 'success');
 }
 
-function updateUserRole(id, role) {
+function toggleUserMenuAccess(id, key, checked) {
   const u = allUsers.find(x=>x.id===id);
-  if (!u) return;
-  u.role = role;
-  if (!Array.isArray(u.menuAccess)) u.menuAccess = getDefaultMenuAccess(role);
-  if (role === 'admin') u.menuAccess = getDefaultMenuAccess('admin');
+  if (!u || u.id === 'admin') return;
+  const access = new Set(getUserMenuAccess(u));
+  if (checked) access.add(key);
+  else access.delete(key);
+  u.menuAccess = normalizeMenuAccess([...access], 'user');
   setShared('sj-users-v6', allUsers);
   if (currentUser?.id === id) {
     currentUser = { ...currentUser, ...u };
     initUI();
   }
-  renderUsers();
-  showToast('역할이 저장되었습니다.', 'success');
-}
-
-function toggleUserMenuAccess(id, key, checked) {
-  const u = allUsers.find(x=>x.id===id);
-  if (!u || u.role === 'admin') return;
-  const access = new Set(getUserMenuAccess(u));
-  if (checked) access.add(key);
-  else access.delete(key);
-  u.menuAccess = normalizeMenuAccess([...access], u.role);
-  setShared('sj-users-v6', allUsers);
-  if (currentUser?.id === id) {
-    currentUser = { ...currentUser, ...u };
-    applyCurrentUserMenuAccess();
-  }
 }
 
 function setUserMenuPreset(id, preset) {
   const u = allUsers.find(x=>x.id===id);
-  if (!u || u.role === 'admin') return;
-  u.menuAccess = preset === 'all' ? MENU_ACCESS_ITEMS.map(item=>item.key) : getDefaultMenuAccess(u.role);
+  if (!u || u.id === 'admin') return;
+  u.menuAccess = preset === 'all' ? MENU_ACCESS_ITEMS.map(item=>item.key) : getDefaultMenuAccess('user');
   setShared('sj-users-v6', allUsers);
   if (currentUser?.id === id) {
     currentUser = { ...currentUser, ...u };
-    applyCurrentUserMenuAccess();
+    initUI();
   }
   renderUsers();
   showToast('메뉴 권한이 저장되었습니다.', 'success');
@@ -819,6 +785,13 @@ function submitSignup() {
   switchAuthMode('login');
 }
 
+function getPendingMenuAccess(id) {
+  const checked = Array.from(document.querySelectorAll('.pending-menu-cb'))
+    .filter(cb => cb.dataset.pendingId === id && cb.checked)
+    .map(cb => cb.value);
+  return normalizeMenuAccess(checked.length ? checked : getDefaultMenuAccess('user'), 'user');
+}
+
 function renderPendingSignups() {
   const wrap = document.getElementById('pending-signups-wrap');
   if (!wrap) return;
@@ -828,28 +801,30 @@ function renderPendingSignups() {
   wrap.innerHTML = `
     <div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r);padding:14px 16px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:14px">🔔</span>
+        <span style="font-size:14px">⏳</span>
         <span style="font-size:13px;font-weight:700;color:var(--amber)">가입 신청 대기 ${pending.length}건</span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;flex-direction:column;gap:10px">
         ${pending.map(p=>{
-          const reqRole = p.role || 'user';
-          const roleLabels = {user:'영업사원',manager:'영업관리',planner:'기획',admin:'관리자'};
           const pid = escInlineJs(p.id);
+          const access = new Set(normalizeMenuAccess(p.menuAccess, 'user'));
           return `
-          <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;display:flex;align-items:center;gap:12px">
-            <div style="flex:1;min-width:0">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:12px;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="flex:1 1 180px;min-width:0">
               <div style="font-size:13px;font-weight:700;color:var(--text)">${escHtml(p.name)} <span style="font-size:11px;color:var(--text3);font-weight:400">(${escHtml(p.id)})</span></div>
               <div style="font-size:11px;color:var(--text2);margin-top:2px">신청일시: ${escHtml((p.requestedAt||'').replace('T',' ').substring(0,16))}</div>
             </div>
-            <select id="role-${escHtml(p.id)}" class="form-select" style="width:120px;font-size:12px">
-              <option value="user"${reqRole==='user'?' selected':''}>영업사원</option>
-              <option value="manager"${reqRole==='manager'?' selected':''}>영업관리</option>
-              <option value="planner"${reqRole==='planner'?' selected':''}>기획</option>
-              <option value="admin"${reqRole==='admin'?' selected':''}>관리자</option>
-            </select>
-            <button class="btn-sm btn-primary" onclick="approveSignup('${pid}')">승인</button>
-            <button class="btn-sm btn-danger" onclick="rejectSignup('${pid}')">거절</button>
+            <div class="user-menu-grid" style="flex:2 1 420px;margin:0">
+              ${MENU_ACCESS_ITEMS.map(item => `
+                <label class="user-menu-check" title="${escHtml(item.label)}">
+                  <input class="pending-menu-cb" data-pending-id="${escHtml(p.id)}" type="checkbox" value="${escHtml(item.key)}" ${access.has(item.key)?'checked':''} />
+                  <span>${escHtml(item.label)}</span>
+                </label>`).join('')}
+            </div>
+            <div style="display:flex;gap:6px;margin-left:auto">
+              <button class="btn-sm btn-primary" onclick="approveSignup('${pid}')">승인</button>
+              <button class="btn-sm btn-danger" onclick="rejectSignup('${pid}')">거절</button>
+            </div>
           </div>`;
         }).join('')}
       </div>
@@ -859,22 +834,20 @@ function renderPendingSignups() {
 function approveSignup(id) {
   const pending = getShared('sj-signup-pending-v1', []);
   const p = pending.find(x=>x.id===id);
-  if (!p) { showToast('신청을 찾을 수 없습니다.','error'); return; }
+  if (!p) { showToast('요청을 찾을 수 없습니다.','error'); return; }
   if (allUsers.find(u=>u.id===id)) { showToast('이미 존재하는 아이디입니다.','error'); return; }
-  const role = document.getElementById('role-'+id)?.value || 'user';
   const colors = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
   allUsers.push({
-    id: p.id, name: p.name, password: p.password, role,
-    menuAccess: getDefaultMenuAccess(role),
+    id: p.id, name: p.name, password: p.password,
+    menuAccess: getPendingMenuAccess(id),
     color: colors[allUsers.length % colors.length],
     createdAt: new Date().toISOString().split('T')[0]
   });
   setShared('sj-users-v6', allUsers);
   setShared('sj-signup-pending-v1', pending.filter(x=>x.id!==id));
   renderUsers(); renderPendingSignups();
-  showToast(`${p.name} 계정이 승인되었습니다.`, 'success');
+  showToast(`${p.name} 계정을 승인했습니다.`, 'success');
 }
-
 function rejectSignup(id) {
   const pending = getShared('sj-signup-pending-v1', []);
   const p = pending.find(x=>x.id===id);
@@ -910,7 +883,7 @@ function renderTargets() {
   const tsPct=document.getElementById('t-sales-pct'); if(tsPct)tsPct.textContent=targets.salesTarget?sPct+'%':'-';
 
   // 영업사원별
-  const userList = allUsers.filter(u=>u.role==='user');
+  const userList = allUsers.filter(isSalesUserAccount);
   const pm={}, sm={};
   allEntries.forEach(e=>{
     if(!e.personId)return;
@@ -966,7 +939,7 @@ function saveTargets() {
   targets.salesTarget = _pc('t-sales');
   targets.personal = {};
   targets.personalSales = {};
-  allUsers.filter(u=>u.role==='user').forEach(u=>{
+  allUsers.filter(isSalesUserAccount).forEach(u=>{
     const v=parseFloat(document.getElementById('pt-'+u.id)?.value)||0;
     if(v)targets.personal[u.id]=v;
     const s=_pc('pts-'+u.id);
@@ -1101,7 +1074,7 @@ function showToast(msg, type='success') {
 }
 
 function updateBadge() {
-  const cnt = currentUser?.role==='admin' ? allEntries.length : allEntries.filter(e=>e.personId===currentUser?.id).length;
+  const cnt = isAdminUser(currentUser) ? allEntries.length : allEntries.filter(e=>e.personId===currentUser?.id).length;
   const el = document.getElementById('total-badge');
   if (el) el.textContent = cnt;
 }

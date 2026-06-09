@@ -167,7 +167,7 @@ function wkOpenForm(id) {
     if (pw < 1) { py--; pw = 52; }
     const prev = allWeeklyReports.find(x =>
       x.year === py && x.week === pw &&
-      (currentUser.role === 'admin' || x.personId === currentUser.id)
+      (isAdminUser(currentUser) || x.personId === currentUser.id)
     );
     if (prev?.nextWeekTarget) {
       setDisp('wk-target-new-disp',      prev.nextWeekTarget.new);
@@ -804,7 +804,7 @@ function moRenum() {
 
 function moCalcSettle() {
   const ym = `${_moYear}-${String(_moMonth).padStart(2,'0')}`;
-  const myEntries = (allEntries||[]).filter(e => e.date?.startsWith(ym) && (currentUser.role==='admin' || e.personId===currentUser.id));
+  const myEntries = (allEntries||[]).filter(e => e.date?.startsWith(ym) && (isAdminUser(currentUser) || e.personId===currentUser.id));
   const visitCount = myEntries.length;
   const salesSum = myEntries.reduce((s,e)=>s+(e.ourPurchase||0),0);
   const newClients = myEntries.filter(e=>e.clientType==='신규거래처').length;
@@ -840,7 +840,7 @@ async function moSavePlan() {
 
 async function moSaveSettle() {
   const ym = `${_moYear}-${String(_moMonth).padStart(2,'0')}`;
-  const myEntries = (allEntries||[]).filter(e=>e.date?.startsWith(ym)&&(currentUser.role==='admin'||e.personId===currentUser.id));
+  const myEntries = (allEntries||[]).filter(e=>e.date?.startsWith(ym)&&(isAdminUser(currentUser)||e.personId===currentUser.id));
   moUpsertReport({
     newTarget: document.getElementById('mo-s-new-target').value,
     contractTarget: document.getElementById('mo-s-contract-target').value,

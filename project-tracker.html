@@ -30,7 +30,6 @@
   button{cursor:pointer;border:none;border-radius:8px;font-family:inherit;font-weight:700}
   .btn-primary{background:var(--green);color:#fff;padding:8px 16px;font-size:13px;box-shadow:0 2px 8px rgba(0,165,130,.22)}
   .btn-primary:hover{background:var(--green-dark)}
-  .role{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
 
   .proj{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow)}
   .ptop{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
@@ -123,12 +122,6 @@
     <div class="controls">
       <button class="btn-primary" id="addProjBtn" onclick="openProjModal()">+ 프로젝트 추가</button>
       <input id="psearch" placeholder="🔍 프로젝트 검색" oninput="renderList()">
-      <div class="role">
-        역할:
-        <select id="role" onchange="renderList();render()">
-          <option value="manager">운영 담당자 (전체 입력)</option>
-        </select>
-      </div>
     </div>
     <div id="projGrid" class="proj-grid"></div>
   </div>
@@ -259,7 +252,7 @@ const YEAR = 2026;
 const MONTHS = 12;
 const T0 = new Date(YEAR+'-01-01');
 const DAYS = Math.round((new Date((YEAR+1)+'-01-01') - T0)/(1000*60*60*24)); // 365
-const PROJECT_STAFF_FALLBACK = [{ id:'admin', name:'관리자', role:'admin', color:'#009E6A' }];
+const PROJECT_STAFF_FALLBACK = [{ id:'admin', name:'관리자', color:'#009E6A' }];
 const PROJECT_LEGACY_ASSIGNEES = ['김운영','이정합','박설계','영업A'];
 const PROJECT_STAFF_PALETTE = ['#009E6A','#2B72C8','#7856C8','#E8900A','#43A047','#D94040'];
 let projectStaff = [];
@@ -286,20 +279,25 @@ function readProjectUsers() {
   }
 }
 
-function isProjectStaffRole(role) {
-  const value = String(role || '').trim();
-  return value && value !== 'user' && value !== 'sales' && value !== '영업사원';
+function hasProjectMenuAccess(user) {
+  const access = Array.isArray(user?.menuAccess) ? user.menuAccess : [];
+  return user?.id === 'admin' || access.includes('project');
+}
+
+function isProjectStaffAccount(user) {
+  const access = Array.isArray(user?.menuAccess) ? user.menuAccess : [];
+  return !!(user && user.name && hasProjectMenuAccess(user) && !access.includes('journal'));
 }
 
 function loadProjectStaff() {
   const users = readProjectUsers();
   const seen = new Set();
-  const staff = users
-    .filter(u => u && u.name && isProjectStaffRole(u.role))
+  const preferred = users.filter(isProjectStaffAccount);
+  const fallbackUsers = preferred.length ? preferred : users.filter(u => u && u.name && hasProjectMenuAccess(u));
+  const staff = fallbackUsers
     .map((u, idx) => ({
       id: u.id || `staff-${idx}`,
       name: String(u.name).trim(),
-      role: u.role || '',
       color: u.color || PROJECT_STAFF_PALETTE[idx % PROJECT_STAFF_PALETTE.length],
     }))
     .filter(u => {
@@ -392,9 +390,6 @@ function dropOn(targetPid){
 }
 
 function renderList(){
-  const role=document.getElementById('role').value;
-  document.getElementById('addProjBtn').style.opacity=role==='sales'?.4:1;
-  document.getElementById('addProjBtn').style.pointerEvents=role==='sales'?'none':'auto';
   const q=(document.getElementById('psearch').value||'').toLowerCase().trim();
   const dragOff = !!q; // 검색 중엔 드래그 비활성 (순서 꼬임 방지)
   const grid=document.getElementById('projGrid'); grid.innerHTML='';
@@ -404,7 +399,7 @@ function renderList(){
   list.forEach(p=>{
     const pr=projProgress(p.id);
     const card=document.createElement('div'); card.className='pcard';
-    const delBtn=(role==='manager'&&!p.fixed)?`<button class="pdel" onclick="event.stopPropagation();delProj(${p.id})">×</button>`:'';
+    const delBtn=(!p.fixed)?`<button class="pdel" onclick="event.stopPropagation();delProj(${p.id})">×</button>`:'';
     const overHtml=pr.over?`<span class="over">⚠ 지연 ${pr.over}</span>`:'';
     const handle=(!p.fixed&&!dragOff)?'<span class="drag-handle" title="드래그로 순서 변경">⠿</span>':'';
     card.innerHTML=`${delBtn}${handle}
@@ -513,7 +508,6 @@ function buildHeader(){
 }
 
 function render(){
-  const role = document.getElementById('role').value;
   const tb = document.getElementById('tableBody'), gb = document.getElementById('ganttBody');
   tb.innerHTML=''; gb.innerHTML='';
 
@@ -551,7 +545,7 @@ function render(){
     const dep = t.dep?`<small>↳ ${t.dep}</small>`:'';
     const statusCtrl = `<select class="statsel" onchange="setStatus(${t.id},this.value)">`+
       Object.entries(statusMap).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')+`</select>`;
-    const delBtn = role==='manager'?`<button class="del" onclick="delTask(${t.id})">×</button>`:`<span style="width:24px"></span>`;
+    const delBtn = `<button class="del" onclick="delTask(${t.id})">×</button>`;
     const p = prioMap[t.priority]||prioMap.mid;
     const prioBadge = `<span class="prio ${p.c}">${p.t}</span>`;
     const tagsHtml = (t.tags||[]).map(tg=>`<span class="tag">${tg}</span>`).join('');
@@ -587,11 +581,9 @@ function render(){
   document.getElementById('pbarPct').textContent=pr.avg+'%';
   document.getElementById('pbarFill').style.width=pr.avg+'%';
   document.getElementById('pbarSub').textContent=`태스크 ${pr.done}/${pr.total} 완료 · 평균 진행률 기준`;
-
-  // 영업사원이면 태스크 "추가" 버튼 비활성
   const ab=document.getElementById('addTaskBtn');
-  ab.style.opacity = role==='sales'?.4:1;
-  ab.style.pointerEvents = role==='sales'?'none':'auto';
+  ab.style.opacity = 1;
+  ab.style.pointerEvents = 'auto';
 }
 
 function setStatus(id,v){ const t=tasks.find(x=>x.id===id); if(t){t.status=v; render();} }

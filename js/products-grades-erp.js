@@ -2,6 +2,12 @@
 // ════════════════════════════════════
 let productPersonId = 'all';
 let productCategoryId = 'all';
+// 아마란스 ERP "고객분류"의 도매(이름) → 영업사원 이름 목록 (allOrders 기준, 가나다순)
+function erpPersonNames() {
+  return [...new Set((typeof allOrders !== 'undefined' ? allOrders : [])
+    .map(o => (o.person || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ko'));
+}
 // 제품/등급 페이지네이션·정렬 상태 (clients.js에서 이동)
 let _prodSortCol = 'sales', _prodSortDir = 'desc';
 let _prodPage = 1, _prodList = [], _prodHasPrev = false;
@@ -139,16 +145,14 @@ function updateGradeMemo(name, val) {
 // ════════════════════════════════════
 // PRODUCTS PAGE
 // ════════════════════════════════════
-function renderProductPersonFilter(salesUsers) {
+function renderProductPersonFilter() {
   const filterEl = document.getElementById('prod-person-filter');
   if (!filterEl) return;
-  const ordered = [...salesUsers].sort((a,b) =>
-    (a.createdAt||'').localeCompare(b.createdAt||'')
-  );
-  if (productPersonId !== 'all' && !ordered.some(u => u.id === productPersonId)) {
+  const personNames = erpPersonNames();
+  if (productPersonId !== 'all' && !personNames.includes(productPersonId)) {
     productPersonId = 'all';
   }
-  const btns = [{id:'all', name:'전체'}, ...ordered.map(u=>({id:u.id, name:u.name}))];
+  const btns = [{id:'all', name:'전체'}, ...personNames.map(n=>({id:n, name:n}))];
   filterEl.innerHTML = btns.map(b =>
     `<button type="button" class="stats-person-btn${productPersonId===b.id?' active':''}" onclick="setProductPerson('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
   ).join('');
@@ -199,8 +203,7 @@ function showProdTab(id) {
 
 function renderProducts() {
   updateOrderBasisUI();
-  const salesUsers = allUsers.filter(u => u.role === 'user');
-  renderProductPersonFilter(salesUsers);
+  renderProductPersonFilter();
   const personF = productPersonId || 'all';
   const cats = [...new Set((allOrders || []).map(o => o.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
   renderProductCategoryFilter(cats);
@@ -233,10 +236,7 @@ function renderProducts() {
     if (!o.date) return;
     if (dateFrom && o.date < dateFrom) return;
     if (dateTo   && o.date > dateTo)   return;
-    if (personF !== 'all') {
-      const personName = allUsers.find(u => u.id === personF)?.name || personF;
-      if (o.person !== personName) return;
-    }
+    if (personF !== 'all' && o.person !== personF) return;
     if (catF !== 'all' && (o.category||'') !== catF) return;
     const productName = o.product || '(품명 없음)';
     if (searchV && !productName.toLowerCase().includes(searchV)) return;
@@ -339,7 +339,7 @@ function renderProdAbc() {
   const catF = (typeof productCategoryId !== 'undefined') ? (productCategoryId || 'all') : 'all';
   const searchV = (document.getElementById('prod-search')?.value || '').toLowerCase();
   const limit = parseInt(document.getElementById('prod-abc-limit')?.value || '50', 10);
-  const personName = personF !== 'all' ? (allUsers.find(u=>u.id===personF)?.name || personF) : null;
+  const personName = personF !== 'all' ? personF : null;
 
   const filtered = allOrders.filter(o => {
     if (!o.product || !o.date) return false;

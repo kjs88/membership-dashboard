@@ -136,7 +136,7 @@ function dlyRenderCal() {
   const entryMap = {};
   (allEntries||[]).forEach(e => {
     if (!e.date) return;
-    if (currentUser.role !== 'admin' && e.personId && e.personId !== currentUser.id) return;
+    if (!isAdminUser(currentUser) && e.personId && e.personId !== currentUser.id) return;
     if (!entryMap[e.date]) entryMap[e.date] = [];
     entryMap[e.date].push(e);
   });
@@ -173,7 +173,7 @@ function dlyRenderCal() {
       if (!personMap[pName]) personMap[pName] = 0;
       personMap[pName]++;
     });
-    const isAdmin = currentUser.role === 'admin';
+    const isAdmin = isAdminUser(currentUser);
     const summaryLines = Object.entries(personMap).slice(0,5).map(([name, cnt]) =>
       isAdmin
         ? `<div class="dly-entry-dot">● ${name} / ${cnt}처</div>`
@@ -239,7 +239,7 @@ function cwRenderSavedList() {
   if (!list) return;
   const dayEntries = (allEntries||[]).filter(e => {
     if (e.date !== ds) return false;
-    if (currentUser.role !== 'admin' && e.personId && e.personId !== currentUser.id) return false;
+    if (!isAdminUser(currentUser) && e.personId && e.personId !== currentUser.id) return false;
     return true;
   });
   document.getElementById('cw-count-label').textContent = `등록된 거래처 ${dayEntries.length}건`;
