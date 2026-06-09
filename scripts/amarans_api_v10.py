@@ -339,8 +339,8 @@ def merge_by_key(existing, new_rows, key_fields):
     return list(by_key.values()), added, updated
 
 
-# 대시보드에 포함할 계정구분(acctNm) — "상품"만 사용, 부품/제품 등 제외
-ACCT_KEEP = {"상품"}
+# 대시보드에 포함할 품목군(itemgrpNm) — "상품"만 사용, 부품 제외
+ITEMGRP_KEEP = {"상품"}
 
 
 def to_dashboard_format(rows, job):
@@ -348,17 +348,14 @@ def to_dashboard_format(rows, job):
     df = job["dashboard_fields"]
     basis = job["slug"]
     result = []
-    acct_counts = {}
     grp_counts = {}
-    skipped_acct = 0
+    skipped_grp = 0
     for r in rows:
-        # 진단: 계정구분/품목군 분포 확인 (부품 구분 필드 찾기)
-        acct = _safe_str(r.get("acctNm", "")).strip()
+        # 품목군 필터: 상품만 (부품 제외)
         grp = _safe_str(r.get("itemgrpNm", "")).strip()
-        acct_counts[acct or "(빈값)"] = acct_counts.get(acct or "(빈값)", 0) + 1
         grp_counts[grp or "(빈값)"] = grp_counts.get(grp or "(빈값)", 0) + 1
-        if ACCT_KEEP and acct not in ACCT_KEEP:
-            skipped_acct += 1
+        if ITEMGRP_KEEP and grp not in ITEMGRP_KEEP:
+            skipped_grp += 1
             continue
         cust_cls = _safe_str(r.get("tradeGrpNm", ""))
         match = re.search(r"도매\((.+?)\)", cust_cls)
@@ -382,8 +379,7 @@ def to_dashboard_format(rows, job):
             "region": _safe_str(r.get("areaNm", "")),
             "orderNo": _safe_str(r.get(df["no"], "")),
         })
-    print(f"   [{basis}] 계정구분 분포: {acct_counts} | 상품만 유지({len(result)}건), 제외 {skipped_acct}건")
-    print(f"   [{basis}] 품목군(itemgrpNm) 분포: {grp_counts}")
+    print(f"   [{basis}] 품목군 분포: {grp_counts} | 상품만 유지({len(result)}건), 부품 등 제외 {skipped_grp}건")
     return result
 
 
