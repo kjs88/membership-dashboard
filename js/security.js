@@ -1,0 +1,138 @@
+// Browser-side hardening helpers. These do not replace Firebase Security Rules,
+// but they reduce XSS, credential leakage, and accidental data corruption.
+const SECURITY_PBKDF2_ITERATIONS = 160000;
+const SECURITY_PASSWORD_VERSION = 'pbkdf2-sha256';
+const SECURITY_MAX_STRING_LENGTH = 20000;
+const SECURITY_MAX_DEPTH = 8;
+const SECURITY_FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function securityRandomBytes(length = 16) {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function securityBytesToBase64(bytes) {
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+
+function securityBase64ToBytes(value) {
+  const bin = atob(String(value || ''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function securityDerivePasswordHash(password, saltBytes, iterations = SECURITY_PBKDF2_ITERATIONS) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(String(password || '')),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: saltBytes, iterations },
+    key,
+    256
+  );
+  return new Uint8Array(bits);
+}
+
+function securityConstantTimeEqual(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+async function authBuildPasswordRecord(password) {
+  const salt = securityRandomBytes(16);
+  const hash = await securityDerivePasswordHash(password, salt);
+  return `${SECURITY_PASSWORD_VERSION}$${SECURITY_PBKDF2_ITERATIONS}$${securityBytesToBase64(salt)}$${securityBytesToBase64(hash)}`;
+}
+
+async function authVerifyPassword(user, password) {
+  if (!user) return false;
+  if (user.passwordHash && String(user.passwordHash).startsWith(`${SECURITY_PASSWORD_VERSION}$`)) {
+    const parts = String(user.passwordHash).split('$');
+    if (parts.length !== 4) return false;
+    const iterations = Math.max(100000, parseInt(parts[1], 10) || SECURITY_PBKDF2_ITERATIONS);
+    const salt = securityBase64ToBytes(parts[2]);
+    const expected = securityBase64ToBytes(parts[3]);
+    const actual = await securityDerivePasswordHash(password, salt, iterations);
+    return securityConstantTimeEqual(actual, expected);
+  }
+  // Legacy migration path: old data may still contain plaintext passwords.
+  return user.password !== undefined && String(user.password) === String(password);
+}
+
+async function authSetPassword(user, password) {
+  if (!user) return user;
+  user.passwordHash = await authBuildPasswordRecord(password);
+  delete user.password;
+  return user;
+}
+
+function authHasLegacyPassword(user) {
+  return !!(user && user.password !== undefined && !user.passwordHash);
+}
+
+function securityNormalizeCredentialRecord(record) {
+  if (!record || typeof record !== 'object') return record;
+  if (record.passwordHash && record.password !== undefined) delete record.password;
+  return record;
+}
+
+function securitySanitizeText(value) {
+  return String(value ?? '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/[<>]/g, c => c === '<' ? '＜' : '＞')
+    .slice(0, SECURITY_MAX_STRING_LENGTH);
+}
+
+function securitySanitizeData(value, depth = 0) {
+  if (depth > SECURITY_MAX_DEPTH) return null;
+  if (value == null || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (typeof value === 'string') return securitySanitizeText(value);
+  if (Array.isArray(value)) return value.slice(0, 10000).map(v => securitySanitizeData(v, depth + 1));
+  if (typeof value === 'object') {
+    const clean = {};
+    Object.entries(value).forEach(([key, val]) => {
+      if (SECURITY_FORBIDDEN_KEYS.has(key) || /^on[a-z]/i.test(key)) return;
+      clean[securitySanitizeText(key).replace(/[.$#[\]/]/g, '_')] = securitySanitizeData(val, depth + 1);
+    });
+    return securityNormalizeCredentialRecord(clean);
+  }
+  return null;
+}
+
+function securityNormalizeFirebaseUrl(url) {
+  const text = String(url || '').trim().replace(/\/+$/, '');
+  try {
+    const parsed = new URL(text);
+    const allowed = parsed.protocol === 'https:' && (
+      parsed.hostname.endsWith('.firebaseio.com') ||
+      parsed.hostname.endsWith('.firebasedatabase.app')
+    );
+    return allowed ? parsed.origin : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function securityAssertSameOriginFrame() {
+  try {
+    const isProjectFrame = /project-tracker\.html$/i.test(location.pathname);
+    if (window.self !== window.top && !isProjectFrame) {
+      document.documentElement.innerHTML = '';
+      window.top.location = window.location.href;
+    }
+  } catch (_) {
+    document.documentElement.innerHTML = '';
+  }
+}
+
+securityAssertSameOriginFrame();

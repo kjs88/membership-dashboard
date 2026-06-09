@@ -17,6 +17,7 @@ if ($branch -ne "main") {
   throw "Deploy must run on main branch. Current branch: $branch"
 }
 
+& (Join-Path $PSScriptRoot "security-scan.ps1") -Root $root
 git diff --check
 
 $status = git status --porcelain

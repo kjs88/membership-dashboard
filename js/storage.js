@@ -14,21 +14,24 @@ const FB_SYNC_KEYS = {
 
 function _fbSyncPath(key) {
   if (FB_SYNC_KEYS[key]) return FB_SYNC_KEYS[key];
+  const safePathKey = value => String(value || '').replace(/[.$#[\]/]/g, '_').slice(0, 120);
   const wm = key.match(/^sj-weekly-reports-(.+)$/);
-  if (wm) return `data/weekly-reports/${wm[1]}`;
+  if (wm) return `data/weekly-reports/${safePathKey(wm[1])}`;
   const mm = key.match(/^sj-monthly-reports-(.+)$/);
-  if (mm) return `data/monthly-reports/${mm[1]}`;
+  if (mm) return `data/monthly-reports/${safePathKey(mm[1])}`;
   return null;
 }
 
 function _fbUrl(path) {
-  const base = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
+  const rawBase = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
+  const base = typeof securityNormalizeFirebaseUrl === 'function' ? securityNormalizeFirebaseUrl(rawBase) : rawBase;
   return base ? `${base}/${path}.json` : null;
 }
 
 function setShared(key, val) {
+  const cleanVal = typeof securitySanitizeData === 'function' ? securitySanitizeData(val) : val;
   try {
-    localStorage.setItem(key, JSON.stringify(val));
+    localStorage.setItem(key, JSON.stringify(cleanVal));
   } catch (err) {
     console.error('[storage:set]', key, err);
     return false;
@@ -40,7 +43,7 @@ function setShared(key, val) {
       fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(val),
+        body: JSON.stringify(cleanVal),
       }).catch(e => console.warn('[storage:fb:set]', key, e));
     }
   }
@@ -50,7 +53,8 @@ function setShared(key, val) {
 function getShared(key, def) {
   try {
     const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : def;
+    const parsed = v ? JSON.parse(v) : def;
+    return typeof securitySanitizeData === 'function' ? securitySanitizeData(parsed) : parsed;
   } catch (err) {
     console.error('[storage:get]', key, err);
     return def;
@@ -94,14 +98,17 @@ function setErpRuntimeData(parsedOrder, parsedShip, payload = {}) {
 
 // 앱 진입 시 Firebase /data + erp/latest 전체를 localStorage에 동기화
 async function syncFromFirebase() {
-  const base = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
+  const rawBase = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
+  const base = typeof securityNormalizeFirebaseUrl === 'function' ? securityNormalizeFirebaseUrl(rawBase) : rawBase;
   if (!base) return;
 
   // /data (영업일지, 사용자, 거래처 등)
   try {
     const res = await fetch(`${base}/data.json?_=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
-      const data = await res.json();
+      const data = typeof securitySanitizeData === 'function'
+        ? securitySanitizeData(await res.json())
+        : await res.json();
       if (data && typeof data === 'object') {
         if (data.entries          !== undefined) localStorage.setItem('sj-entries-v4',         JSON.stringify(data.entries));
         if (data.users            !== undefined) localStorage.setItem('sj-users-v6',            JSON.stringify(data.users));
@@ -179,10 +186,11 @@ async function pushAllToFirebase() {
   if (Object.keys(monthly).length) payload['monthly-reports'] = monthly;
 
   try {
+    const cleanPayload = typeof securitySanitizeData === 'function' ? securitySanitizeData(payload) : payload;
     const res = await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(cleanPayload),
     });
     return res.ok;
   } catch (e) {

@@ -1,0 +1,23 @@
+name: 보안 검사
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: 비밀정보/토큰 검사
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 가져오기
+        uses: actions/checkout@v5
+
+      - name: 보안 스캔
+        shell: pwsh
+        run: ./scripts/security-scan.ps1

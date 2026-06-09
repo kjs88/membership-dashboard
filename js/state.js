@@ -10,8 +10,30 @@ let fbListeners = [];
 // FIREBASE CONFIG
 // ════════════════════════════════════
 let DB_URL = 'https://membership-7aef2-default-rtdb.firebaseio.com';
+try {
+  const savedDbUrl = localStorage.getItem('sj-firebase-db-url');
+  const normalizedDbUrl = typeof securityNormalizeFirebaseUrl === 'function'
+    ? securityNormalizeFirebaseUrl(savedDbUrl)
+    : '';
+  if (normalizedDbUrl) DB_URL = normalizedDbUrl;
+} catch (_) {}
 
-function saveFbConfig() {}
+function saveFbConfig() {
+  const input = document.getElementById('fb-url-input');
+  const err = document.getElementById('fb-setup-err');
+  const url = typeof securityNormalizeFirebaseUrl === 'function'
+    ? securityNormalizeFirebaseUrl(input?.value)
+    : String(input?.value || '').trim().replace(/\/+$/, '');
+  if (!url) {
+    if (err) err.style.display = 'block';
+    return;
+  }
+  DB_URL = url;
+  localStorage.setItem('sj-firebase-db-url', url);
+  const screen = document.getElementById('fb-setup-screen');
+  if (screen) screen.style.display = 'none';
+  if (typeof checkFbConfig === 'function') checkFbConfig();
+}
 
 function toggleMobMenu(){
   document.querySelector('.sidebar').classList.toggle('mob-open');

@@ -131,11 +131,11 @@ function setOrderBasis(basis) {
 // INIT DATA
 // ════════════════════════════════════
 const DEFAULT_USERS = [
-  { id:'admin', name:'관리자', password:'1234', color:'#009E6A', createdAt:'2026-01-01' },
-  { id:'lee1',  name:'이기현', password:'1234',  color:'#7856C8', createdAt:'2026-01-02' },
-  { id:'jang1', name:'장재순', password:'1234',  color:'#E53935', createdAt:'2026-01-03' },
-  { id:'lee2',  name:'이민우', password:'1234',  color:'#2B72C8', createdAt:'2026-01-04' },
-  { id:'ahn1',  name:'안성종', password:'1234',  color:'#43A047', createdAt:'2026-01-05' },
+  { id:'admin', name:'관리자', passwordHash:'pbkdf2-sha256$160000$eE00Yw5Qt51oyvfD09dPbg==$ETO1qIAKoNqbzXyxet/uzgv0geCVSI6POkLRNjnpHog=', color:'#009E6A', createdAt:'2026-01-01' },
+  { id:'lee1',  name:'이기현', passwordHash:'pbkdf2-sha256$160000$NsXoyROEcQ2+WNd7+2+nfw==$6XItrKK4gpEmlIszSkNwjhPaS7KssNqui+2NhrdVozY=',  color:'#7856C8', createdAt:'2026-01-02' },
+  { id:'jang1', name:'장재순', passwordHash:'pbkdf2-sha256$160000$oOTZXxlEZAihtsi4t2LY0A==$puMCD3Xxr6qwJ7vZ5e6thr3YtEadT4nbTm6ZtGWBvSk=',  color:'#E53935', createdAt:'2026-01-03' },
+  { id:'lee2',  name:'이민우', passwordHash:'pbkdf2-sha256$160000$Dfbp/PRmz5XdQlYunDYd3g==$Hjdxo4yTIwPyr3ZQjQzZJAOHdAtm4gfHGpdOYaQHvYQ=',  color:'#2B72C8', createdAt:'2026-01-04' },
+  { id:'ahn1',  name:'안성종', passwordHash:'pbkdf2-sha256$160000$P/VPede99zuWprWtDH8D/g==$tVTeXJXQ081omqseRbVYDflxqKgBMNs1/jqBi1cg+mI=',  color:'#43A047', createdAt:'2026-01-05' },
 ];
 const SEED_ENTRIES = [];
 
@@ -178,7 +178,7 @@ function getLegacyMenuProfile(user) {
 function stripLegacyRole(user) {
   const copy = { ...user };
   delete copy['role'];
-  return copy;
+  return typeof securityNormalizeCredentialRecord === 'function' ? securityNormalizeCredentialRecord(copy) : copy;
 }
 
 function getUserMenuAccess(user = currentUser) {
@@ -222,8 +222,9 @@ async function doLogin() {
   await syncFromFirebase();
   ensureUsers();
   if (allUsers.length === 0) allUsers = DEFAULT_USERS;
-  const user = allUsers.find(u => u.id === uid && u.password === pw);
-  if (!user) {
+  const user = allUsers.find(u => u.id === uid);
+  const loginOk = user ? await authVerifyPassword(user, pw) : false;
+  if (!loginOk) {
     const pending = getShared('sj-signup-pending-v1', []);
     const isPending = pending.find(p => p.id === uid);
     const err = document.getElementById('login-err');
@@ -233,6 +234,10 @@ async function doLogin() {
     err.style.display = 'block';
     setTimeout(() => err.style.display = 'none', 3000);
     return;
+  }
+  if (authHasLegacyPassword(user)) {
+    await authSetPassword(user, pw);
+    setShared('sj-users-v6', allUsers);
   }
   currentUser = user;
   saveCurrentUser(user, document.getElementById('li-remember')?.checked);
@@ -265,7 +270,12 @@ function ensureUsers() {
     allUsers = DEFAULT_USERS.map(d => {
       const existing = allUsers.find(u => u.id === d.id);
       return existing
-        ? stripLegacyRole({ ...d, password: existing.password, menuAccess: normalizeMenuAccess(existing.menuAccess, getLegacyMenuProfile(existing)) })
+        ? stripLegacyRole({
+            ...d,
+            passwordHash: existing.passwordHash || d.passwordHash,
+            password: existing.password,
+            menuAccess: normalizeMenuAccess(existing.menuAccess, getLegacyMenuProfile(existing)),
+          })
         : { ...d, menuAccess: getDefaultMenuAccess(d.id === 'admin' ? 'admin' : 'user') };
     });
   } else {

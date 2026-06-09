@@ -21,6 +21,9 @@ concurrency:
   group: amarans-erp-sync
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   sync:
     name: 주문/출고현황 수집
