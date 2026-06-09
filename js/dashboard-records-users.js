@@ -85,24 +85,36 @@ function renderSalesPage() {
   if (rankSub) rankSub.textContent = useErpForCharts ? `${basisMeta.label} 공급가 기준 (원)` : '당사 구매액 기준 (원)';
   const personSub = document.getElementById('sh-person-sub');
   if (personSub) personSub.textContent = useErpForCharts ? `이번달 ${basisMeta.label} 공급가 기준 (원)` : '이번달 당사 구매액 기준 (원)';
+
+  // ── 채널 분류 (사업소 / 유통사) ──
+  //  · 사업소: 영업사원이 이기현·장재순·이민우·안성종 중 한 명 (고객분류 도매(이름))
+  //  · 유통사: 고객분류 == "도도매/유통사" (수집 시 channel='dist'로 표시)
+  const OFFICE_PERSONS = ['이기현','장재순','이민우','안성종'];
+  const isOffice = o => o.channel ? o.channel === 'office' : OFFICE_PERSONS.includes((o.person||'').trim());
+  const isDist   = o => o.channel ? o.channel === 'dist'   : (o.custClass||'').trim() === '도도매/유통사';
+  const sumSupply = arr => Math.round(arr.reduce((s,e)=>s+(parseFloat(e.supply)||0),0));
+
+  const erpMonthOffice = erpMonth.filter(isOffice);
+  const erpMonthDist   = erpMonth.filter(isDist);
+  const monthOfficeSales = sumSupply(erpMonthOffice);
+  const monthDistSales   = sumSupply(erpMonthDist);
+  // 합계 매출 = 사업소 + 유통사 (상품 기준)
   const monthSales = useErpForCharts
-    ? Math.round(erpMonth.reduce((s,e) => s+(parseFloat(e.supply)||0),0))
+    ? (monthOfficeSales + monthDistSales)
     : monthEntries.reduce((s,e) => s+(e.ourPurchase||0),0);
-  const erpToday = allOrders.filter(e => e.date===today);
-  const todaySales = erpToday.length > 0
-    ? Math.round(erpToday.reduce((s,e)=>s+(parseFloat(e.supply)||0),0))
-    : todayEntries.reduce((s,e)=>s+(e.ourPurchase||0),0);
-  const erpYest = allOrders.filter(e => e.date===yesterday);
-  const yesterdaySales = erpYest.length > 0
-    ? Math.round(erpYest.reduce((s,e)=>s+(parseFloat(e.supply)||0),0))
-    : yesterdayEntries.reduce((s,e)=>s+(e.ourPurchase||0),0);
+
   const prevM = new Date(); prevM.setMonth(prevM.getMonth()-1);
   const prevYm = prevM.getFullYear()+'-'+String(prevM.getMonth()+1).padStart(2,'0');
+  const prevMonthRows = allOrders.filter(e => (e.date||'').startsWith(prevYm));
   const prevMonthSales = useErpForCharts
-    ? Math.round(allOrders.filter(e => (e.date||'').startsWith(prevYm)).reduce((s,e) => s+(parseFloat(e.supply)||0),0))
+    ? (sumSupply(prevMonthRows.filter(isOffice)) + sumSupply(prevMonthRows.filter(isDist)))
     : allEntries.filter(e => e.date?.startsWith(prevYm)).reduce((s,e) => s + (e.ourPurchase||0), 0);
   const monthDiff = prevMonthSales > 0 ? ((monthSales - prevMonthSales) / prevMonthSales * 100) : 0;
-  const dayDiff = yesterdaySales > 0 ? ((todaySales - yesterdaySales) / yesterdaySales * 100) : 0;
+  // 전월 동월 채널별 (사업소/유통사 카드 전월 대비용)
+  const prevMonthOfficeSales = sumSupply(prevMonthRows.filter(isOffice));
+  const prevMonthDistSales   = sumSupply(prevMonthRows.filter(isDist));
+  const officeDiff = prevMonthOfficeSales > 0 ? ((monthOfficeSales - prevMonthOfficeSales) / prevMonthOfficeSales * 100) : 0;
+  const distDiff   = prevMonthDistSales   > 0 ? ((monthDistSales   - prevMonthDistSales)   / prevMonthDistSales   * 100) : 0;
 
   document.getElementById('sh-month-val').textContent = monthSales.toLocaleString();
   if (targets.salesTarget) {
@@ -122,12 +134,20 @@ function renderSalesPage() {
   document.getElementById('sh-month-sub').innerHTML = prevMonthSales > 0
     ? `전월 대비 <span class="sales-kpi-badge ${monthDiff>=0?'up':'down'}">${monthDiff>=0?'▲':'▼'} ${Math.abs(monthDiff).toFixed(1)}%</span>`
     : `${useErpForCharts ? erpMonth.length+'건 '+basisMeta.action+' 기준' : monthEntries.length+'건 방문 기준'}`;
-  document.getElementById('sh-today-val').textContent = todaySales.toLocaleString();
-  document.getElementById('sh-today-sub').innerHTML = erpToday.length > 0 ? `${erpToday.length}건 ${basisMeta.action}` : `${todayEntries.length}건 방문`;
-  document.getElementById('sh-yesterday-val').textContent = yesterdaySales.toLocaleString();
-  document.getElementById('sh-yesterday-sub').innerHTML = yesterdaySales > 0
-    ? `전일 대비 <span class="sales-kpi-badge ${dayDiff>=0?'up':'down'}">${dayDiff>=0?'▲':'▼'} ${Math.abs(dayDiff).toFixed(1)}%</span>`
-    : `${erpYest.length > 0 ? erpYest.length+'건 '+basisMeta.action : yesterdayEntries.length+'건 방문'}`;
+
+  // 카드2 (구 오늘 매출 → 이번달 누적 사업소 매출)
+  document.getElementById('sh-today-val').textContent = monthOfficeSales.toLocaleString();
+  const officeShare = monthSales > 0 ? Math.round(monthOfficeSales / monthSales * 100) : 0;
+  document.getElementById('sh-today-sub').innerHTML = prevMonthOfficeSales > 0
+    ? `전월 대비 <span class="sales-kpi-badge ${officeDiff>=0?'up':'down'}">${officeDiff>=0?'▲':'▼'} ${Math.abs(officeDiff).toFixed(1)}%</span> · 비중 ${officeShare}%`
+    : `${erpMonthOffice.length}건 · 비중 ${officeShare}%`;
+
+  // 카드3 (구 어제 매출 → 이번달 누적 유통사 매출)
+  document.getElementById('sh-yesterday-val').textContent = monthDistSales.toLocaleString();
+  const distShare = monthSales > 0 ? Math.round(monthDistSales / monthSales * 100) : 0;
+  document.getElementById('sh-yesterday-sub').innerHTML = prevMonthDistSales > 0
+    ? `전월 대비 <span class="sales-kpi-badge ${distDiff>=0?'up':'down'}">${distDiff>=0?'▲':'▼'} ${Math.abs(distDiff).toFixed(1)}%</span> · 비중 ${distShare}%`
+    : `${erpMonthDist.length}건 · 비중 ${distShare}%`;
 
   const daysInMonth = new Date(parseInt(ym.split('-')[0]), parseInt(ym.split('-')[1]), 0).getDate();
   const dayLabels = [], daySalesData = [], dailyBarColors = [];

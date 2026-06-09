@@ -342,6 +342,20 @@ def merge_by_key(existing, new_rows, key_fields):
 # 대시보드에 포함할 품목군(itemgrpNm) — "상품"만 사용, 부품 제외
 ITEMGRP_KEEP = {"상품"}
 
+# 채널 분류 (고객분류=tradeGrpNm 기준)
+#  - 사업소(office): 도매(이기현/장재순/이민우/안성종) → person 이 아래 이름 중 하나
+#  - 유통사(dist): 고객분류 == "도도매/유통사"
+OFFICE_PERSONS = {"이기현", "장재순", "이민우", "안성종"}
+DIST_GROUP = "도도매/유통사"
+
+
+def classify_channel(cust_cls, person):
+    if cust_cls == DIST_GROUP:
+        return "dist"
+    if person in OFFICE_PERSONS:
+        return "office"
+    return "other"
+
 
 def to_dashboard_format(rows, job):
     """erpParseRows와 동일한 형식으로 변환."""
@@ -349,6 +363,8 @@ def to_dashboard_format(rows, job):
     basis = job["slug"]
     result = []
     grp_counts = {}
+    cls_counts = {}
+    chan_counts = {}
     skipped_grp = 0
     for r in rows:
         # 품목군 필터: 상품만 (부품 제외)
@@ -357,9 +373,12 @@ def to_dashboard_format(rows, job):
         if ITEMGRP_KEEP and grp not in ITEMGRP_KEEP:
             skipped_grp += 1
             continue
-        cust_cls = _safe_str(r.get("tradeGrpNm", ""))
+        cust_cls = _safe_str(r.get("tradeGrpNm", "")).strip()
         match = re.search(r"도매\((.+?)\)", cust_cls)
         person = match.group(1) if match else _safe_str(r.get("empNm", ""))
+        channel = classify_channel(cust_cls, person)
+        cls_counts[cust_cls or "(빈값)"] = cls_counts.get(cust_cls or "(빈값)", 0) + 1
+        chan_counts[channel] = chan_counts.get(channel, 0) + 1
 
         date_str = format_date(r.get(df["date"], ""))
         client = _safe_str(r.get("trNm", ""))
@@ -376,10 +395,14 @@ def to_dashboard_format(rows, job):
             "supply": _safe_num(r.get(df["supply"], 0)),
             "total": _safe_num(r.get(df["total"], 0)),
             "person": person,
+            "custClass": cust_cls,
+            "channel": channel,
             "region": _safe_str(r.get("areaNm", "")),
             "orderNo": _safe_str(r.get(df["no"], "")),
         })
     print(f"   [{basis}] 품목군 분포: {grp_counts} | 상품만 유지({len(result)}건), 부품 등 제외 {skipped_grp}건")
+    print(f"   [{basis}] 고객분류 분포: {cls_counts}")
+    print(f"   [{basis}] 채널 분포: {chan_counts}")
     return result
 
 
