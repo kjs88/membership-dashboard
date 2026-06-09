@@ -1067,7 +1067,7 @@ PowerShell을 '관리자 권한'으로 열고 아래 명령을 한 번만 실행
 
 # 1) 환경변수 영구 설정 (사용자 단위)
 [System.Environment]::SetEnvironmentVariable('AMARANS_USERNAME','너의ID','User')
-[System.Environment]::SetEnvironmentVariable('AMARANS_PASSWORD','너의비밀번호','User')
+[System.Environment]::SetEnvironmentVariable('AMARANS_PASSWORD', (Read-Host 'Amarans password'), 'User')
 [System.Environment]::SetEnvironmentVariable('AMARANS_FIREBASE_DB_URL','{FIREBASE_DB_URL}','User')
 
 # 2) 09시~21시 5분마다 자동 실행

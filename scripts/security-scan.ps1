@@ -19,7 +19,7 @@ $patterns = @(
   @{ Name = "signKey cookie"; Regex = "signKey\s*=" },
   @{ Name = "Private key"; Regex = "-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----" },
   @{ Name = "Firebase auth token value"; Regex = "(AMARANS_FIREBASE_AUTH_TOKEN|FIREBASE_AUTH_TOKEN)\s*[:=]\s*['""]?[A-Za-z0-9._~+/\-=]{20,}" },
-  @{ Name = "Literal password field"; Regex = "\bpassword\s*:\s*['""][^'""]{4,}['""]" }
+  @{ Name = "Literal password field"; Regex = "\bpassword\s*:\s*['""][^'""\r\n]{4,}['""]" }
 )
 
 $files = Get-ChildItem -LiteralPath $Root -Recurse -Force -File | Where-Object {

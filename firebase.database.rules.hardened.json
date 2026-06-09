@@ -1,0 +1,17 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": false,
+    "erp": {
+      "latest": {
+        ".read": "auth != null",
+        ".write": "auth.token.admin === true",
+        ".validate": "newData.hasChildren(['order', 'ship', 'syncedAt'])"
+      }
+    },
+    "data": {
+      ".read": "auth != null",
+      ".write": "auth.token.admin === true"
+    }
+  }
+}

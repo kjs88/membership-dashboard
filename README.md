@@ -8,6 +8,14 @@
 - Repository: `kjs88/membership-dashboard`
 - Deploy source: GitHub Pages, `main` branch root
 
+## Security
+
+- 자세한 보안 정책과 남은 한계는 [SECURITY.md](SECURITY.md)를 확인하세요.
+- 배포 전 `scripts/security-scan.ps1`이 Bearer 토큰, Amarans/Bizcube 쿠키, private key, 평문 password literal을 검사합니다.
+- 신규/변경/초기화 비밀번호는 PBKDF2-SHA256 해시로 저장됩니다.
+- 기존 Firebase 데이터에 남아 있는 평문 비밀번호는 해당 사용자가 로그인에 성공하면 자동으로 해시로 마이그레이션됩니다.
+- GitHub Pages 정적 사이트 특성상 Firebase Authentication 또는 서버 프록시 없이 Firebase 직접 REST 공격을 완전히 차단할 수는 없습니다.
+
 ## 원클릭 작업
 
 다른 PC에서 처음 세팅할 때는 PowerShell에서 아래 한 줄만 실행합니다.

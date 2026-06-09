@@ -263,6 +263,8 @@ const statusMap = {todo:'할 일',prog:'진행',review:'검토',done:'완료'};
 const prioMap = {high:{t:'높음',c:'p-high'},mid:{t:'보통',c:'p-mid'},low:{t:'낮음',c:'p-low'}};
 const prioRank = {high:0,mid:1,low:2};
 const TODAY = new Date('2026-06-10'); // 프로토타입 기준 '오늘'
+function escHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function safeInitial(s){ return escHtml((String(s || '-').trim()[0] || '-')); }
 function dueInfo(end,status){
   if(!end||status==='done') return '';
   const diff=Math.round((new Date(end)-TODAY)/(1000*60*60*24));
@@ -405,8 +407,8 @@ function renderList(){
     const overHtml=pr.over?`<span class="over">⚠ 지연 ${pr.over}</span>`:'';
     const handle=(!p.fixed&&!dragOff)?'<span class="drag-handle" title="드래그로 순서 변경">⠿</span>':'';
     card.innerHTML=`${delBtn}${handle}
-      <h3>${p.name}</h3>
-      <div class="owner">${p.fixed?'📌 '+p.desc:'담당 '+p.owner+(p.desc?' · '+p.desc:'')}</div>
+      <h3>${escHtml(p.name)}</h3>
+      <div class="owner">${p.fixed?'📌 '+escHtml(p.desc):'담당 '+escHtml(p.owner)+(p.desc?' · '+escHtml(p.desc):'')}</div>
       <div class="pc-pct"><span>진행률</span><b>${pr.avg}%</b></div>
       <div class="pbar"><i style="width:${pr.avg}%"></i></div>
       <div class="pc-stat"><span>태스크 ${pr.done}/${pr.total} 완료</span>${overHtml}</div>`;
@@ -544,23 +546,23 @@ function render(){
     // table row
     const row=document.createElement('div'); row.className='trow';
     const c = colors[t.who]||'#8b93a4';
-    const dep = t.dep?`<small>↳ ${t.dep}</small>`:'';
+    const dep = t.dep?`<small>↳ ${escHtml(t.dep)}</small>`:'';
     const statusCtrl = `<select class="statsel" onchange="setStatus(${t.id},this.value)">`+
       Object.entries(statusMap).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')+`</select>`;
     const delBtn = `<button class="del" onclick="delTask(${t.id})">×</button>`;
     const p = prioMap[t.priority]||prioMap.mid;
     const prioBadge = `<span class="prio ${p.c}">${p.t}</span>`;
-    const tagsHtml = (t.tags||[]).map(tg=>`<span class="tag">${tg}</span>`).join('');
+    const tagsHtml = (t.tags||[]).map(tg=>`<span class="tag">${escHtml(tg)}</span>`).join('');
     const cnt = (t.logs&&t.logs.length)?` 💬${t.logs.length}`:'';
     const due = dueInfo(t.end,t.status);
 
-    row.innerHTML = `<div class="who" style="background:${c}">${t.who[0]}</div>
+    row.innerHTML = `<div class="who" style="background:${c}">${safeInitial(t.who)}</div>
       <span class="t-name"></span>
       ${prioBadge}
       <span style="width:90px">${statusCtrl}</span>${delBtn}`;
     const nm = row.querySelector('.t-name');
     nm.style.cursor='pointer';
-    nm.innerHTML = `${t.name}<span style="color:var(--accent);font-size:11px">${cnt}</span>${tagsHtml} ${due}${dep}`;
+    nm.innerHTML = `${escHtml(t.name)}<span style="color:var(--accent);font-size:11px">${escHtml(cnt)}</span>${tagsHtml} ${due}${dep}`;
     nm.onclick=()=>openDetail(t.id);
     tb.appendChild(row);
 
@@ -570,7 +572,7 @@ function render(){
       const s=Math.max(0,dayOffset(t.start)), e=Math.min(DAYS,dayOffset(t.end)+1);
       const left=(s/DAYS)*100, width=Math.max(2,((e-s)/DAYS)*100);
       const bg = t.status==='done'?'var(--done)':(t.status==='todo'?'var(--muted)':c);
-      g.innerHTML=`<div class="gbar" style="left:${left}%;width:${width}%;background:${bg}">${t.who[0]} · ${t.prog}%</div>`;
+      g.innerHTML=`<div class="gbar" style="left:${left}%;width:${width}%;background:${bg}">${safeInitial(t.who)} · ${Number(t.prog)||0}%</div>`;
     } else {
       g.innerHTML=`<div class="nodate">— 날짜 미입력</div>`;
     }
@@ -627,7 +629,7 @@ function openDetail(id){
   if(!t.logs)t.logs=[];
   document.getElementById('dTitle').textContent=t.name;
   const logHtml=t.logs.length
-    ? t.logs.slice().reverse().map(l=>`<div class="logitem"><span class="logd">${l.d} · ${l.who}</span>${l.txt}</div>`).join('')
+    ? t.logs.slice().reverse().map(l=>`<div class="logitem"><span class="logd">${escHtml(l.d)} · ${escHtml(l.who)}</span>${escHtml(l.txt)}</div>`).join('')
     : '<div class="logempty">아직 진행 기록이 없습니다</div>';
   document.getElementById('dLogs').innerHTML=logHtml;
   document.getElementById('dInput').value='';
