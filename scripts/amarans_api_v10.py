@@ -372,7 +372,13 @@ def to_dashboard_format(rows, job):
     chan_counts = {}
     skipped_grp = 0
     skipped_chan = 0
+    _dist_dumped = False
     for r in rows:
+        # [임시 탐색] 유통사 행의 거래처분류 코드 필드 찾기 (코드 = V10xxx 추정)
+        if not _dist_dumped and "도도매/유통사" in _safe_str(r.get("tradeGrpNm", "")):
+            code_like = {k: v for k, v in r.items() if isinstance(v, str) and re.fullmatch(r"[A-Z]\d{4,}", v.strip())}
+            print(f"   [{basis}] ★유통사 행 코드후보: {code_like}")
+            _dist_dumped = True
         # 품목군 필터: 상품만 (부품 제외)
         grp = _safe_str(r.get("itemgrpNm", "")).strip()
         grp_counts[grp or "(빈값)"] = grp_counts.get(grp or "(빈값)", 0) + 1
