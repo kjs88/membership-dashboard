@@ -1,28 +1,5 @@
 // DASHBOARD
 // ════════════════════════════════════
-function setDashFilter(f, el) {
-  dashFilter = f;
-  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  renderDashboard();
-}
-
-function filterEntries(entries) {
-  const now = new Date();
-  if (dashFilter === 'month') {
-    return entries.filter(e => {
-      const d = new Date(e.date);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    });
-  }
-  if (dashFilter === 'week') {
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0,0,0,0);
-    return entries.filter(e => new Date(e.date) >= startOfWeek);
-  }
-  return entries;
-}
 
 function renderDashboard() {
   const salesActive = document.getElementById('page-sales')?.classList.contains('active');
@@ -67,15 +44,10 @@ function renderSalesPage() {
   const fmtYmd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const now = new Date();
   const today = fmtYmd(now);
-  const yDate = new Date(now);
-  yDate.setDate(now.getDate() - 1);
-  const yesterday = fmtYmd(yDate);
   const ym = today.slice(0,7);
   const monthStart = ym + '-01';
   const basisMeta = getOrderBasisMeta();
   const monthEntries = allEntries.filter(e => e.date?.startsWith(ym));
-  const todayEntries = allEntries.filter(e => e.date === today);
-  const yesterdayEntries = allEntries.filter(e => e.date === yesterday);
   const erpMonth = allOrders.filter(e => {
     const d = e.date || '';
     return d >= monthStart && d <= today;
@@ -213,7 +185,6 @@ function renderSalesPage() {
     dist: buildSalesRank(distRankRows),
   };
   window._shRankPages = { office: 1, dist: 1 };
-  if (charts['chart-sales-rank']) { charts['chart-sales-rank'].destroy(); delete charts['chart-sales-rank']; }
   shRenderRankPage('office');
   shRenderRankPage('dist');
 

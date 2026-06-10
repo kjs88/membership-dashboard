@@ -3,7 +3,7 @@
 // ════════════════════════════════════
 let allEntries = [], allUsers = [], targets = {}, currentUser = null, charts = {}, selectedDeal = '', editingEntryId = null;
 let allOrders = [], allShipOrders = [], allOrderOrders = [], orderBasis = 'ship';
-let allNotices = [], allRevisits = [], allClients = [], dashFilter = 'all', statsPersonId = 'all', reportMode = 'week', viewingClientId = null;
+let allNotices = [], allRevisits = [], allClients = [], statsPersonId = 'all', reportMode = 'week', viewingClientId = null;
 let fbListeners = [];
 
 // ════════════════════════════════════

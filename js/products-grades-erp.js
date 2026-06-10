@@ -1405,10 +1405,6 @@ function erpGetRemoteDataUrl() {
   return base ? `${base}/${ERP_REMOTE_DATA_PATH}.json` : '';
 }
 
-function erpSleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function erpIsNewerRemoteSync(remoteSyncedAt, previousSyncedAt) {
   if (!remoteSyncedAt) return false;
   if (!previousSyncedAt) return true;
