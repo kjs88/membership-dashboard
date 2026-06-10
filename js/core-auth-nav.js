@@ -1,8 +1,19 @@
 const CURRENT_USER_STORAGE_KEY = 'sj-current-user';
+const AUTH_SESSION_MAX_MS = 14 * 60 * 60 * 1000;
+const AUTH_REMEMBER_MAX_MS = 7 * 24 * 60 * 60 * 1000;
 
 function clearCurrentUserStorage() {
   try { sessionStorage.removeItem(CURRENT_USER_STORAGE_KEY); } catch (err) { console.error('[auth:clearSession]', err); }
   try { localStorage.removeItem(CURRENT_USER_STORAGE_KEY); } catch (err) { console.error('[auth:clearLocal]', err); }
+}
+
+function buildStoredCurrentUser(user, ttlMs) {
+  const now = Date.now();
+  return { id: user.id, issuedAt: now, expiresAt: now + ttlMs };
+}
+
+function isStoredCurrentUserExpired(storedUser) {
+  return !!(storedUser?.expiresAt && Date.now() > storedUser.expiresAt);
 }
 
 function loadStoredCurrentUser() {
@@ -10,6 +21,18 @@ function loadStoredCurrentUser() {
   let fromPersistentStorage = false;
   try { saved = sessionStorage.getItem(CURRENT_USER_STORAGE_KEY) || ''; }
   catch (err) { console.error('[auth:getSession]', err); }
+  if (saved) {
+    try {
+      const sessionUser = JSON.parse(saved);
+      if (isStoredCurrentUserExpired(sessionUser)) {
+        sessionStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+        saved = '';
+      }
+    } catch (_) {
+      sessionStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+      saved = '';
+    }
+  }
   if (!saved) {
     try {
       saved = localStorage.getItem(CURRENT_USER_STORAGE_KEY) || '';
@@ -21,13 +44,19 @@ function loadStoredCurrentUser() {
   if (!saved) return null;
   try {
     const storedUser = JSON.parse(saved);
+    if (isStoredCurrentUserExpired(storedUser)) {
+      clearCurrentUserStorage();
+      return null;
+    }
     const user = allUsers.find(u => u.id === storedUser?.id);
     if (!user) {
       clearCurrentUserStorage();
       return null;
     }
     if (fromPersistentStorage) {
-      sessionStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify({ id: user.id }));
+      sessionStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(buildStoredCurrentUser(user, AUTH_SESSION_MAX_MS)));
+    } else if (!storedUser.expiresAt) {
+      sessionStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(buildStoredCurrentUser(user, AUTH_SESSION_MAX_MS)));
     }
     return user;
   } catch (err) {
@@ -38,11 +67,12 @@ function loadStoredCurrentUser() {
 }
 
 function saveCurrentUser(user, rememberLogin) {
-  const storedUser = JSON.stringify({ id: user.id });
-  try { sessionStorage.setItem(CURRENT_USER_STORAGE_KEY, storedUser); }
+  const sessionUser = JSON.stringify(buildStoredCurrentUser(user, AUTH_SESSION_MAX_MS));
+  const persistentUser = JSON.stringify(buildStoredCurrentUser(user, AUTH_REMEMBER_MAX_MS));
+  try { sessionStorage.setItem(CURRENT_USER_STORAGE_KEY, sessionUser); }
   catch (err) { console.error('[auth:setSession]', err); }
   try {
-    if (rememberLogin) localStorage.setItem(CURRENT_USER_STORAGE_KEY, storedUser);
+    if (rememberLogin) localStorage.setItem(CURRENT_USER_STORAGE_KEY, persistentUser);
     else localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
   } catch (err) {
     console.error('[auth:setLocal]', err);
@@ -50,10 +80,13 @@ function saveCurrentUser(user, rememberLogin) {
 }
 
 async function checkFbConfig() {
-  await syncFromFirebase();
-  ensureUsers();
+  await syncAuthFromFirebase();
+  ensureUsers({ persist: false });
   currentUser = loadStoredCurrentUser();
   if (currentUser) {
+    await syncFromFirebase();
+    ensureUsers();
+    currentUser = allUsers.find(u => u.id === currentUser.id) || currentUser;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
     initUI();
@@ -62,6 +95,7 @@ async function checkFbConfig() {
     loadAndRender();
     if (typeof erpRefreshFromRemote === 'function') erpRefreshFromRemote({ silent: true }).then(() => loadAndRender());
   } else {
+    if (typeof clearSensitiveLocalCache === 'function') clearSensitiveLocalCache({ keepAuth: true });
     document.getElementById('login-screen').style.display = 'block';
     document.getElementById('app-screen').style.display = 'none';
   }
@@ -219,8 +253,8 @@ async function doLogin() {
   const uid = document.getElementById('li-id').value.trim();
   const pw  = document.getElementById('li-pw').value;
   if (!uid || !pw) return;
-  await syncFromFirebase();
-  ensureUsers();
+  await syncAuthFromFirebase();
+  ensureUsers({ persist: false });
   if (allUsers.length === 0) allUsers = DEFAULT_USERS;
   const user = allUsers.find(u => u.id === uid);
   const loginOk = user ? await authVerifyPassword(user, pw) : false;
@@ -236,11 +270,14 @@ async function doLogin() {
     return;
   }
   if (authHasLegacyPassword(user)) {
+    currentUser = user;
     await authSetPassword(user, pw);
     setShared('sj-users-v6', allUsers);
   }
-  currentUser = user;
-  saveCurrentUser(user, document.getElementById('li-remember')?.checked);
+  await syncFromFirebase();
+  ensureUsers();
+  currentUser = allUsers.find(u => u.id === uid) || user;
+  saveCurrentUser(currentUser, document.getElementById('li-remember')?.checked);
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
   initUI();
@@ -253,6 +290,7 @@ async function doLogin() {
 function doLogout() {
   currentUser = null;
   clearCurrentUserStorage();
+  if (typeof clearSensitiveLocalCache === 'function') clearSensitiveLocalCache();
   const badge = document.getElementById('fb-status-badge');
   if (badge) badge.style.display = 'none';
   document.getElementById('app-screen').style.display = 'none';
@@ -263,7 +301,8 @@ function doLogout() {
   if (remember) remember.checked = false;
 }
 
-function ensureUsers() {
+function ensureUsers(options = {}) {
+  const shouldPersist = options.persist !== false;
   allUsers = getShared('sj-users-v6', []);
   const hasStale = allUsers.some(u => u.id === 'kim') || allUsers.some(u => u.id === 'ahn');
   if (allUsers.length === 0 || hasStale) {
@@ -285,7 +324,8 @@ function ensureUsers() {
       return stripLegacyRole({ ...merged, menuAccess: normalizeMenuAccess(merged.menuAccess, getLegacyMenuProfile(merged)) });
     });
   }
-  setShared('sj-users-v6', allUsers);
+  if (shouldPersist) setShared('sj-users-v6', allUsers);
+  else setPlainStorage('sj-users-v6', JSON.stringify(allUsers));
 }
 
 function setNavDisplay(id, visible) {

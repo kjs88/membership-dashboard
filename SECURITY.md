@@ -11,6 +11,11 @@
 - Firebase URL allowlist 검증
 - CSP meta, SRI, referrer policy 적용
 - iframe 삽입 방어 스크립트
+- 로그인 전 전체 데이터 동기화 차단
+- 로그아웃 시 민감 로컬 캐시 제거
+- 세션 14시간 / 로그인 유지 7일 만료
+- 가입/변경/초기화 비밀번호 정책 강화
+- 로그인 전 Firebase 원격 쓰기 차단(가입 신청 제외)
 - 배포 전 비밀정보/토큰 스캔
 - GitHub Actions 최소 권한 설정
 

@@ -12,6 +12,22 @@ const FB_SYNC_KEYS = {
   'sj-manual-grades':     'data/manual-grades',
 };
 
+const AUTH_LOCAL_KEYS = new Set([
+  'sj-users-v6',
+  'sj-signup-pending-v1',
+]);
+
+const SENSITIVE_LOCAL_KEYS = new Set([
+  ...Object.keys(FB_SYNC_KEYS),
+  'sj-orders-order',
+  'sj-orders-ship',
+  'sj-orders',
+  'sj-erp-sync-meta',
+  'sj-erp-auto-sync-meta',
+  'sj-erp-auto-sync-lock',
+  'sj-erp-last-sync',
+]);
+
 function _fbSyncPath(key) {
   if (FB_SYNC_KEYS[key]) return FB_SYNC_KEYS[key];
   const safePathKey = value => String(value || '').replace(/[.$#[\]/]/g, '_').slice(0, 120);
@@ -28,6 +44,51 @@ function _fbUrl(path) {
   return base ? `${base}/${path}.json` : null;
 }
 
+function _safeSetJsonStorage(key, value) {
+  const cleanVal = typeof securitySanitizeData === 'function' ? securitySanitizeData(value) : value;
+  localStorage.setItem(key, JSON.stringify(cleanVal));
+}
+
+function _isSensitiveLocalKey(key) {
+  return SENSITIVE_LOCAL_KEYS.has(key)
+    || /^sj-weekly-reports-/.test(key)
+    || /^sj-monthly-reports-/.test(key)
+    || /^sj-draft-/.test(key);
+}
+
+function _canRemoteWriteSharedKey(key) {
+  if (key === 'sj-signup-pending-v1') return true;
+  return typeof currentUser !== 'undefined' && !!currentUser;
+}
+
+function clearSensitiveLocalCache(options = {}) {
+  const keepAuth = options.keepAuth === true;
+  const keys = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !_isSensitiveLocalKey(key)) continue;
+      if (keepAuth && AUTH_LOCAL_KEYS.has(key)) continue;
+      keys.push(key);
+    }
+    keys.forEach(key => localStorage.removeItem(key));
+  } catch (err) {
+    console.warn('[storage:clearSensitiveLocalCache]', err);
+  }
+
+  try {
+    window.__erpRemoteData = null;
+    if (typeof allOrders !== 'undefined') allOrders = [];
+    if (typeof allOrderOrders !== 'undefined') allOrderOrders = [];
+    if (typeof allShipOrders !== 'undefined') allShipOrders = [];
+    if (typeof allEntries !== 'undefined') allEntries = [];
+    if (typeof allClients !== 'undefined') allClients = [];
+    if (typeof allNotices !== 'undefined') allNotices = [];
+    if (typeof allRevisits !== 'undefined') allRevisits = [];
+    if (typeof targets !== 'undefined') targets = {};
+  } catch (_) {}
+}
+
 function setShared(key, val) {
   const cleanVal = typeof securitySanitizeData === 'function' ? securitySanitizeData(val) : val;
   try {
@@ -38,6 +99,10 @@ function setShared(key, val) {
   }
   const path = _fbSyncPath(key);
   if (path) {
+    if (!_canRemoteWriteSharedKey(key)) {
+      console.warn('[storage:fb:set:blocked-before-login]', key);
+      return true;
+    }
     const url = _fbUrl(path);
     if (url) {
       fetch(url, {
@@ -96,6 +161,33 @@ function setErpRuntimeData(parsedOrder, parsedShip, payload = {}) {
   }
 }
 
+// 로그인 화면에서는 사용자/가입대기 정보만 최소 조회한다.
+async function syncAuthFromFirebase() {
+  const rawBase = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
+  const base = typeof securityNormalizeFirebaseUrl === 'function' ? securityNormalizeFirebaseUrl(rawBase) : rawBase;
+  if (!base) return false;
+
+  try {
+    const [usersRes, pendingRes] = await Promise.all([
+      fetch(`${base}/data/users.json?_=${Date.now()}`, { cache: 'no-store' }),
+      fetch(`${base}/data/signup-pending.json?_=${Date.now()}`, { cache: 'no-store' }),
+    ]);
+
+    if (usersRes.ok) {
+      const users = await usersRes.json().catch(() => null);
+      if (users !== null && users !== undefined) _safeSetJsonStorage('sj-users-v6', users);
+    }
+    if (pendingRes.ok) {
+      const pending = await pendingRes.json().catch(() => null);
+      _safeSetJsonStorage('sj-signup-pending-v1', pending || []);
+    }
+    return true;
+  } catch (e) {
+    console.warn('[storage:syncAuthFromFirebase]', e);
+    return false;
+  }
+}
+
 // 앱 진입 시 Firebase /data + erp/latest 전체를 localStorage에 동기화
 async function syncFromFirebase() {
   const rawBase = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
@@ -110,21 +202,21 @@ async function syncFromFirebase() {
         ? securitySanitizeData(await res.json())
         : await res.json();
       if (data && typeof data === 'object') {
-        if (data.entries          !== undefined) localStorage.setItem('sj-entries-v4',         JSON.stringify(data.entries));
-        if (data.users            !== undefined) localStorage.setItem('sj-users-v6',            JSON.stringify(data.users));
-        if (data.targets          !== undefined) localStorage.setItem('sj-targets-v4',          JSON.stringify(data.targets));
-        if (data.notices          !== undefined) localStorage.setItem('sj-notices',             JSON.stringify(data.notices));
-        if (data.revisits         !== undefined) localStorage.setItem('sj-revisits',            JSON.stringify(data.revisits));
-        if (data.clients          !== undefined) localStorage.setItem('sj-clients',             JSON.stringify(data.clients));
-        if (data['signup-pending']!== undefined) localStorage.setItem('sj-signup-pending-v1',  JSON.stringify(data['signup-pending']));
-        if (data['grade-tiers']   !== undefined) localStorage.setItem('sj-grade-tiers',         JSON.stringify(data['grade-tiers']));
-        if (data['grade-overrides']!==undefined) localStorage.setItem('sj-grade-overrides',     JSON.stringify(data['grade-overrides']));
-        if (data['manual-grades'] !== undefined) localStorage.setItem('sj-manual-grades',       JSON.stringify(data['manual-grades']));
+        if (data.entries          !== undefined) _safeSetJsonStorage('sj-entries-v4',        data.entries);
+        if (data.users            !== undefined) _safeSetJsonStorage('sj-users-v6',          data.users);
+        if (data.targets          !== undefined) _safeSetJsonStorage('sj-targets-v4',        data.targets);
+        if (data.notices          !== undefined) _safeSetJsonStorage('sj-notices',           data.notices);
+        if (data.revisits         !== undefined) _safeSetJsonStorage('sj-revisits',          data.revisits);
+        if (data.clients          !== undefined) _safeSetJsonStorage('sj-clients',           data.clients);
+        if (data['signup-pending']!== undefined) _safeSetJsonStorage('sj-signup-pending-v1', data['signup-pending']);
+        if (data['grade-tiers']   !== undefined) _safeSetJsonStorage('sj-grade-tiers',       data['grade-tiers']);
+        if (data['grade-overrides']!==undefined) _safeSetJsonStorage('sj-grade-overrides',   data['grade-overrides']);
+        if (data['manual-grades'] !== undefined) _safeSetJsonStorage('sj-manual-grades',     data['manual-grades']);
         if (data['weekly-reports'] && typeof data['weekly-reports'] === 'object') {
-          Object.entries(data['weekly-reports']).forEach(([uid, val]) => localStorage.setItem('sj-weekly-reports-' + uid, JSON.stringify(val)));
+          Object.entries(data['weekly-reports']).forEach(([uid, val]) => _safeSetJsonStorage('sj-weekly-reports-' + uid, val));
         }
         if (data['monthly-reports'] && typeof data['monthly-reports'] === 'object') {
-          Object.entries(data['monthly-reports']).forEach(([uid, val]) => localStorage.setItem('sj-monthly-reports-' + uid, JSON.stringify(val)));
+          Object.entries(data['monthly-reports']).forEach(([uid, val]) => _safeSetJsonStorage('sj-monthly-reports-' + uid, val));
         }
       }
     }
@@ -146,6 +238,10 @@ async function syncFromFirebase() {
 
 // 현재 브라우저 localStorage 데이터 전체를 Firebase에 한 번에 업로드 (마이그레이션용)
 async function pushAllToFirebase() {
+  if (typeof currentUser === 'undefined' || !currentUser || (typeof isAdminUser === 'function' && !isAdminUser(currentUser))) {
+    alert('관리자 로그인 후 업로드할 수 있습니다.');
+    return false;
+  }
   const url = _fbUrl('data');
   if (!url) { alert('Firebase DB URL이 설정되지 않았습니다.'); return false; }
 

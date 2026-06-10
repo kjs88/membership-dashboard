@@ -14,6 +14,9 @@
 - 배포 전 `scripts/security-scan.ps1`이 Bearer 토큰, Amarans/Bizcube 쿠키, private key, 평문 password literal을 검사합니다.
 - 신규/변경/초기화 비밀번호는 PBKDF2-SHA256 해시로 저장됩니다.
 - 기존 Firebase 데이터에 남아 있는 평문 비밀번호는 해당 사용자가 로그인에 성공하면 자동으로 해시로 마이그레이션됩니다.
+- 로그인 전에는 Firebase의 사용자/가입대기 정보만 최소 조회하고, 영업/거래처/ERP 데이터는 로그인 성공 뒤에만 동기화합니다.
+- 로그아웃 시 브라우저의 영업/거래처/ERP 로컬 캐시와 작성 중 임시저장을 제거합니다.
+- 세션은 14시간, "로그인 유지"는 7일 만료로 제한됩니다.
 - GitHub Pages 정적 사이트 특성상 Firebase Authentication 또는 서버 프록시 없이 Firebase 직접 REST 공격을 완전히 차단할 수는 없습니다.
 
 ## 원클릭 작업

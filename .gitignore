@@ -7,6 +7,14 @@ Desktop.ini
 *.tmp
 *.bak
 *.log
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets/
 
 # Test artifacts
 playwright-report/
@@ -16,6 +24,9 @@ __pycache__/
 # Generated ERP data
 js/erp-data.js
 downloads/api/
+downloads/recorded/
+downloads/**/*.xlsx
+downloads/**/*.xls
 
 # Local helper state
 .local-server.pid

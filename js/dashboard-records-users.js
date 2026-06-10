@@ -722,7 +722,8 @@ async function addUser() {
   const pw   = document.getElementById('nu-pw').value;
   if (!name||!id||!pw) { showToast('모든 항목을 입력하세요','error'); return; }
   if (!/^[A-Za-z0-9_-]{2,32}$/.test(id)) { showToast('아이디는 영문, 숫자, _, - 조합 2~32자만 가능합니다.','error'); return; }
-  if (pw.length < 8) { showToast('비밀번호는 8자 이상이어야 합니다.','error'); return; }
+  const pwPolicyErr = authValidatePasswordPolicy(pw, { id, name });
+  if (pwPolicyErr) { showToast(pwPolicyErr, 'error'); return; }
   if (allUsers.find(u=>u.id===id)) { showToast('이미 존재하는 아이디입니다.','error'); return; }
   const colors = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
   allUsers.push({ id, name, passwordHash: await authBuildPasswordRecord(pw), menuAccess: getDefaultMenuAccess('user'), color: colors[allUsers.length % colors.length], createdAt: new Date().toISOString().split('T')[0] });
@@ -791,10 +792,12 @@ async function submitSignup() {
   const pw2  = document.getElementById('su-pw-confirm').value;
   if (!name || !id || !pw || !pw2) { showSignupErr('모든 항목을 입력하세요.'); return; }
   if (!/^[A-Za-z0-9_-]{2,32}$/.test(id)) { showSignupErr('아이디는 영문, 숫자, _, - 조합 2~32자만 가능합니다.'); return; }
-  if (pw.length < 8) { showSignupErr('비밀번호는 8자 이상이어야 합니다.'); return; }
+  const pwPolicyErr = authValidatePasswordPolicy(pw, { id, name });
+  if (pwPolicyErr) { showSignupErr(pwPolicyErr); return; }
   if (pw !== pw2) { showSignupErr('비밀번호가 일치하지 않습니다.'); return; }
 
-  ensureUsers();
+  await syncAuthFromFirebase();
+  ensureUsers({ persist: false });
   if (allUsers.find(u=>u.id===id)) { showSignupErr('이미 존재하는 아이디입니다.'); return; }
   const pending = getShared('sj-signup-pending-v1', []);
   if (pending.find(p=>p.id===id)) { showSignupErr('이미 신청된 아이디입니다. 승인을 기다려주세요.'); return; }
@@ -986,8 +989,9 @@ async function changeMyPassword() {
   if (!(await authVerifyPassword(currentUser, current))) {
     errEl.textContent = '현재 비밀번호가 올바르지 않습니다.'; errEl.style.display = 'block'; return;
   }
-  if (newPw.length < 8) {
-    errEl.textContent = '새 비밀번호는 8자 이상이어야 합니다.'; errEl.style.display = 'block'; return;
+  const pwPolicyErr = authValidatePasswordPolicy(newPw, currentUser);
+  if (pwPolicyErr) {
+    errEl.textContent = pwPolicyErr; errEl.style.display = 'block'; return;
   }
   if (newPw !== confirm) {
     errEl.textContent = '새 비밀번호가 일치하지 않습니다.'; errEl.style.display = 'block'; return;
@@ -1019,14 +1023,13 @@ async function resetUserPassword() {
   const errEl   = document.getElementById('rpw-err');
   errEl.style.display = 'none';
 
-  if (newPw.length < 8) {
-    errEl.textContent = '비밀번호는 8자 이상이어야 합니다.'; errEl.style.display = 'block'; return;
-  }
+  const idx = allUsers.findIndex(u => u.id === uid);
+  const pwPolicyErr = authValidatePasswordPolicy(newPw, allUsers[idx] || {});
+  if (pwPolicyErr) { errEl.textContent = pwPolicyErr; errEl.style.display = 'block'; return; }
   if (newPw !== confirm) {
     errEl.textContent = '비밀번호가 일치하지 않습니다.'; errEl.style.display = 'block'; return;
   }
 
-  const idx = allUsers.findIndex(u => u.id === uid);
   await authSetPassword(allUsers[idx], newPw);
   setShared('sj-users-v6', allUsers);
 

@@ -11,7 +11,21 @@
     },
     "data": {
       ".read": "auth != null",
-      ".write": "auth.token.admin === true"
+      ".write": "auth.token.admin === true",
+      "users": {
+        "$userIndex": {
+          "password": {
+            ".validate": false
+          }
+        }
+      },
+      "signup-pending": {
+        "$pendingIndex": {
+          "password": {
+            ".validate": false
+          }
+        }
+      }
     }
   }
 }

@@ -80,6 +80,18 @@ function authHasLegacyPassword(user) {
   return !!(user && user.password !== undefined && !user.passwordHash);
 }
 
+function authValidatePasswordPolicy(password, user = {}) {
+  const pw = String(password || '');
+  if (pw.length < 10) return '비밀번호는 10자 이상이어야 합니다.';
+  if (!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return '비밀번호에는 영문과 숫자를 모두 포함해야 합니다.';
+  const lowered = pw.toLowerCase();
+  const id = String(user.id || '').toLowerCase();
+  const name = String(user.name || '').toLowerCase();
+  if (id && id.length >= 3 && lowered.includes(id)) return '비밀번호에 아이디를 포함할 수 없습니다.';
+  if (name && name.length >= 2 && lowered.includes(name)) return '비밀번호에 이름을 포함할 수 없습니다.';
+  return '';
+}
+
 function securityNormalizeCredentialRecord(record) {
   if (!record || typeof record !== 'object') return record;
   if (record.passwordHash && record.password !== undefined) delete record.password;
