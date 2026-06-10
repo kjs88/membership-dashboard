@@ -40,9 +40,10 @@ def now_kst_iso():
 
 
 TARGET_YEAR = int(os.environ.get("AMARANS_YEAR", str(now_kst().year)))
-# 거래처분류(고객분류) 그룹 코드. 빈 리스트 = 전체 그룹 수집 후 채널(사업소/유통사)만 보관.
-# (유통사 그룹 코드가 응답에 노출되지 않아 코드 필터 대신 전체 수집 → 처리 단계에서 필터)
-CUSTOMER_GROUPS = []
+# 거래처분류(고객분류) 그룹 코드 (응답 필드 tradeGrp 기준)
+#  V10002~V10005 = 사업소 도매(이민우/안성종/장재순/이기현), V10006 = 유통사(도도매/유통사)
+#  ※ 소매(V10001 등)는 제외. 전체 그룹 수집 시 데이터가 너무 커서 ERP가 502 발생 → 코드로 필터.
+CUSTOMER_GROUPS = ["V10002", "V10003", "V10004", "V10005", "V10006"]
 ITEM_GROUPS = ["TM00", "TP00"]
 
 # 한 번에 받을 최대 행수. 이 값에 도달하면 자동 경고. 부족하면 더 늘려라.
@@ -372,13 +373,7 @@ def to_dashboard_format(rows, job):
     chan_counts = {}
     skipped_grp = 0
     skipped_chan = 0
-    _dist_dumped = False
     for r in rows:
-        # [임시 탐색] 유통사 행의 거래처분류 코드 필드 찾기 (코드 = V10xxx 추정)
-        if not _dist_dumped and "도도매/유통사" in _safe_str(r.get("tradeGrpNm", "")):
-            code_like = {k: v for k, v in r.items() if isinstance(v, str) and re.fullmatch(r"[A-Z]\d{4,}", v.strip())}
-            print(f"   [{basis}] ★유통사 행 코드후보: {code_like}")
-            _dist_dumped = True
         # 품목군 필터: 상품만 (부품 제외)
         grp = _safe_str(r.get("itemgrpNm", "")).strip()
         grp_counts[grp or "(빈값)"] = grp_counts.get(grp or "(빈값)", 0) + 1
