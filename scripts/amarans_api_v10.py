@@ -858,31 +858,41 @@ def run_job(page, job, replace_payload=True, override_payload=None):
     page.route(lambda url: job["endpoint"] in url, handle_route)
 
     try:
-        print(f"[3/5] {job['menu_name']} 페이지 진입")
-        page.goto(f"https://work.hectonproject.com/{job['url_hash']}")
-        page.wait_for_timeout(5000)
+        # 조회 버튼이 간헐적으로 안 떠서 페이지 새로고침 + 재시도 (최대 3회)
+        max_attempts = 3
+        clicked = False
+        for attempt in range(1, max_attempts + 1):
+            print(f"[3/5] {job['menu_name']} 페이지 진입 (시도 {attempt}/{max_attempts})")
+            page.goto(f"https://work.hectonproject.com/{job['url_hash']}")
+            page.wait_for_timeout(7000)
 
-        # 페이지 진입만으로 자동 조회되는 경우 있음 (주문현황 등) → 잠시 대기
-        if captured["body"] is None:
+            # 페이지 진입만으로 자동 조회되는 경우 있음 (주문현황 등)
+            if captured["body"] is not None:
+                print(f"[4/5] 페이지 진입 시 자동 조회 감지 → 버튼 클릭 생략")
+                clicked = True
+                break
+
             print(f"[4/5] 조회 버튼 클릭 (페이지가 sign 만들어서 API 호출 → 우리가 가로채기)")
             # 조회 버튼 후보 여러 개 시도
-            clicked = False
             for locator in [
                 page.get_by_role("button", name="조회").first,
                 page.locator("button").filter(has_text="조회").first,
                 page.locator(".OBTButton_root__1g4ov").first,
             ]:
                 try:
-                    locator.wait_for(state="visible", timeout=5000)
+                    locator.wait_for(state="visible", timeout=8000)
                     locator.click()
                     clicked = True
                     break
                 except Exception:
                     continue
-            if not clicked:
-                raise RuntimeError("조회 버튼을 찾지 못했습니다.")
-        else:
-            print(f"[4/5] 페이지 진입 시 자동 조회 감지 → 버튼 클릭 생략")
+            if clicked:
+                break
+            print(f"  ⚠ 조회 버튼 못 찾음 — 새로고침 후 재시도 ({attempt}/{max_attempts})")
+            page.wait_for_timeout(3000)
+
+        if not clicked and captured["body"] is None:
+            raise RuntimeError("조회 버튼을 찾지 못했습니다.")
 
         print(f"[5/5] API 응답 대기 (최대 300초, 큰 데이터는 시간 걸림)")
         deadline = time.time() + 300
