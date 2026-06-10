@@ -81,8 +81,11 @@ function renderSalesPage() {
     return d >= monthStart && d <= today;
   });
   const useErpForCharts = erpMonth.length > 0;
-  const rankSub = document.getElementById('sh-rank-sub');
-  if (rankSub) rankSub.textContent = useErpForCharts ? `${basisMeta.label} 공급가 기준 (원)` : '당사 구매액 기준 (원)';
+  const rankBasisText = useErpForCharts ? `${basisMeta.label} 공급가 기준 (원)` : '당사 구매액 기준 (원)';
+  const rankOfficeSub = document.getElementById('sh-rank-office-sub');
+  const rankDistSub = document.getElementById('sh-rank-dist-sub');
+  if (rankOfficeSub) rankOfficeSub.textContent = rankBasisText;
+  if (rankDistSub) rankDistSub.textContent = rankBasisText;
   const personSub = document.getElementById('sh-person-sub');
   if (personSub) personSub.textContent = useErpForCharts ? `이번달 ${basisMeta.label} 공급가 기준 (원)` : '이번달 당사 구매액 기준 (원)';
 
@@ -193,20 +196,26 @@ function renderSalesPage() {
   }
   rcDaily('chart-sales-daily', dayLabels, daySalesData, dailyBarColors, dailyDowType);
 
-  const salesByInst = {};
-  if (useErpForCharts) {
-    erpMonth.forEach(e => { if (e.client) salesByInst[e.client] = (salesByInst[e.client]||0) + (parseFloat(e.supply)||0); });
-  } else {
-    monthEntries.forEach(e => { if (e.institution && e.ourPurchase) salesByInst[e.institution] = (salesByInst[e.institution]||0) + (e.ourPurchase||0); });
-  }
-  window._shRankList = Object.entries(salesByInst).sort((a,b) => b[1]-a[1]);
-  window._shRankPage = 1;
-  shRenderRankPage();
-  const top10r = window._shRankList.slice(0, 10);
-  const otherAmt = window._shRankList.slice(10).reduce((s, r) => s + r[1], 0);
-  const rlabels = top10r.map(r => r[0]); const rdata = top10r.map(r => r[1]);
-  if (otherAmt > 0) { rlabels.push('기타'); rdata.push(otherAmt); }
-  rc('chart-sales-rank','doughnut', rlabels, rdata, ['#2B72C8','#009E6A','#7856C8','#E8900A','#D94040','#3DB8A0','#6C8EBF','#C75BAB','#8BC34A','#FF7043','#9E9E9E']);
+  const buildSalesRank = rows => {
+    const map = {};
+    rows.forEach(e => {
+      const name = String(e.client || e.institution || '').trim();
+      if (!name) return;
+      const amount = useErpForCharts ? (parseFloat(e.supply) || 0) : (parseFloat(e.ourPurchase) || 0);
+      map[name] = (map[name] || 0) + amount;
+    });
+    return Object.entries(map).sort((a,b) => b[1] - a[1]);
+  };
+  const officeRankRows = useErpForCharts ? erpMonthOffice : monthEntries.filter(isOffice);
+  const distRankRows = useErpForCharts ? erpMonthDist : monthEntries.filter(isDist);
+  window._shRankLists = {
+    office: buildSalesRank(officeRankRows),
+    dist: buildSalesRank(distRankRows),
+  };
+  window._shRankPages = { office: 1, dist: 1 };
+  if (charts['chart-sales-rank']) { charts['chart-sales-rank'].destroy(); delete charts['chart-sales-rank']; }
+  shRenderRankPage('office');
+  shRenderRankPage('dist');
 
   const salesByPerson = {};
   if (useErpForCharts) {
@@ -426,19 +435,24 @@ function renderDashPending() {
   </table>`;
 }
 
-function shRenderRankPage() {
-  const list = window._shRankList || [];
+function shRenderRankPage(kind = 'office') {
+  const list = (window._shRankLists && window._shRankLists[kind]) || [];
   const PAGE_SIZE = 10;
   const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
-  let page = window._shRankPage || 1;
+  window._shRankPages = window._shRankPages || {};
+  let page = window._shRankPages[kind] || 1;
   if (page > totalPages) page = totalPages;
-  window._shRankPage = page;
+  window._shRankPages[kind] = page;
   const start = (page - 1) * PAGE_SIZE;
   const pageItems = list.slice(start, start + PAGE_SIZE);
   const maxRank = list[0]?.[1] || 1;
   const totalRankAmt = list.reduce((s, r) => s + r[1], 0);
   const medalIcons = ['🥇','🥈','🥉'];
-  document.getElementById('sh-rank-list').innerHTML = pageItems.length === 0
+  const color = kind === 'dist' ? 'var(--amber)' : 'var(--green-dark)';
+  const listEl = document.getElementById(`sh-rank-${kind}-list`);
+  const pagerEl = document.getElementById(`sh-rank-${kind}-pager`);
+  if (!listEl || !pagerEl) return;
+  listEl.innerHTML = pageItems.length === 0
     ? '<div style="color:var(--text3);font-size:13px;padding:24px 0">이번달 매출 데이터가 없습니다</div>'
     : pageItems.map(([name, amt], idx) => {
         const globalIdx = start + idx;
@@ -447,12 +461,10 @@ function shRenderRankPage() {
         return `<div class="leader-item">
           ${medal}
           <div class="leader-name" style="font-size:12px">${escHtml(name)}</div>
-          <div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${amt/maxRank*100}%;background:var(--blue)"></div></div>
-          <div class="leader-num" style="color:var(--blue)">${amt.toLocaleString()} <span style="font-size:13px;color:var(--green-dark);font-weight:700">${pct}%</span></div>
+          <div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${amt/maxRank*100}%;background:${color}"></div></div>
+          <div class="leader-num" style="color:${color}">${Math.round(amt).toLocaleString()} <span style="font-size:13px;color:${color};font-weight:700">${pct}%</span></div>
         </div>`;
       }).join('');
-  // 페이지네이션 렌더링
-  const pagerEl = document.getElementById('sh-rank-pager');
   if (totalPages <= 1) { pagerEl.innerHTML = ''; return; }
   const btnStyle = 'background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:12px;min-width:30px';
   const activeStyle = 'background:var(--green);border:1px solid var(--green);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:700;min-width:30px';
@@ -470,25 +482,28 @@ function shRenderRankPage() {
   }
   const sorted = [...pages].sort((a, b) => a - b);
 
-  let html = `<button style="${prevDisabled?disabledStyle:btnStyle}" ${prevDisabled?'disabled':''} onclick="shRankPageMove(-1)">‹</button>`;
+  let html = `<button style="${prevDisabled?disabledStyle:btnStyle}" ${prevDisabled?'disabled':''} onclick="shRankPageMove('${kind}',-1)">‹</button>`;
   let prev = 0;
   for (const p of sorted) {
     if (prev && p - prev > 1) html += `<span style="${ellipsisStyle}">...</span>`;
-    html += `<button style="${p===page?activeStyle:btnStyle}" onclick="shRankGoPage(${p})">${p}</button>`;
+    html += `<button style="${p===page?activeStyle:btnStyle}" onclick="shRankGoPage('${kind}',${p})">${p}</button>`;
     prev = p;
   }
-  html += `<button style="${nextDisabled?disabledStyle:btnStyle}" ${nextDisabled?'disabled':''} onclick="shRankPageMove(1)">›</button>`;
+  html += `<button style="${nextDisabled?disabledStyle:btnStyle}" ${nextDisabled?'disabled':''} onclick="shRankPageMove('${kind}',1)">›</button>`;
   html += `<span style="color:var(--text3);font-size:11px;margin-left:8px">${page}/${totalPages} · 총 ${list.length}개</span>`;
   pagerEl.innerHTML = html;
 }
-function shRankPageMove(dir) {
-  const totalPages = Math.max(1, Math.ceil((window._shRankList||[]).length / 10));
-  window._shRankPage = Math.max(1, Math.min(totalPages, (window._shRankPage||1) + dir));
-  shRenderRankPage();
+function shRankPageMove(kind, dir) {
+  const list = (window._shRankLists && window._shRankLists[kind]) || [];
+  const totalPages = Math.max(1, Math.ceil(list.length / 10));
+  window._shRankPages = window._shRankPages || {};
+  window._shRankPages[kind] = Math.max(1, Math.min(totalPages, (window._shRankPages[kind]||1) + dir));
+  shRenderRankPage(kind);
 }
-function shRankGoPage(p) {
-  window._shRankPage = p;
-  shRenderRankPage();
+function shRankGoPage(kind, p) {
+  window._shRankPages = window._shRankPages || {};
+  window._shRankPages[kind] = p;
+  shRenderRankPage(kind);
 }
 
 function rcDaily(id, labels, data, colors, dowTypes) {

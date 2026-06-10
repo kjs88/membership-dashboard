@@ -170,6 +170,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 /* CHARTS */
 .chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:16px;}
+.chart-grid.sales-rank-grid{grid-template-columns:1fr 1fr;}
 .chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow);}
 .chart-card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
