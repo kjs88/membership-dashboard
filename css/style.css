@@ -140,6 +140,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sales-kpi.primary{background:linear-gradient(135deg,var(--green-deep),var(--green-dark));border-color:var(--green-dark);}
 .sales-kpi.primary .sales-kpi-label,.sales-kpi.primary .sales-kpi-sub{color:rgba(255,255,255,.65);}
 .sales-kpi.primary .sales-kpi-value{color:#fff;}
+.sales-kpi.office{background:linear-gradient(135deg,#1f63bb,#2b72c8);border-color:#2b72c8;}
+.sales-kpi.dist{background:linear-gradient(135deg,#6345b7,#7856c8);border-color:#7856c8;}
+.sales-kpi.office .sales-kpi-label,.sales-kpi.office .sales-kpi-sub,
+.sales-kpi.dist .sales-kpi-label,.sales-kpi.dist .sales-kpi-sub{color:rgba(255,255,255,.68);}
+.sales-kpi.office .sales-kpi-value,.sales-kpi.dist .sales-kpi-value{color:#fff;}
+.sales-kpi.office .sales-kpi-label span,.sales-kpi.dist .sales-kpi-label span{color:rgba(255,255,255,.78)!important;background:rgba(255,255,255,.16)!important;border-color:rgba(255,255,255,.24)!important;}
 .sales-kpi-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.04em;margin-bottom:8px;}
 .sales-kpi-value{font-size:32px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1;}
 .sales-kpi-unit{font-size:14px;font-weight:400;opacity:.6;margin-left:2px;}

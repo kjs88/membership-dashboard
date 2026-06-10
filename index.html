@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260610-security">
+<link rel="stylesheet" href="css/style.css?v=20260611-kpi-color">
 </head>
 <body>
 
@@ -196,16 +196,14 @@
           <div class="sales-kpi-sub" id="sh-month-sub" style="color:rgba(255,255,255,.6)">데이터 연동 대기</div>
           <div id="sh-month-forecast" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.82);margin-top:3px"></div>
         </div>
-        <div class="sales-kpi">
-          <div class="kpi-accent" style="background:var(--blue)"></div>
+        <div class="sales-kpi office">
           <div class="sales-kpi-label" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">이번달 누적 사업소 매출<span style="font-size:10px;font-weight:600;color:var(--text3);background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:5px;letter-spacing:0">사업소/상품</span></div>
-          <div class="sales-kpi-value" style="color:var(--blue)"><span id="sh-today-val">0</span><span class="sales-kpi-unit">원</span></div>
+          <div class="sales-kpi-value"><span id="sh-today-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-sub" id="sh-today-sub">-</div>
         </div>
-        <div class="sales-kpi">
-          <div class="kpi-accent" style="background:var(--purple)"></div>
+        <div class="sales-kpi dist">
           <div class="sales-kpi-label" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">이번달 누적 유통사 매출<span style="font-size:10px;font-weight:600;color:var(--text3);background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:5px;letter-spacing:0">유통사/상품</span></div>
-          <div class="sales-kpi-value" style="color:var(--purple)"><span id="sh-yesterday-val">0</span><span class="sales-kpi-unit">원</span></div>
+          <div class="sales-kpi-value"><span id="sh-yesterday-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-sub" id="sh-yesterday-sub">-</div>
         </div>
       </div>
