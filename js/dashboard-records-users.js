@@ -433,7 +433,10 @@ function shRenderRankPage(kind = 'office') {
           ${medal}
           <div class="leader-name" style="font-size:12px">${escHtml(name)}</div>
           <div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${amt/maxRank*100}%;background:${color}"></div></div>
-          <div class="leader-num" style="color:${color}">${Math.round(amt).toLocaleString()} <span style="font-size:13px;color:${color};font-weight:700">${pct}%</span></div>
+          <div class="leader-num sales-rank-num" style="color:${color}">
+            <span class="sales-rank-amount">${Math.round(amt).toLocaleString()}</span>
+            <span class="sales-rank-pct">${pct}%</span>
+          </div>
         </div>`;
       }).join('');
   if (totalPages <= 1) { pagerEl.innerHTML = ''; return; }
