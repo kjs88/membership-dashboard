@@ -173,29 +173,50 @@ function renderSalesPage() {
   const wdEl = document.getElementById('sh-workdays-label');
   if (wdEl) wdEl.textContent = `영업일 ${workdays}일 (경과 ${passedWorkdays}일)`;
   // 월말 매출 예측 (과거 월별 페이싱 반영 — 월초 집중/월말 감소 패턴 보정, 데이터 부족 시 선형 fallback)
-  const setForecast = (id, actual, target, rowFilter) => {
+  // 합계 카드는 사업소+유통사 예측을 다시 합산해서 실제 매출 집계식과 맞춘다.
+  const calcForecast = (actual, rowFilter) => {
+    if (!(useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays)) return null;
+    if (actual <= 0) return { forecast: 0, empty: true };
+    const pace = forecastMonthByPacing(ym, today, rowFilter);
+    const usePace = pace && pace >= 0.05;
+    const forecast = usePace
+      ? Math.round(actual / pace)
+      : Math.round(actual / passedWorkdays * workdays);
+    return { forecast, pace, usePace };
+  };
+  const setForecastText = (id, info, target, title) => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays && actual > 0) {
-      const pace = forecastMonthByPacing(ym, today, rowFilter);
-      const usePace = pace && pace >= 0.05;
-      const forecast = usePace
-        ? Math.round(actual / pace)
-        : Math.round(actual / passedWorkdays * workdays);
-      let s = `📈 예상 월말 ${forecast.toLocaleString()}원`;
-      if (target) s += ` · 목표 ${Math.min(Math.round(forecast / target * 100), 999)}%`;
+    if (info && !info.empty) {
+      let s = `📈 예상 월말 ${info.forecast.toLocaleString()}원`;
+      if (target) s += ` · 목표 ${Math.min(Math.round(info.forecast / target * 100), 999)}%`;
       el.textContent = s;
-      el.title = usePace
-        ? `과거 매출 페이싱 반영 (이번달 ${today.slice(8,10)}일까지 보통 누적 ${Math.round(pace*100)}% 시점)`
-        : '경과 영업일 기준 단순 추정';
+      el.title = title || (info.usePace
+        ? `과거 매출 페이싱 반영 (이번달 ${today.slice(8,10)}일까지 보통 누적 ${Math.round(info.pace*100)}% 시점)`
+        : '경과 영업일 기준 단순 추정');
     } else {
       el.textContent = '';
       el.title = '';
     }
   };
-  setForecast('sh-month-forecast', monthSales, teamSalesTarget, isTrackedSales);
-  setForecast('sh-office-forecast', monthOfficeSales, officeTarget, isOffice);
-  setForecast('sh-dist-forecast', monthDistSales, distTarget, isDist);
+  const officeForecast = calcForecast(monthOfficeSales, isOffice);
+  const distForecast = calcForecast(monthDistSales, isDist);
+  const hasOfficeForecast = officeForecast && !officeForecast.empty;
+  const hasDistForecast = distForecast && !distForecast.empty;
+  const totalForecast = (hasOfficeForecast || hasDistForecast)
+    ? {
+        forecast: (officeForecast?.forecast || 0) + (distForecast?.forecast || 0),
+        usePace: true,
+      }
+    : null;
+  setForecastText(
+    'sh-month-forecast',
+    totalForecast,
+    teamSalesTarget,
+    '사업소 예상 월말과 유통사 예상 월말을 합산한 값입니다.'
+  );
+  setForecastText('sh-office-forecast', officeForecast, officeTarget);
+  setForecastText('sh-dist-forecast', distForecast, distTarget);
   rcDaily('chart-sales-daily', dayLabels, daySalesData, dailyBarColors, dailyDowType);
 
   const buildSalesRank = rows => {
