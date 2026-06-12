@@ -4,25 +4,29 @@ function renderStats() {
   try {
     const basisMeta = getOrderBasisMeta();
     updateOrderBasisUI();
-    // 영업사원 버튼 그룹 (ERP 고객분류 도매(이름) 기준)
-    const personNames = erpPersonNames();
+    // 채널(사업소/유통사)로 먼저 분리 — 사업소: 영업사원 실적, 유통사: 유통사 데이터만
+    const channel = (typeof statsChannel !== 'undefined') ? statsChannel : 'office';
+    const baseOrders = (allOrders || []).filter(o => (o.channel || 'office') === channel);
+    // 영업사원 버튼 그룹 (해당 채널의 ERP 고객분류 도매(이름) 기준)
+    const personNames = erpPersonNames(channel);
     const filterEl = document.getElementById('stats-person-filter');
     if (filterEl) {
       if (statsPersonId !== 'all' && !personNames.includes(statsPersonId)) statsPersonId = 'all';
-      const btns = [{id:'all', name:'전체'}, ...personNames.map(n=>({id:n, name:n}))];
+      const personBtnLabel = channel === 'dist' ? '유통사' : '영업사원';
+      const btns = [{id:'all', name:'전체 '+personBtnLabel}, ...personNames.map(n=>({id:n, name:n}))];
       filterEl.innerHTML = btns.map(b =>
         `<button type="button" class="stats-person-btn${statsPersonId===b.id?' active':''}" onclick="setStatsPerson('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
       ).join('');
     }
 
-    const useErp = allOrders && allOrders.length > 0;
+    const useErp = baseOrders.length > 0;
     const personName = statsPersonId==='all' ? null : statsPersonId;
     // 기간 필터
     const dateFrom = document.getElementById('stats-date-from')?.value || '';
     const dateTo   = document.getElementById('stats-date-to')?.value || '';
     const inRange = d => (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
     const O = useErp
-      ? allOrders.filter(o => {
+      ? baseOrders.filter(o => {
           if (statsPersonId !== 'all' && o.person !== personName) return false;
           if (!inRange(o.date||'')) return false;
           return true;
@@ -52,7 +56,7 @@ function renderStats() {
     if (useErp) {
       const monthSales = months.map(m => {
         const ym = m.y+'-'+String(m.m+1).padStart(2,'0');
-        return Math.round(allOrders.filter(o => {
+        return Math.round(baseOrders.filter(o => {
           if (statsPersonId !== 'all' && o.person !== personName) return false;
           return (o.date||'').startsWith(ym);
         }).reduce((s,o)=>s+(parseFloat(o.supply)||0),0));
@@ -124,14 +128,25 @@ function setStatsPerson(id, el) {
   renderStats();
 }
 
+// 실적 분석 하위메뉴: 사업소 / 유통사 채널 전환
+function showStatsChannel(channel, el) {
+  statsChannel = (channel === 'dist') ? 'dist' : 'office';
+  statsPersonId = 'all';
+  showPage('stats', el);
+  const titleEl = document.getElementById('topbar-title');
+  if (titleEl) titleEl.textContent = statsChannel === 'dist' ? '유통사 분석' : '사업소 분석';
+}
+
 function genReport(mode, el) {
   reportMode = mode;
   if (el) { document.querySelectorAll('#report-week-btn,#report-month-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
   const basisMeta = getOrderBasisMeta();
+  const channel = (typeof statsChannel !== 'undefined') ? statsChannel : 'office';
+  const baseOrders = (allOrders || []).filter(o => (o.channel || 'office') === channel);
   const personName = statsPersonId==='all' ? null : statsPersonId;
   const E = statsPersonId==='all' ? allEntries : allEntries.filter(e=>(allUsers.find(u=>u.id===e.personId)?.name)===personName);
-  const useErp = allOrders && allOrders.length > 0;
-  const O = useErp ? (statsPersonId==='all' ? allOrders : allOrders.filter(o=>o.person===personName)) : [];
+  const useErp = baseOrders.length > 0;
+  const O = useErp ? (statsPersonId==='all' ? baseOrders : baseOrders.filter(o=>o.person===personName)) : [];
 
   const now = new Date();
   let filtered, filteredO, periodLabel;

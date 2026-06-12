@@ -3,9 +3,11 @@
 let productPersonId = 'all';
 let productCategoryId = 'all';
 // 아마란스 ERP "고객분류"의 도매(이름) → 영업사원 이름 목록 (allOrders 기준, 가나다순)
-function erpPersonNames() {
-  return [...new Set((typeof allOrders !== 'undefined' ? allOrders : [])
-    .map(o => (o.person || '').trim()).filter(Boolean))]
+// channel 지정 시 해당 채널(office/dist) 레코드로만 한정
+function erpPersonNames(channel) {
+  const src = (typeof allOrders !== 'undefined' ? allOrders : [])
+    .filter(o => !channel || (o.channel || 'office') === channel);
+  return [...new Set(src.map(o => (o.person || '').trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'ko'));
 }
 // 제품/등급 페이지네이션·정렬 상태 (clients.js에서 이동)

@@ -4,6 +4,8 @@
 let allEntries = [], allUsers = [], targets = {}, currentUser = null, charts = {}, selectedDeal = '', editingEntryId = null;
 let allOrders = [], allShipOrders = [], allOrderOrders = [], orderBasis = 'ship';
 let allNotices = [], allRevisits = [], allClients = [], statsPersonId = 'all', reportMode = 'week', viewingClientId = null;
+// 실적 분석 채널: 'office'(사업소) | 'dist'(유통사)
+let statsChannel = 'office';
 let fbListeners = [];
 
 // ════════════════════════════════════

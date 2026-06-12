@@ -175,7 +175,7 @@ const SEED_ENTRIES = [];
 
 const MENU_ACCESS_ITEMS = [
   { key:'sales',   label:'대시보드',     page:'sales',   nav:'nav-sales' },
-  { key:'stats',   label:'실적 분석',    page:'stats',   nav:'nav-stats' },
+  { key:'stats',   label:'실적 분석',    page:'stats',   nav:'nav-stats-group' },
   { key:'products',label:'품목별 분석',  page:'products',nav:'nav-products' },
   { key:'project', label:'프로젝트 관리',page:'project', nav:'nav-project' },
   { key:'dash',    label:'영업현황',     page:'dash',    nav:'nav-dash' },
