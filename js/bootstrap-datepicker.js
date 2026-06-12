@@ -13,6 +13,7 @@ function loadAndRender() {
   applyOrderBasis();
   allUsers   = getShared('sj-users-v6', []);
   targets    = getShared('sj-targets-v4', {});
+  if (typeof applyPlannedSalesTarget === 'function') applyPlannedSalesTarget();
   allNotices = getShared('sj-notices', []);
   allRevisits= getShared('sj-revisits', []);
   allClients = getShared('sj-clients', []);
