@@ -11,12 +11,13 @@ function renderDashboard() {
 // 월말 매출 예측용 페이싱 비율: 과거 월들이 'curDay까지 누적한 매출 / 그 달 전체 매출'의 평균.
 // 월초 매출이 크고 월말로 갈수록 줄어드는 패턴이면 이 비율이 (선형 경과비율보다) 커져서 과대추정을 막아준다.
 // 반환: 0~1 누적비율 g (데이터 부족 시 null → 호출부에서 선형 fallback)
-function forecastMonthByPacing(ym, todayStr) {
+function forecastMonthByPacing(ym, todayStr, rowFilter) {
   if (!allOrders || !allOrders.length) return null;
   const curDay = parseInt(todayStr.slice(8, 10), 10);
   if (!curDay) return null;
   const byMonth = {}; // 'YYYY-MM' -> { day: sales }
   allOrders.forEach(o => {
+    if (rowFilter && !rowFilter(o)) return;
     const d = o.date || '';
     if (d.length < 10) return;
     const m = d.slice(0, 7), day = parseInt(d.slice(8, 10), 10);
@@ -90,36 +91,61 @@ function renderSalesPage() {
   const prevMonthDistSales   = sumSupply(prevMonthRows.filter(isDist));
   const officeDiff = prevMonthOfficeSales > 0 ? ((monthOfficeSales - prevMonthOfficeSales) / prevMonthOfficeSales * 100) : 0;
   const distDiff   = prevMonthDistSales   > 0 ? ((monthDistSales   - prevMonthDistSales)   / prevMonthDistSales   * 100) : 0;
+  const officeShare = monthSales > 0 ? Math.round(monthOfficeSales / monthSales * 100) : 0;
+  const distShare = monthSales > 0 ? Math.round(monthDistSales / monthSales * 100) : 0;
+  const isTrackedSales = o => isOffice(o) || isDist(o);
+  const recentChannelShare = channelFilter => {
+    const totalByMonth = {}, channelByMonth = {};
+    allOrders.forEach(o => {
+      const d = o.date || '';
+      const m = d.slice(0, 7);
+      if (m.length !== 7 || m >= ym || !isTrackedSales(o)) return;
+      const amount = parseFloat(o.supply) || 0;
+      totalByMonth[m] = (totalByMonth[m] || 0) + amount;
+      if (channelFilter(o)) channelByMonth[m] = (channelByMonth[m] || 0) + amount;
+    });
+    const histMonths = Object.keys(totalByMonth).filter(m => totalByMonth[m] > 0).sort().slice(-6);
+    const total = histMonths.reduce((s, m) => s + (totalByMonth[m] || 0), 0);
+    const channel = histMonths.reduce((s, m) => s + (channelByMonth[m] || 0), 0);
+    return total > 0 ? channel / total : null;
+  };
+  const teamSalesTarget = parseFloat(targets.salesTarget) || 0;
+  const officeTargetShare = recentChannelShare(isOffice);
+  const distTargetShare = recentChannelShare(isDist);
+  const officeTarget = teamSalesTarget ? Math.round(teamSalesTarget * (officeTargetShare ?? (officeShare / 100))) : 0;
+  const distTarget = teamSalesTarget ? Math.round(teamSalesTarget * (distTargetShare ?? (distShare / 100))) : 0;
+  const setSalesKpiTarget = (barId, pctId, labelId, actual, target) => {
+    const bar = document.getElementById(barId);
+    const pctEl = document.getElementById(pctId);
+    const lblEl = document.getElementById(labelId);
+    if (target > 0) {
+      const pct = Math.min(Math.round(actual / target * 100), 999);
+      if (bar) bar.style.width = Math.min(pct, 100) + '%';
+      if (pctEl) pctEl.textContent = pct + '%';
+      if (lblEl) lblEl.textContent = '목표 ' + target.toLocaleString() + '원';
+    } else {
+      if (bar) bar.style.width = '0%';
+      if (pctEl) pctEl.textContent = '-';
+      if (lblEl) lblEl.textContent = '목표 미설정';
+    }
+  };
 
   document.getElementById('sh-month-val').textContent = monthSales.toLocaleString();
-  if (targets.salesTarget) {
-    const sPct = Math.min(Math.round(monthSales / targets.salesTarget * 100), 999);
-    const bar = document.getElementById('sh-sales-target-bar');
-    if (bar) bar.style.width = Math.min(sPct, 100) + '%';
-    const pctEl = document.getElementById('sh-sales-target-pct');
-    if (pctEl) pctEl.textContent = sPct + '%';
-    const lblEl = document.getElementById('sh-sales-target-label');
-    if (lblEl) lblEl.textContent = '목표 ' + targets.salesTarget.toLocaleString() + '원';
-  } else {
-    const pctEl = document.getElementById('sh-sales-target-pct');
-    if (pctEl) pctEl.textContent = '-';
-    const lblEl = document.getElementById('sh-sales-target-label');
-    if (lblEl) lblEl.textContent = '목표 미설정';
-  }
+  setSalesKpiTarget('sh-sales-target-bar', 'sh-sales-target-pct', 'sh-sales-target-label', monthSales, teamSalesTarget);
   document.getElementById('sh-month-sub').innerHTML = prevMonthSales > 0
     ? `전월 대비 <span class="sales-kpi-badge ${monthDiff>=0?'up':'down'}">${monthDiff>=0?'▲':'▼'} ${Math.abs(monthDiff).toFixed(1)}%</span>`
     : `${useErpForCharts ? erpMonth.length+'건 '+basisMeta.action+' 기준' : monthEntries.length+'건 방문 기준'}`;
 
   // 카드2 (구 오늘 매출 → 이번달 누적 사업소 매출)
   document.getElementById('sh-today-val').textContent = monthOfficeSales.toLocaleString();
-  const officeShare = monthSales > 0 ? Math.round(monthOfficeSales / monthSales * 100) : 0;
+  setSalesKpiTarget('sh-office-target-bar', 'sh-office-target-pct', 'sh-office-target-label', monthOfficeSales, officeTarget);
   document.getElementById('sh-today-sub').innerHTML = prevMonthOfficeSales > 0
     ? `전월 대비 <span class="sales-kpi-badge ${officeDiff>=0?'up':'down'}">${officeDiff>=0?'▲':'▼'} ${Math.abs(officeDiff).toFixed(1)}%</span> · 비중 ${officeShare}%`
     : `${erpMonthOffice.length}건 · 비중 ${officeShare}%`;
 
   // 카드3 (구 어제 매출 → 이번달 누적 유통사 매출)
   document.getElementById('sh-yesterday-val').textContent = monthDistSales.toLocaleString();
-  const distShare = monthSales > 0 ? Math.round(monthDistSales / monthSales * 100) : 0;
+  setSalesKpiTarget('sh-dist-target-bar', 'sh-dist-target-pct', 'sh-dist-target-label', monthDistSales, distTarget);
   document.getElementById('sh-yesterday-sub').innerHTML = prevMonthDistSales > 0
     ? `전월 대비 <span class="sales-kpi-badge ${distDiff>=0?'up':'down'}">${distDiff>=0?'▲':'▼'} ${Math.abs(distDiff).toFixed(1)}%</span> · 비중 ${distShare}%`
     : `${erpMonthDist.length}건 · 비중 ${distShare}%`;
@@ -147,25 +173,29 @@ function renderSalesPage() {
   const wdEl = document.getElementById('sh-workdays-label');
   if (wdEl) wdEl.textContent = `영업일 ${workdays}일 (경과 ${passedWorkdays}일)`;
   // 월말 매출 예측 (과거 월별 페이싱 반영 — 월초 집중/월말 감소 패턴 보정, 데이터 부족 시 선형 fallback)
-  const fcEl = document.getElementById('sh-month-forecast');
-  if (fcEl) {
-    if (useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays) {
-      const pace = forecastMonthByPacing(ym, today);
+  const setForecast = (id, actual, target, rowFilter) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays && actual > 0) {
+      const pace = forecastMonthByPacing(ym, today, rowFilter);
       const usePace = pace && pace >= 0.05;
       const forecast = usePace
-        ? Math.round(monthSales / pace)
-        : Math.round(monthSales / passedWorkdays * workdays);
+        ? Math.round(actual / pace)
+        : Math.round(actual / passedWorkdays * workdays);
       let s = `📈 예상 월말 ${forecast.toLocaleString()}원`;
-      if (targets.salesTarget) s += ` · 목표 ${Math.min(Math.round(forecast / targets.salesTarget * 100), 999)}%`;
-      fcEl.textContent = s;
-      fcEl.title = usePace
+      if (target) s += ` · 목표 ${Math.min(Math.round(forecast / target * 100), 999)}%`;
+      el.textContent = s;
+      el.title = usePace
         ? `과거 매출 페이싱 반영 (이번달 ${today.slice(8,10)}일까지 보통 누적 ${Math.round(pace*100)}% 시점)`
         : '경과 영업일 기준 단순 추정';
     } else {
-      fcEl.textContent = '';
-      fcEl.title = '';
+      el.textContent = '';
+      el.title = '';
     }
-  }
+  };
+  setForecast('sh-month-forecast', monthSales, teamSalesTarget, isTrackedSales);
+  setForecast('sh-office-forecast', monthOfficeSales, officeTarget, isOffice);
+  setForecast('sh-dist-forecast', monthDistSales, distTarget, isDist);
   rcDaily('chart-sales-daily', dayLabels, daySalesData, dailyBarColors, dailyDowType);
 
   const buildSalesRank = rows => {
