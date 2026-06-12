@@ -415,6 +415,22 @@ function renderPageByName(name) {
   if (renderer) renderer();
 }
 
+function clearNavTextCaret(el) {
+  try {
+    if (document.getSelection) document.getSelection().removeAllRanges();
+    if (el && typeof el.blur === 'function') el.blur();
+    const active = document.activeElement;
+    if (active && active.closest && active.closest('.sidebar') && typeof active.blur === 'function') active.blur();
+  } catch (_) {}
+}
+
+document.addEventListener('mousedown', e => {
+  const target = e.target?.closest?.('.sidebar .nav-item, .sidebar .nav-group-toggle, .sidebar .basis-toggle button, .sidebar .logout-btn');
+  if (!target) return;
+  e.preventDefault();
+  clearNavTextCaret(target);
+});
+
 function showPage(name, el) {
   if (currentUser && !userCanOpenPage(name, currentUser)) {
     if (typeof showToast === 'function') showToast('접근 권한이 없는 메뉴입니다.', 'error');
@@ -432,6 +448,7 @@ function showPage(name, el) {
   page.classList.add('active');
   const navEl = el || document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
+  clearNavTextCaret(navEl);
   const titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.textContent = PAGE_TITLES[name] || name;
   try {
@@ -446,6 +463,7 @@ function toggleNavGroup(el) {
   el.classList.toggle('open');
   const sub = el.nextElementSibling;
   if (sub) sub.classList.toggle('open');
+  clearNavTextCaret(el);
 }
 
 // ════════════════════════════════════
