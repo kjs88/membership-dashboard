@@ -137,12 +137,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .product-filter-panel .drp-trigger{min-width:0;width:100%;}
 .stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
 .sales-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
-.sales-kpi.primary{background:linear-gradient(135deg,var(--green-deep),var(--green-dark));border-color:var(--green-dark);}
+.sales-kpi.primary{background:linear-gradient(135deg,#007A5A,#00916E);border-color:#007A5A;}
 .sales-kpi.primary .sales-kpi-label,.sales-kpi.office .sales-kpi-label,.sales-kpi.dist .sales-kpi-label{color:#fff;}
 .sales-kpi.primary .sales-kpi-sub,.sales-kpi.office .sales-kpi-sub,.sales-kpi.dist .sales-kpi-sub{color:rgba(255,255,255,.74);}
 .sales-kpi.primary .sales-kpi-value{color:#fff;}
-.sales-kpi.office{background:linear-gradient(135deg,#006F72,#0B8C96);border-color:#0B8C96;}
-.sales-kpi.dist{background:linear-gradient(135deg,#8B6F18,#B8891F);border-color:#B8891F;}
+.sales-kpi.office{background:linear-gradient(135deg,#006D77,#0A9396);border-color:#006D77;}
+.sales-kpi.dist{background:linear-gradient(135deg,#A75D1B,#C9822B);border-color:#A75D1B;}
 .sales-kpi.office .sales-kpi-value,.sales-kpi.dist .sales-kpi-value{color:#fff;}
 .sales-kpi .sales-kpi-label span{font-size:10px;font-weight:700;line-height:1;color:rgba(255,255,255,.84);background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);padding:3px 8px;border-radius:5px;letter-spacing:0;}
 .sales-kpi-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;font-weight:800;color:#fff;letter-spacing:0;line-height:1.25;margin-bottom:8px;}

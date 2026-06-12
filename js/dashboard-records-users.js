@@ -192,7 +192,7 @@ function renderSalesPage() {
       if (target) s += ` · 목표 ${Math.min(Math.round(info.forecast / target * 100), 999)}%`;
       el.textContent = s;
       el.title = title || (info.usePace
-        ? `과거 매출 페이싱 반영 (이번달 ${today.slice(8,10)}일까지 보통 누적 ${Math.round(info.pace*100)}% 시점)`
+        ? `과거 매출 페이싱 반영 (이번달 ${today.slice(8,10)}일까지 보통 ${Math.round(info.pace*100)}% 시점)`
         : '경과 영업일 기준 단순 추정');
     } else {
       el.textContent = '';

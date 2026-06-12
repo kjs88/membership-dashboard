@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260613-sales-kpi-forecast">
+<link rel="stylesheet" href="css/style.css?v=20260613-sales-kpi-palette">
 </head>
 <body>
 
@@ -186,7 +186,7 @@
       <div class="sales-hero" style="margin-bottom:0">
       <div class="sales-kpi-row">
         <div class="sales-kpi primary">
-          <div class="sales-kpi-label">이번달 누적 합계 매출<span>아마란스기준: 사업소+유통사/상품</span></div>
+          <div class="sales-kpi-label">이번달 합계 매출<span>아마란스기준: 사업소+유통사/상품</span></div>
           <div class="sales-kpi-value" id="sh-month"><span id="sh-month-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
             <div class="sales-kpi-target-track"><div class="sales-kpi-target-fill" id="sh-sales-target-bar"></div></div>
@@ -197,7 +197,7 @@
           <div class="sales-kpi-forecast" id="sh-month-forecast"></div>
         </div>
         <div class="sales-kpi office">
-          <div class="sales-kpi-label">이번달 누적 사업소 매출<span>사업소/상품</span></div>
+          <div class="sales-kpi-label">이번달 사업소 매출<span>사업소/상품</span></div>
           <div class="sales-kpi-value"><span id="sh-today-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
             <div class="sales-kpi-target-track"><div class="sales-kpi-target-fill" id="sh-office-target-bar"></div></div>
@@ -208,7 +208,7 @@
           <div class="sales-kpi-forecast" id="sh-office-forecast"></div>
         </div>
         <div class="sales-kpi dist">
-          <div class="sales-kpi-label">이번달 누적 유통사 매출<span>유통사/상품</span></div>
+          <div class="sales-kpi-label">이번달 유통사 매출<span>유통사/상품</span></div>
           <div class="sales-kpi-value"><span id="sh-yesterday-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
             <div class="sales-kpi-target-track"><div class="sales-kpi-target-fill" id="sh-dist-target-bar"></div></div>
@@ -270,7 +270,7 @@
       <div class="dash-section-title"><span>📋</span>영업현황</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
       <div class="kpi-card main-card">
-        <div class="kpi-label">이번 달 누적 방문 수</div>
+        <div class="kpi-label">이번 달 방문 수</div>
         <div class="kpi-value" id="kpi-total">0</div>
         <div style="display:flex;align-items:center;gap:6px;margin:8px 0 4px">
           <div class="target-bar-wrap"><div class="target-bar-fill" id="kpi-visit-bar" style="width:0%;background:rgba(255,255,255,.9)"></div></div>
@@ -348,7 +348,7 @@
     <div class="chart-grid-3">
       <div class="chart-card">
         <div class="chart-card-title">영업사원별 방문 랭킹</div>
-        <div class="chart-card-sub">누적 방문 건수</div>
+        <div class="chart-card-sub">방문 건수</div>
         <div id="leaderboard" style="padding-top:4px"></div>
       </div>
       <div class="chart-card">
@@ -371,7 +371,7 @@
       </div>
       <div class="chart-card">
         <div class="chart-card-title">거래처별 방문 TOP 10</div>
-        <div class="chart-card-sub">누적 방문 횟수 기준</div>
+        <div class="chart-card-sub">방문 횟수 기준</div>
         <div id="top10-list" style="padding-top:4px"></div>
       </div>
     </div>
@@ -1552,7 +1552,7 @@
 <script src="js/products-grades-erp.js?v=20260611-cleanup"></script>
 <script src="js/core-auth-nav.js?v=20260610-security"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
-<script src="js/dashboard-records-users.js?v=20260613-forecast-sum-fix"></script>
+<script src="js/dashboard-records-users.js?v=20260613-sales-kpi-palette"></script>
 <script src="js/clients.js?v=20260523-features"></script>
 <script src="js/daily-entry.js?v=20260523-cleanup"></script>
 <script src="js/stats-notices.js?v=20260609-person-erp"></script>
