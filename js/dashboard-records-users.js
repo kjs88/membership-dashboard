@@ -189,11 +189,13 @@ function renderSalesPage() {
   shRenderRankPage('dist');
 
   const salesByPerson = {};
-  if (useErpForCharts) {
-    erpMonth.forEach(e => { if (e.person) salesByPerson[e.person] = (salesByPerson[e.person]||0) + (parseFloat(e.supply)||0); });
-  } else {
-    monthEntries.forEach(e => { if (e.person) salesByPerson[e.person] = (salesByPerson[e.person]||0) + (e.ourPurchase||0); });
-  }
+  const personSalesRows = useErpForCharts ? erpMonthOffice : monthEntries.filter(e => !isDist(e));
+  personSalesRows.forEach(e => {
+    const person = (e.person || '').trim();
+    if (!person || person === '도도매/유통사') return;
+    const amount = useErpForCharts ? (parseFloat(e.supply) || 0) : (parseFloat(e.ourPurchase) || 0);
+    salesByPerson[person] = (salesByPerson[person] || 0) + amount;
+  });
   const personList = Object.entries(salesByPerson).sort((a,b) => b[1]-a[1]);
   const maxPerson = personList[0]?.[1] || 1;
   const personSalesTgt = {};
