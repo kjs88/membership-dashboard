@@ -94,26 +94,9 @@ function renderSalesPage() {
   const officeShare = monthSales > 0 ? Math.round(monthOfficeSales / monthSales * 100) : 0;
   const distShare = monthSales > 0 ? Math.round(monthDistSales / monthSales * 100) : 0;
   const isTrackedSales = o => isOffice(o) || isDist(o);
-  const recentChannelShare = channelFilter => {
-    const totalByMonth = {}, channelByMonth = {};
-    allOrders.forEach(o => {
-      const d = o.date || '';
-      const m = d.slice(0, 7);
-      if (m.length !== 7 || m >= ym || !isTrackedSales(o)) return;
-      const amount = parseFloat(o.supply) || 0;
-      totalByMonth[m] = (totalByMonth[m] || 0) + amount;
-      if (channelFilter(o)) channelByMonth[m] = (channelByMonth[m] || 0) + amount;
-    });
-    const histMonths = Object.keys(totalByMonth).filter(m => totalByMonth[m] > 0).sort().slice(-6);
-    const total = histMonths.reduce((s, m) => s + (totalByMonth[m] || 0), 0);
-    const channel = histMonths.reduce((s, m) => s + (channelByMonth[m] || 0), 0);
-    return total > 0 ? channel / total : null;
-  };
-  const teamSalesTarget = parseFloat(targets.salesTarget) || 0;
-  const officeTargetShare = recentChannelShare(isOffice);
-  const distTargetShare = recentChannelShare(isDist);
-  const officeTarget = teamSalesTarget ? Math.round(teamSalesTarget * (officeTargetShare ?? (officeShare / 100))) : 0;
-  const distTarget = teamSalesTarget ? Math.round(teamSalesTarget * (distTargetShare ?? (distShare / 100))) : 0;
+  const officeTarget = parseFloat(targets.officeSalesTarget) || 0;
+  const distTarget = parseFloat(targets.distSalesTarget) || 0;
+  const teamSalesTarget = (officeTarget + distTarget) || (parseFloat(targets.salesTarget) || 0);
   const setSalesKpiTarget = (barId, pctId, labelId, actual, target) => {
     const bar = document.getElementById(barId);
     const pctEl = document.getElementById(pctId);
@@ -936,9 +919,13 @@ function fmtComma(input) {
 }
 
 const TARGET_PLAN_MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-const TARGET_PLAN_SALES_MONTHLY = [
-  1640159409, 1416161151, 1785100777, 1926275003, 1728867590, 1934143414,
-  2233436800, 2068165915, 2149781426, 2235261696, 2429195454, 2675056711
+const TARGET_PLAN_OFFICE_SALES_MONTHLY = [
+  1124242712, 977556765, 1252870926, 1368303455, 1228985285, 1385519200,
+  1593347080, 1454795160, 1527534918, 1603911664, 1768312610, 1991056053
+];
+const TARGET_PLAN_DIST_SALES_MONTHLY = [
+  430958980, 352543888, 440031801, 465738126, 406332753, 453641032,
+  542336483, 517235355, 522306290, 532448160, 559070568, 585692976
 ];
 const TARGET_PLAN_COLUMNS = ['합계','합계',...TARGET_PLAN_MONTHS,'합계'];
 const TARGET_PLAN_ROWS = [
@@ -984,17 +971,23 @@ const TARGET_PLAN_ROWS = [
   ]},
 ];
 
-function getPlanSalesTargetForMonth(ym) {
+function getPlanSalesTargetsForMonth(ym) {
   if (!ym || !ym.startsWith('2026-')) return 0;
   const idx = parseInt(ym.slice(5, 7), 10) - 1;
-  return TARGET_PLAN_SALES_MONTHLY[idx] || 0;
+  const office = TARGET_PLAN_OFFICE_SALES_MONTHLY[idx] || 0;
+  const dist = TARGET_PLAN_DIST_SALES_MONTHLY[idx] || 0;
+  return { office, dist, total: office + dist };
 }
 
 function applyPlannedSalesTarget() {
   const now = new Date();
   const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const planTarget = getPlanSalesTargetForMonth(ym);
-  if (planTarget) targets.salesTarget = planTarget;
+  const planTarget = getPlanSalesTargetsForMonth(ym);
+  if (planTarget?.total) {
+    targets.officeSalesTarget = planTarget.office;
+    targets.distSalesTarget = planTarget.dist;
+    targets.salesTarget = planTarget.total;
+  }
   return planTarget;
 }
 
@@ -1011,24 +1004,37 @@ function renderTargetPlanTable() {
     const cells = row.values.map((v, idx) => `<td class="${idx===currentMonthIdx?'plan-current-month':''}">${v}</td>`).join('');
     return `<tr class="${i===0?'plan-section-start':''}">${sectionCell}${groupCell}<th class="plan-label">${row.label}</th>${cells}</tr>`;
   }).join('')).join('');
-  wrap.innerHTML = `<div class="target-plan-scroll"><table class="target-plan-table">${head}<tbody>${body}</tbody></table></div><div class="target-plan-note">현재 월 계획값은 월간 매출 목표에 자동 반영됩니다.</div>`;
+  wrap.innerHTML = `<div class="target-plan-scroll"><table class="target-plan-table">${head}<tbody>${body}</tbody></table></div><div class="target-plan-note">현재 월 사업소/유통사 계획값은 매출 목표에 자동 반영됩니다.</div>`;
 }
 
 function renderTargets() {
   const now=new Date(), ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   applyPlannedSalesTarget();
   document.getElementById('t-visit').value = targets.visitTarget||'';
-  document.getElementById('t-sales').value = targets.salesTarget ? targets.salesTarget.toLocaleString() : '';
+  document.getElementById('t-sales-office').value = targets.officeSalesTarget ? targets.officeSalesTarget.toLocaleString() : '';
+  document.getElementById('t-sales-dist').value = targets.distSalesTarget ? targets.distSalesTarget.toLocaleString() : '';
 
   // team totals
-  let teamVisit=0, teamSales=0;
-  allEntries.forEach(e=>{if((e.date||'').startsWith(ym)){teamVisit++;teamSales+=(parseFloat(e.ourPurchase)||0);}});
+  let teamVisit=0;
+  allEntries.forEach(e=>{if((e.date||'').startsWith(ym)){teamVisit++;}});
+  const officePersons = ['이기현','장재순','이민우','안성종'];
+  const isOfficeRow = o => o.channel ? o.channel === 'office' : officePersons.includes((o.person||'').trim());
+  const isDistRow = o => o.channel ? o.channel === 'dist' : ((o.person||'').trim() === '도도매/유통사' || (o.custClass||'').trim() === '도매(도도매/유통사)');
+  const monthOrders = (allOrders || []).filter(o => (o.date || '').startsWith(ym));
+  const sumOrderSupply = rows => rows.reduce((s,o)=>s+(parseFloat(o.supply)||0),0);
+  const officeActualSales = sumOrderSupply(monthOrders.filter(isOfficeRow));
+  const distActualSales = sumOrderSupply(monthOrders.filter(isDistRow));
+  const officeTarget = parseFloat(targets.officeSalesTarget) || 0;
+  const distTarget = parseFloat(targets.distSalesTarget) || 0;
   const vPct=targets.visitTarget?Math.min(Math.round(teamVisit/targets.visitTarget*100),999):0;
-  const sPct=targets.salesTarget?Math.min(Math.round(teamSales/targets.salesTarget*100),999):0;
+  const officeSalesPct=officeTarget?Math.min(Math.round(officeActualSales/officeTarget*100),999):0;
+  const distSalesPct=distTarget?Math.min(Math.round(distActualSales/distTarget*100),999):0;
   const tvBar=document.getElementById('t-visit-bar'); if(tvBar)tvBar.style.width=vPct+'%';
-  const tsBar=document.getElementById('t-sales-bar'); if(tsBar)tsBar.style.width=sPct+'%';
+  const officeBar=document.getElementById('t-sales-office-bar'); if(officeBar)officeBar.style.width=officeSalesPct+'%';
+  const distBar=document.getElementById('t-sales-dist-bar'); if(distBar)distBar.style.width=distSalesPct+'%';
   const tvPct=document.getElementById('t-visit-pct'); if(tvPct)tvPct.textContent=targets.visitTarget?vPct+'%':'-';
-  const tsPct=document.getElementById('t-sales-pct'); if(tsPct)tsPct.textContent=targets.salesTarget?sPct+'%':'-';
+  const officePct=document.getElementById('t-sales-office-pct'); if(officePct)officePct.textContent=officeTarget?officeSalesPct+'%':'-';
+  const distPct=document.getElementById('t-sales-dist-pct'); if(distPct)distPct.textContent=distTarget?distSalesPct+'%':'-';
 
   // 영업사원별
   const userList = allUsers.filter(isSalesUserAccount);
@@ -1085,7 +1091,9 @@ function renderTargets() {
 function saveTargets() {
   const _pc = id => parseFloat((document.getElementById(id)?.value||'').replace(/,/g,''))||0;
   targets.visitTarget = parseFloat(document.getElementById('t-visit').value)||0;
-  targets.salesTarget = _pc('t-sales');
+  targets.officeSalesTarget = _pc('t-sales-office');
+  targets.distSalesTarget = _pc('t-sales-dist');
+  targets.salesTarget = (targets.officeSalesTarget || 0) + (targets.distSalesTarget || 0);
   targets.personal = {};
   targets.personalSales = {};
   allUsers.filter(isSalesUserAccount).forEach(u=>{
