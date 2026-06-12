@@ -156,7 +156,6 @@
     <div class="nav-label" id="nav-admin-label" style="display:none">관리/설정</div>
     <div class="nav-item admin-only" onclick="showPage('users',this)" id="nav-users" style="display:none"><span class="nav-icon">👥</span>계정 관리</div>
     <div class="nav-item" onclick="showPage('targets',this)" id="nav-targets" style="display:none"><span class="nav-icon">◎</span>목표 설정</div>
-    <div class="nav-item" onclick="openModal('modal-erp-upload')" id="nav-erp-upload" style="display:none"><span class="nav-icon">↻</span>ERP API 연동</div>
     <div class="nav-label">계정</div>
     <div class="nav-item" onclick="openModal('modal-change-pw')"><span class="nav-icon">🔑</span>비밀번호 변경</div>
   </nav>
@@ -1093,7 +1092,7 @@
           <tbody id="prod-tbody"></tbody>
         </table>
       </div>
-      <div id="prod-empty" style="display:none;padding:48px;text-align:center;color:var(--text3)">ERP 데이터를 먼저 연동하세요. (사이드바 → ERP API 연동)</div>
+      <div id="prod-empty" style="display:none;padding:48px;text-align:center;color:var(--text3)">ERP 데이터가 없습니다. 자동 동기화 상태를 확인하세요.</div>
       <div id="prod-pagination" style="display:none;padding:14px 20px;border-top:1px solid var(--border);align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <span id="prod-page-info" style="font-size:12px;color:var(--text3)"></span>
         <div style="display:flex;gap:4px" id="prod-page-btns"></div>
@@ -1562,7 +1561,7 @@
 <script src="js/storage.js?v=20260610-security"></script>
 <script src="js/state.js?v=20260611-cleanup"></script>
 <script src="js/products-grades-erp.js?v=20260611-cleanup"></script>
-<script src="js/core-auth-nav.js?v=20260613-nav-caret-fix"></script>
+<script src="js/core-auth-nav.js?v=20260613-no-erp-menu"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
 <script src="js/dashboard-records-users.js?v=20260613-channel-targets"></script>
 <script src="js/clients.js?v=20260523-features"></script>

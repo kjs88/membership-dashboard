@@ -184,13 +184,12 @@ const MENU_ACCESS_ITEMS = [
   { key:'clients', label:'거래처 DB',    page:'clients', nav:'nav-clients' },
   { key:'users',   label:'계정 관리',    page:'users',   nav:'nav-users' },
   { key:'targets', label:'목표 설정',    page:'targets', nav:'nav-targets' },
-  { key:'erp',     label:'ERP API 연동', page:null,      nav:'nav-erp-upload' },
 ];
 
 const MENU_ACCESS_DEFAULTS = {
   admin:   MENU_ACCESS_ITEMS.map(m => m.key),
   manager: ['sales','stats','products','project','dash','grade','clients'],
-  planner: ['sales','stats','products','project','dash','grade','clients','targets','erp'],
+  planner: ['sales','stats','products','project','dash','grade','clients','targets'],
   user:    ['sales','stats','products','project','dash','journal'],
 };
 
@@ -344,7 +343,7 @@ function applyCurrentUserMenuAccess() {
   });
 
   const clientsVisible = can('grade') || can('clients');
-  const adminVisible = can('users') || can('targets') || can('erp');
+  const adminVisible = can('users') || can('targets');
   setNavDisplay('nav-clients-label', clientsVisible);
   setNavDisplay('nav-project-label', can('project'));
   setNavDisplay('nav-admin-label', adminVisible);
