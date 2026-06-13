@@ -610,6 +610,7 @@ def upload_dashboard_data_remote(ship_records, order_records, date_from=None, da
         "ship": ship_records,
     }
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    print(f"  업로드 페이로드 크기: {len(body)/1048576:.1f} MB")
     req = urllib.request.Request(
         url,
         data=body,
@@ -618,12 +619,20 @@ def upload_dashboard_data_remote(ship_records, order_records, date_from=None, da
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=120) as resp:
             status = getattr(resp, "status", resp.getcode())
             if 200 <= int(status) < 300:
                 print(f"✓ Firebase 업로드 완료: /{REMOTE_ERP_PATH} (주문 {len(order_records):,}, 출고 {len(ship_records):,})")
                 return True
             print(f"⚠️ Firebase 업로드 응답 이상: HTTP {status}")
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", "replace")[:500]
+        except Exception:
+            pass
+        print(f"⚠️ Firebase 업로드 실패: {exc} | 응답: {detail}")
+        print("   DB 규칙/URL/인증 토큰을 확인하세요. AMARANS_SKIP_FIREBASE_UPLOAD=1 로 끌 수 있습니다.")
     except Exception as exc:
         print(f"⚠️ Firebase 업로드 실패: {exc}")
         print("   DB 규칙/URL/인증 토큰을 확인하세요. AMARANS_SKIP_FIREBASE_UPLOAD=1 로 끌 수 있습니다.")
