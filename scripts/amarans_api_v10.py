@@ -595,7 +595,7 @@ def upload_dashboard_data_remote(ship_records, order_records, date_from=None, da
         else:
             print("  Remote full-year base not found. Uploading the fetched window as-is.")
 
-    payload = {
+    meta = {
         "source": "amarans-playwright",
         "syncedAt": now_iso,
         "year": TARGET_YEAR,
@@ -606,36 +606,49 @@ def upload_dashboard_data_remote(ship_records, order_records, date_from=None, da
         "baseSyncedAt": base_synced_at,
         "orderCount": len(order_records),
         "shipCount": len(ship_records),
-        "order": order_records,
-        "ship": ship_records,
     }
-    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    print(f"  업로드 페이로드 크기: {len(body)/1048576:.1f} MB")
+
+    # Firebase REST는 단일 쓰기 16MB 제한 → order/ship 노드를 분리 업로드하고 메타는 PATCH.
+    ok_order = _firebase_write(f"{REMOTE_ERP_PATH}/order", order_records, "PUT")
+    ok_ship  = _firebase_write(f"{REMOTE_ERP_PATH}/ship",  ship_records,  "PUT")
+    ok_meta  = _firebase_write(REMOTE_ERP_PATH, meta, "PATCH")
+    if ok_order and ok_ship and ok_meta:
+        print(f"✓ Firebase 업로드 완료: /{REMOTE_ERP_PATH} (주문 {len(order_records):,}, 출고 {len(ship_records):,})")
+        return True
+    print(f"⚠️ Firebase 업로드 일부 실패 (order={ok_order}, ship={ok_ship}, meta={ok_meta})")
+    print("   DB 규칙/URL/인증 토큰을 확인하세요. AMARANS_SKIP_FIREBASE_UPLOAD=1 로 끌 수 있습니다.")
+    return False
+
+
+def _firebase_write(path, data, method="PUT"):
+    """Firebase REST 단일 노드 쓰기. 16MB 제한을 피하려 노드별로 호출한다."""
+    url = build_firebase_rest_url(path)
+    if not url:
+        return False
+    body = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    size_mb = len(body) / 1048576
+    if size_mb >= 15:
+        print(f"  ⚠️ /{path} 쓰기 크기 {size_mb:.1f}MB — Firebase 16MB 제한 근접")
     req = urllib.request.Request(
-        url,
-        data=body,
-        method="PUT",
+        url, data=body, method=method,
         headers={"Content-Type": "application/json; charset=utf-8"},
     )
-
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             status = getattr(resp, "status", resp.getcode())
             if 200 <= int(status) < 300:
-                print(f"✓ Firebase 업로드 완료: /{REMOTE_ERP_PATH} (주문 {len(order_records):,}, 출고 {len(ship_records):,})")
+                print(f"  ✓ {method} /{path} ({size_mb:.1f}MB)")
                 return True
-            print(f"⚠️ Firebase 업로드 응답 이상: HTTP {status}")
+            print(f"  ⚠️ {method} /{path} 응답 이상: HTTP {status}")
     except urllib.error.HTTPError as exc:
         detail = ""
         try:
-            detail = exc.read().decode("utf-8", "replace")[:500]
+            detail = exc.read().decode("utf-8", "replace")[:300]
         except Exception:
             pass
-        print(f"⚠️ Firebase 업로드 실패: {exc} | 응답: {detail}")
-        print("   DB 규칙/URL/인증 토큰을 확인하세요. AMARANS_SKIP_FIREBASE_UPLOAD=1 로 끌 수 있습니다.")
+        print(f"  ⚠️ {method} /{path} 실패: {exc} | {detail}")
     except Exception as exc:
-        print(f"⚠️ Firebase 업로드 실패: {exc}")
-        print("   DB 규칙/URL/인증 토큰을 확인하세요. AMARANS_SKIP_FIREBASE_UPLOAD=1 로 끌 수 있습니다.")
+        print(f"  ⚠️ {method} /{path} 실패: {exc}")
     return False
 
 
