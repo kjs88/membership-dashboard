@@ -6,6 +6,25 @@ let allOrders = [], allShipOrders = [], allOrderOrders = [], orderBasis = 'ship'
 let allNotices = [], allRevisits = [], allClients = [], statsPersonId = 'all', reportMode = 'week', viewingClientId = null;
 // 실적 분석 채널: 'office'(사업소) | 'dist'(유통사)
 let statsChannel = 'office';
+// 사업소 영업사원 (아마란스 고객분류 도매(이름))
+const OFFICE_PERSONS = ['이기현','장재순','이민우','안성종'];
+// 주문/출고 레코드의 채널 판정 — 고객분류(custClass)·영업사원(person) 우선, 저장된 channel은 보조
+//  office=사업소, dist=유통사(도도매/유통사), other=소매·도매(기타) 등 (대시보드 제외 대상)
+function orderChannel(o) {
+  if (!o) return 'other';
+  const cc = (o.custClass || '').trim();
+  const p  = (o.person || '').trim();
+  if (cc) { // 고객분류가 있으면 그것을 기준으로 확정
+    if (cc === '도매(도도매/유통사)') return 'dist';
+    if (/^도매\(/.test(cc) && OFFICE_PERSONS.includes(p)) return 'office';
+    return 'other'; // 소매, 도매(기타) 등
+  }
+  // 고객분류가 없는 구버전 레코드 폴백
+  if (p === '도도매/유통사') return 'dist';
+  if (OFFICE_PERSONS.includes(p)) return 'office';
+  if (o.channel === 'dist' || o.channel === 'office') return o.channel;
+  return 'other';
+}
 let fbListeners = [];
 
 // ════════════════════════════════════

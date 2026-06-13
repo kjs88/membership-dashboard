@@ -6,7 +6,7 @@ function renderStats() {
     updateOrderBasisUI();
     // 채널(사업소/유통사)로 먼저 분리 — 사업소: 영업사원 실적, 유통사: 유통사 데이터만
     const channel = (typeof statsChannel !== 'undefined') ? statsChannel : 'office';
-    const baseOrders = (allOrders || []).filter(o => (o.channel || 'office') === channel);
+    const baseOrders = (allOrders || []).filter(o => orderChannel(o) === channel);
     // 영업사원 버튼 그룹 (해당 채널의 ERP 고객분류 도매(이름) 기준)
     const personNames = erpPersonNames(channel);
     const filterEl = document.getElementById('stats-person-filter');
@@ -142,7 +142,7 @@ function genReport(mode, el) {
   if (el) { document.querySelectorAll('#report-week-btn,#report-month-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
   const basisMeta = getOrderBasisMeta();
   const channel = (typeof statsChannel !== 'undefined') ? statsChannel : 'office';
-  const baseOrders = (allOrders || []).filter(o => (o.channel || 'office') === channel);
+  const baseOrders = (allOrders || []).filter(o => orderChannel(o) === channel);
   const personName = statsPersonId==='all' ? null : statsPersonId;
   const E = statsPersonId==='all' ? allEntries : allEntries.filter(e=>(allUsers.find(u=>u.id===e.personId)?.name)===personName);
   const useErp = baseOrders.length > 0;

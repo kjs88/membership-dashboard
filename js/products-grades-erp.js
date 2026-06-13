@@ -6,7 +6,7 @@ let productCategoryId = 'all';
 // channel 지정 시 해당 채널(office/dist) 레코드로만 한정
 function erpPersonNames(channel) {
   const src = (typeof allOrders !== 'undefined' ? allOrders : [])
-    .filter(o => !channel || (o.channel || 'office') === channel);
+    .filter(o => !channel || (typeof orderChannel === 'function' ? orderChannel(o) : (o.channel || 'office')) === channel);
   return [...new Set(src.map(o => (o.person || '').trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'ko'));
 }

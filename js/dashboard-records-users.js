@@ -65,9 +65,8 @@ function renderSalesPage() {
   // ── 채널 분류 (사업소 / 유통사) ──
   //  · 사업소: 영업사원이 이기현·장재순·이민우·안성종 중 한 명 (고객분류 도매(이름))
   //  · 유통사: 고객분류 == "도도매/유통사" (수집 시 channel='dist'로 표시)
-  const OFFICE_PERSONS = ['이기현','장재순','이민우','안성종'];
-  const isOffice = o => o.channel ? o.channel === 'office' : OFFICE_PERSONS.includes((o.person||'').trim());
-  const isDist   = o => o.channel ? o.channel === 'dist'   : ((o.person||'').trim() === '도도매/유통사' || (o.custClass||'').trim() === '도매(도도매/유통사)');
+  const isOffice = o => orderChannel(o) === 'office';
+  const isDist   = o => orderChannel(o) === 'dist';
   const sumSupply = arr => Math.round(arr.reduce((s,e)=>s+(parseFloat(e.supply)||0),0));
 
   const erpMonthOffice = erpMonth.filter(isOffice);
