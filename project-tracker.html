@@ -74,6 +74,15 @@
   .mact{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
   .btn-ghost{background:var(--surface2);color:var(--muted);padding:8px 16px;font-size:13px;border:1px solid var(--line2)}
   .btn-ghost:hover{background:var(--green-light);border-color:var(--green-mid);color:var(--green-dark)}
+  .btn-danger{background:var(--danger-light);color:var(--danger);padding:8px 14px;font-size:13px;border:1px solid var(--danger)}
+  .btn-danger:hover{background:var(--danger);color:#fff}
+  .trash-badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;text-align:center;margin-left:2px}
+  .trash-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--surface2)}
+  .trash-info{flex:1;min-width:0}
+  .trash-info b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trash-meta{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+  .trash-act{display:flex;gap:6px;flex-shrink:0}
+  .trash-act button{padding:6px 12px;font-size:12px}
   .hint{font-size:10px;color:var(--warn);margin-top:4px}
   .dLogs{max-height:240px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px}
   .logitem{font-size:12px;padding:8px 10px;border-bottom:1px solid var(--line)}
@@ -124,6 +133,7 @@
     <div class="controls">
       <button class="btn-primary" id="addProjBtn" onclick="openProjModal()">+ 프로젝트 추가</button>
       <input id="psearch" placeholder="🔍 프로젝트 검색" oninput="renderList()">
+      <button class="btn-ghost" id="trashBtn" onclick="openTrash()" style="margin-left:auto">🗑 휴지통 <span id="trashCount" class="trash-badge">0</span></button>
     </div>
     <div id="projGrid" class="proj-grid"></div>
   </div>
@@ -244,6 +254,17 @@
       <div class="mact">
         <button class="btn-ghost" onclick="closeProjModal()">취소</button>
         <button class="btn-primary" onclick="saveProj()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mask" id="trashMask">
+    <div class="modal">
+      <h3>🗑 휴지통</h3>
+      <div id="trashList" class="dLogs" style="max-height:320px"></div>
+      <div class="mact">
+        <button class="btn-danger" onclick="emptyTrash()">휴지통 비우기</button>
+        <button class="btn-ghost" onclick="closeTrash()">닫기</button>
       </div>
     </div>
   </div>
@@ -390,10 +411,12 @@ function dropOn(targetPid){
   movable.splice(to,0,moved);
   projects = [...movable, ...fixed]; // 고정 항목은 항상 뒤
   dragPid = null;
-  renderList();
+  ptSave(); renderList();
 }
 
 function renderList(){
+  const tc=document.getElementById('trashCount');
+  if(tc){ tc.textContent=trash.length; tc.style.display=trash.length?'':'none'; }
   const q=(document.getElementById('psearch').value||'').toLowerCase().trim();
   const dragOff = !!q; // 검색 중엔 드래그 비활성 (순서 꼬임 방지)
   const grid=document.getElementById('projGrid'); grid.innerHTML='';
@@ -457,13 +480,57 @@ function saveProj(){
   const name=document.getElementById('p_name').value.trim();
   if(!name){alert('프로젝트명을 입력하세요');return;}
   projects.push({id:nextPid++,name,owner:document.getElementById('p_owner').value,desc:document.getElementById('p_desc').value.trim()});
-  closeProjModal(); renderList();
+  ptSave(); closeProjModal(); renderList();
 }
 function delProj(pid){
-  if(!confirm('프로젝트와 소속 태스크가 모두 삭제됩니다. 계속할까요?'))return;
+  const proj=projects.find(p=>p.id===pid);
+  if(!proj) return;
+  if(proj.fixed){ alert('이 항목은 삭제할 수 없습니다.'); return; }
+  if(!confirm('프로젝트를 휴지통으로 이동합니다. 소속 태스크도 함께 보관되며 휴지통에서 복원할 수 있습니다.'))return;
+  const ptasks=tasks.filter(t=>t.pid===pid);
+  trash.unshift({project:proj, tasks:ptasks, deletedAt:new Date().toISOString()});
   projects=projects.filter(p=>p.id!==pid);
   tasks=tasks.filter(t=>t.pid!==pid);
-  renderList();
+  ptSave(); renderList();
+}
+
+// ===== 휴지통 =====
+function openTrash(){ renderTrash(); document.getElementById('trashMask').classList.add('on'); }
+function closeTrash(){ document.getElementById('trashMask').classList.remove('on'); }
+function renderTrash(){
+  const box=document.getElementById('trashList');
+  if(!trash.length){ box.innerHTML='<div class="logempty">휴지통이 비어 있습니다</div>'; return; }
+  box.innerHTML=trash.map((e,i)=>{
+    const when=(e.deletedAt||'').slice(0,10);
+    return `<div class="trash-item">
+      <div class="trash-info">
+        <b>${escHtml(e.project.name)}</b>
+        <span class="trash-meta">태스크 ${e.tasks.length}개 · 삭제일 ${escHtml(when)}</span>
+      </div>
+      <div class="trash-act">
+        <button class="btn-ghost" onclick="restoreProj(${i})">복원</button>
+        <button class="btn-danger" onclick="purgeProj(${i})">영구삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function restoreProj(idx){
+  const e=trash[idx]; if(!e) return;
+  let pid=e.project.id;
+  if(projects.some(p=>p.id===pid)){ pid=nextPid++; } // id 충돌 시 새 번호
+  projects.push({...e.project, id:pid});
+  (e.tasks||[]).forEach(t=>tasks.push({...t, pid}));
+  trash.splice(idx,1);
+  ptSave(); renderTrash(); renderList();
+}
+function purgeProj(idx){
+  if(!confirm('영구 삭제하면 복구할 수 없습니다. 계속할까요?'))return;
+  trash.splice(idx,1); ptSave(); renderTrash(); renderList();
+}
+function emptyTrash(){
+  if(!trash.length) return;
+  if(!confirm('휴지통을 비우면 모든 항목이 영구 삭제됩니다. 계속할까요?'))return;
+  trash=[]; ptSave(); renderTrash(); renderList();
 }
 
 let projects = [
@@ -497,6 +564,34 @@ let tasks = [
   {id:18,pid:3,name:'B2B 운영 업무 시스템 개선',who:'박설계',status:'todo',start:'2026-10-01',end:'2026-12-31',prog:0,priority:'mid',tags:['운영효율']},
 ];
 let nextId = 19, editId = null, detailId = null;
+
+// ===== 로컬 저장 + 휴지통 =====
+let trash = []; // [{project, tasks, deletedAt}]
+const PT_FIXED = {id:0,name:'프로젝트 외 task',owner:'-',desc:'특정 프로젝트에 속하지 않는 단건 업무',fixed:true};
+const PT_K = {p:'pt-projects', t:'pt-tasks', tr:'pt-trash', m:'pt-meta'};
+function ptSave(){
+  try{
+    localStorage.setItem(PT_K.p, JSON.stringify(projects));
+    localStorage.setItem(PT_K.t, JSON.stringify(tasks));
+    localStorage.setItem(PT_K.tr, JSON.stringify(trash));
+    localStorage.setItem(PT_K.m, JSON.stringify({nextPid,nextId,seeded:true}));
+  }catch(e){}
+}
+function ptLoad(){
+  try{
+    const m=JSON.parse(localStorage.getItem(PT_K.m)||'null');
+    if(!m||!m.seeded){ ptSave(); return; } // 첫 실행: 시드 데이터를 저장하고 사용
+    const p=JSON.parse(localStorage.getItem(PT_K.p)||'null');
+    const t=JSON.parse(localStorage.getItem(PT_K.t)||'null');
+    const tr=JSON.parse(localStorage.getItem(PT_K.tr)||'null');
+    if(Array.isArray(p)) projects=p;
+    if(Array.isArray(t)) tasks=t;
+    if(Array.isArray(tr)) trash=tr;
+    if(typeof m.nextPid==='number') nextPid=m.nextPid;
+    if(typeof m.nextId==='number') nextId=m.nextId;
+    if(!projects.some(x=>x.fixed)) projects.push({...PT_FIXED}); // 고정 항목 보장
+  }catch(e){}
+}
 
 function dayOffset(d){ return Math.round((new Date(d)-T0)/(1000*60*60*24)); }
 
@@ -590,8 +685,8 @@ function render(){
   ab.style.pointerEvents = 'auto';
 }
 
-function setStatus(id,v){ const t=tasks.find(x=>x.id===id); if(t){t.status=v; render();} }
-function delTask(id){ tasks=tasks.filter(x=>x.id!==id); render(); }
+function setStatus(id,v){ const t=tasks.find(x=>x.id===id); if(t){t.status=v; ptSave(); render();} }
+function delTask(id){ tasks=tasks.filter(x=>x.id!==id); ptSave(); render(); }
 
 function openModal(){
   fillProjectStaffSelects();
@@ -617,10 +712,11 @@ function saveTask(){
     priority:document.getElementById('f_prio').value,
     tags:document.getElementById('f_tags').value.split(',').map(s=>s.trim()).filter(Boolean)
   });
-  closeModal(); render();
+  ptSave(); closeModal(); render();
 }
 
 initProjectStaff();
+ptLoad();
 buildHeader(); renderList();
 
 function openDetail(id){
@@ -644,6 +740,7 @@ function addLog(){
   const d=new Date().toISOString().slice(0,10);
   if(!t.logs)t.logs=[];
   t.logs.push({d,who,txt});
+  ptSave();
   openDetail(detailId);
   render();
 }
