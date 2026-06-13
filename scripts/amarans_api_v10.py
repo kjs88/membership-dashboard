@@ -822,12 +822,22 @@ def run_job(page, job, replace_payload=True, override_payload=None):
     custom_payload_str = json.dumps(effective_payload)
     mode = "페이로드 교체" if replace_payload else "원본 페이로드 유지"
 
+    # 페이지에는 빈 응답만 돌려준다. 실제 데이터(최대 80MB+)를 그리드에 렌더링하면
+    # 브라우저 렌더러가 OOM으로 죽어("Target page ... closed") 다음 단계가 실패하기 때문.
+    # 우리는 route 레벨에서 본문을 이미 캡처하므로 페이지 표시는 필요 없다.
+    EMPTY_BODY = b'{"resultData":[],"data":[],"list":[],"rows":[],"resultList":[]}'
+    EMPTY_HEADERS = {"Content-Type": "application/json; charset=utf-8"}
+
     def handle_route(route):
         if captured["body"] is not None:
+            # 이미 캡처함 — 페이지엔 빈 응답만 줘서 대용량 재요청/렌더링 방지
             try:
-                route.continue_()
+                route.fulfill(status=200, headers=EMPTY_HEADERS, body=EMPTY_BODY)
             except Exception:
-                pass
+                try:
+                    route.abort()
+                except Exception:
+                    pass
             return
 
         try:
@@ -843,11 +853,8 @@ def run_job(page, job, replace_payload=True, override_payload=None):
             captured["url"] = resp.url
             print(f"  ✓ 응답 캡처: HTTP {resp.status} ({len(body):,} bytes, mode={mode})")
 
-            headers = {
-                k: v for k, v in resp.headers.items()
-                if k.lower() not in ("content-encoding", "content-length")
-            }
-            route.fulfill(status=resp.status, headers=headers, body=body)
+            # 캡처 완료 → 페이지엔 빈 응답을 fulfill (대용량 렌더링 크래시 방지)
+            route.fulfill(status=resp.status, headers=EMPTY_HEADERS, body=EMPTY_BODY)
         except Exception as exc:
             captured["error"] = repr(exc)
             print(f"  ✗ route fetch 실패: {exc}")
