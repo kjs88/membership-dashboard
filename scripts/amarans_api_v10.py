@@ -65,6 +65,7 @@ FIREBASE_DB_URL = (
 FIREBASE_AUTH_TOKEN = os.environ.get("AMARANS_FIREBASE_AUTH_TOKEN") or os.environ.get("FIREBASE_AUTH_TOKEN") or ""
 REMOTE_ERP_PATH = os.environ.get("AMARANS_REMOTE_ERP_PATH", "erp/latest").strip("/")
 SKIP_FIREBASE_UPLOAD = os.environ.get("AMARANS_SKIP_FIREBASE_UPLOAD", "").lower() in ("1", "true", "yes")
+IGNORE_AUTO_HOURS = os.environ.get("AMARANS_IGNORE_AUTO_HOURS", "").lower() in ("1", "true", "yes")
 
 # 2026년 한국 기준 휴무일. --auto 모드에서만 자동 스킵한다.
 KOREA_HOLIDAYS_2026 = {
@@ -652,15 +653,17 @@ def _firebase_write(path, data, method="PUT"):
     return False
 
 
-def auto_skip_reason(now=None):
+def auto_skip_reason(now=None, ignore_hours=None):
     """--auto 실행 시 야간/주말/공휴일 스킵 여부."""
     now = now or now_kst()
+    if ignore_hours is None:
+        ignore_hours = IGNORE_AUTO_HOURS
     ymd = now.strftime("%Y-%m-%d")
     if now.weekday() >= 5:
         return "주말"
     if ymd in KOREA_HOLIDAYS_2026:
         return KOREA_HOLIDAYS_2026[ymd]
-    if now.hour < 9 or now.hour >= 21:
+    if not ignore_hours and (now.hour < 9 or now.hour >= 21):
         return "야간 시간대"
     return ""
 
@@ -1226,6 +1229,8 @@ if __name__ == "__main__":
 
     if "--auto" in args:
         print(f"  AUTO: headless + 환경변수 사용")
+        if IGNORE_AUTO_HOURS:
+            print(f"  AUTO: 스케줄 지연 허용(주말/공휴일은 계속 스킵, 야간 시간만 무시)")
         if "--force" not in args:
             reason = auto_skip_reason()
             if reason:

@@ -922,7 +922,7 @@ function setManualGrade(name, grade) {
 // ════════════════════════════════════
 let erpParsedByBasis = { order: [], ship: [] };
 const ERP_REMOTE_DATA_PATH = 'erp/latest';
-const ERP_AUTO_SYNC_INTERVAL_MS = 10 * 60 * 1000;
+const ERP_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000;
 const ERP_AUTO_SYNC_CHECK_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
 const ERP_AUTO_SYNC_LOCK_MS = 10 * 60 * 1000;
@@ -1359,7 +1359,10 @@ function erpUpdateSidebarSyncStamp(meta = erpReadSyncMeta()) {
   const el = document.getElementById('erp-sidebar-updated-at');
   if (!el) return;
   const syncedAt = meta?.syncedAt ? erpFormatSidebarUpdatedAt(meta.syncedAt) : '';
-  el.textContent = syncedAt ? `데이터 업데이트 ${syncedAt}` : '데이터 업데이트 -';
+  el.textContent = syncedAt ? `마지막 업데이트 ${syncedAt}` : '마지막 업데이트 -';
+  el.title = syncedAt
+    ? `Firebase ERP 기준: ${syncedAt} · ${meta?.syncMode || meta?.source || 'ERP'}`
+    : '';
   el.classList.toggle('is-empty', !syncedAt);
 }
 

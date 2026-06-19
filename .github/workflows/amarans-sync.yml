@@ -12,10 +12,10 @@ on:
           - recent60
           - full
   schedule:
-    # KST 09:00-20:55 weekdays every 5 minutes (recent). Korean holidays are skipped in the script.
-    - cron: '*/5 0-11 * * 1-5'
-    # KST 08:00 평일 전체 수집 (full). UTC 23:00 = 익일 KST 08:00 이므로 요일 0-4.
-    - cron: '0 23 * * 0-4'
+    # KST 09:17-20:17 weekdays hourly (recent). Minute 17 avoids GitHub's top-of-hour schedule congestion.
+    - cron: '17 0-11 * * 1-5'
+    # KST 08:17 weekdays full. UTC 23:17 = next-day KST 08:17, so UTC days 0-4.
+    - cron: '17 23 * * 0-4'
 
 concurrency:
   group: amarans-erp-sync
@@ -47,11 +47,14 @@ jobs:
 
       - name: 아마란스 ERP 수집 및 Firebase 업로드
         run: |
+          echo "event=${{ github.event_name }} schedule=${{ github.event.schedule }}"
+          echo "utc_now=$(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "kst_now=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S')"
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "$(date -u +%H)" = "23" ]; then
-              python scripts/amarans_api_v10.py --auto --force --full
+            if [ "${{ github.event.schedule }}" = "17 23 * * 0-4" ]; then
+              AMARANS_IGNORE_AUTO_HOURS=1 python scripts/amarans_api_v10.py --auto --full
             else
-              python scripts/amarans_api_v10.py --auto --recent 60
+              AMARANS_IGNORE_AUTO_HOURS=1 python scripts/amarans_api_v10.py --auto --recent 60
             fi
           elif [ "${{ inputs.mode }}" = "full" ]; then
             python scripts/amarans_api_v10.py --auto --force --full
