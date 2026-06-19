@@ -252,22 +252,38 @@ async function doLogin() {
   const uid = document.getElementById('li-id').value.trim();
   const pw  = document.getElementById('li-pw').value;
   if (!uid || !pw) return;
+  const throttle = typeof authGetLoginThrottle === 'function'
+    ? authGetLoginThrottle(uid)
+    : { locked: false, waitMs: 0 };
+  if (throttle.locked) {
+    const err = document.getElementById('login-err');
+    const seconds = Math.max(1, Math.ceil(throttle.waitMs / 1000));
+    err.textContent = `로그인 시도가 잠시 제한되었습니다. ${Math.ceil(seconds / 60)}분 후 다시 시도하세요.`;
+    err.style.display = 'block';
+    return;
+  }
   await syncAuthFromFirebase();
   ensureUsers({ persist: false });
   if (allUsers.length === 0) allUsers = DEFAULT_USERS;
   const user = allUsers.find(u => u.id === uid);
   const loginOk = user ? await authVerifyPassword(user, pw) : false;
   if (!loginOk) {
+    const nextThrottle = typeof authRecordLoginFailure === 'function'
+      ? authRecordLoginFailure(uid)
+      : { locked: false };
     const pending = getShared('sj-signup-pending-v1', []);
     const isPending = pending.find(p => p.id === uid);
     const err = document.getElementById('login-err');
-    err.textContent = isPending
+    err.textContent = nextThrottle.locked
+      ? '로그인 실패가 반복되어 5분간 제한됩니다.'
+      : isPending
       ? '관리자 승인 대기 중인 계정입니다.'
       : '아이디 또는 비밀번호가 올바르지 않습니다.';
     err.style.display = 'block';
     setTimeout(() => err.style.display = 'none', 3000);
     return;
   }
+  if (typeof authClearLoginThrottle === 'function') authClearLoginThrottle(uid);
   if (authHasLegacyPassword(user)) {
     currentUser = user;
     await authSetPassword(user, pw);

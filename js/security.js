@@ -5,6 +5,10 @@ const SECURITY_PASSWORD_VERSION = 'pbkdf2-sha256';
 const SECURITY_MAX_STRING_LENGTH = 20000;
 const SECURITY_MAX_DEPTH = 8;
 const SECURITY_FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const SECURITY_LOGIN_THROTTLE_KEY = 'sj-login-throttle-v1';
+const SECURITY_LOGIN_MAX_FAILURES = 5;
+const SECURITY_LOGIN_LOCK_MS = 5 * 60 * 1000;
+const SECURITY_PASSWORD_MAX_LENGTH = 128;
 
 function securityRandomBytes(length = 16) {
   const bytes = new Uint8Array(length);
@@ -56,6 +60,7 @@ async function authBuildPasswordRecord(password) {
 
 async function authVerifyPassword(user, password) {
   if (!user) return false;
+  if (String(password || '').length > SECURITY_PASSWORD_MAX_LENGTH) return false;
   if (user.passwordHash && String(user.passwordHash).startsWith(`${SECURITY_PASSWORD_VERSION}$`)) {
     const parts = String(user.passwordHash).split('$');
     if (parts.length !== 4) return false;
@@ -83,6 +88,7 @@ function authHasLegacyPassword(user) {
 function authValidatePasswordPolicy(password, user = {}) {
   const pw = String(password || '');
   if (pw.length < 10) return '비밀번호는 10자 이상이어야 합니다.';
+  if (pw.length > SECURITY_PASSWORD_MAX_LENGTH) return `비밀번호는 ${SECURITY_PASSWORD_MAX_LENGTH}자 이하여야 합니다.`;
   if (!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return '비밀번호에는 영문과 숫자를 모두 포함해야 합니다.';
   const lowered = pw.toLowerCase();
   const id = String(user.id || '').toLowerCase();
@@ -90,6 +96,62 @@ function authValidatePasswordPolicy(password, user = {}) {
   if (id && id.length >= 3 && lowered.includes(id)) return '비밀번호에 아이디를 포함할 수 없습니다.';
   if (name && name.length >= 2 && lowered.includes(name)) return '비밀번호에 이름을 포함할 수 없습니다.';
   return '';
+}
+
+function authValidateUserId(id) {
+  const value = String(id || '').trim();
+  if (!/^[A-Za-z0-9_-]{2,32}$/.test(value)) return '아이디는 영문, 숫자, _, - 조합 2~32자만 가능합니다.';
+  return '';
+}
+
+function authThrottleKey(id) {
+  return String(id || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32) || '_blank';
+}
+
+function authReadThrottleStore() {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(SECURITY_LOGIN_THROTTLE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function authWriteThrottleStore(store) {
+  try { sessionStorage.setItem(SECURITY_LOGIN_THROTTLE_KEY, JSON.stringify(store)); }
+  catch (_) {}
+}
+
+function authGetLoginThrottle(id) {
+  const store = authReadThrottleStore();
+  const key = authThrottleKey(id);
+  const item = store[key] || { count: 0, lockedUntil: 0 };
+  if (item.lockedUntil && Date.now() < item.lockedUntil) {
+    return { locked: true, waitMs: item.lockedUntil - Date.now(), count: item.count || 0 };
+  }
+  if (item.lockedUntil && Date.now() >= item.lockedUntil) {
+    delete store[key];
+    authWriteThrottleStore(store);
+  }
+  return { locked: false, waitMs: 0, count: item.count || 0 };
+}
+
+function authRecordLoginFailure(id) {
+  const store = authReadThrottleStore();
+  const key = authThrottleKey(id);
+  const item = store[key] || { count: 0, lockedUntil: 0 };
+  item.count = (item.count || 0) + 1;
+  item.lastFailedAt = Date.now();
+  if (item.count >= SECURITY_LOGIN_MAX_FAILURES) item.lockedUntil = Date.now() + SECURITY_LOGIN_LOCK_MS;
+  store[key] = item;
+  authWriteThrottleStore(store);
+  return authGetLoginThrottle(id);
+}
+
+function authClearLoginThrottle(id) {
+  const store = authReadThrottleStore();
+  delete store[authThrottleKey(id)];
+  authWriteThrottleStore(store);
 }
 
 function securityNormalizeCredentialRecord(record) {

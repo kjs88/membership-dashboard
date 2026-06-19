@@ -15,9 +15,22 @@
 - 로그아웃 시 민감 로컬 캐시 제거
 - 세션 14시간 / 로그인 유지 7일 만료
 - 가입/변경/초기화 비밀번호 정책 강화
+- 로그인 실패 5회 반복 시 브라우저 세션 기준 5분 제한
+- 사용자 ID 검증 공통화
 - 로그인 전 Firebase 원격 쓰기 차단(가입 신청 제외)
-- 배포 전 비밀정보/토큰 스캔
+- 배포 전 비밀정보/토큰/위험 실행 패턴/SRI 스캔
+- 코드 건강도 요약 스크립트(`scripts/code-health.ps1`)
 - GitHub Actions 최소 권한 설정
+
+## 자동 점검
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\security-scan.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\security-scan.ps1 -ShowAdvisory
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\code-health.ps1
+```
+
+`deploy.cmd`와 `scripts/deploy.ps1`은 위 보안 스캔과 코드 건강도 요약을 실행한 뒤 푸시합니다.
 
 ## 운영자가 꼭 해야 하는 설정
 

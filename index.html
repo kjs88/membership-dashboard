@@ -51,11 +51,11 @@
         </div>
         <div class="login-group">
           <label class="login-label">아이디</label>
-          <input class="login-input" id="li-id" placeholder="아이디를 입력하세요" onkeydown="if(event.key==='Enter')document.getElementById('li-pw').focus()" />
+          <input class="login-input" id="li-id" placeholder="아이디를 입력하세요" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('li-pw').focus()" />
         </div>
         <div class="login-group">
           <label class="login-label">비밀번호</label>
-          <input class="login-input" id="li-pw" type="password" placeholder="비밀번호를 입력하세요" onkeydown="if(event.key==='Enter')doLogin()" />
+          <input class="login-input" id="li-pw" type="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
         </div>
         <label class="login-remember">
           <input type="checkbox" id="li-remember">
@@ -64,7 +64,7 @@
         <button class="login-btn" onclick="doLogin()">로그인</button>
         <div class="login-err" id="login-err">아이디 또는 비밀번호가 올바르지 않습니다.</div>
         <div class="login-hint">
-          계정이 없으신가요? <a href="javascript:void(0)" onclick="switchAuthMode('signup')" style="color:var(--green);font-weight:700;text-decoration:none">회원가입 신청</a>
+          계정이 없으신가요? <button type="button" onclick="switchAuthMode('signup')" style="border:0;background:transparent;color:var(--green);font-weight:700;text-decoration:none;padding:0;cursor:pointer;font-family:var(--font)">회원가입 신청</button>
         </div>
         <div class="login-security-notice">
           <div class="login-security-head">
@@ -89,24 +89,24 @@
         </div>
         <div class="login-group">
           <label class="login-label">이름</label>
-          <input class="login-input" id="su-name" placeholder="이름" />
+          <input class="login-input" id="su-name" placeholder="이름" autocomplete="name" />
         </div>
         <div class="login-group">
           <label class="login-label">아이디</label>
-          <input class="login-input" id="su-id" placeholder="아이디" />
+          <input class="login-input" id="su-id" placeholder="아이디" autocomplete="username" />
         </div>
         <div class="login-group">
           <label class="login-label">비밀번호</label>
-          <input class="login-input" id="su-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')submitSignup()" />
+          <input class="login-input" id="su-pw" type="password" placeholder="비밀번호" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitSignup()" />
         </div>
         <div class="login-group">
           <label class="login-label">비밀번호 확인</label>
-          <input class="login-input" id="su-pw-confirm" type="password" placeholder="비밀번호 확인" onkeydown="if(event.key==='Enter')submitSignup()" />
+          <input class="login-input" id="su-pw-confirm" type="password" placeholder="비밀번호 확인" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitSignup()" />
         </div>
         <button class="login-btn" onclick="submitSignup()">신청하기</button>
         <div class="login-err" id="signup-err"></div>
         <div class="login-hint">
-          이미 계정이 있으신가요? <a href="javascript:void(0)" onclick="switchAuthMode('login')" style="color:var(--green);font-weight:700;text-decoration:none">로그인</a>
+          이미 계정이 있으신가요? <button type="button" onclick="switchAuthMode('login')" style="border:0;background:transparent;color:var(--green);font-weight:700;text-decoration:none;padding:0;cursor:pointer;font-family:var(--font)">로그인</button>
         </div>
       </div>
     </div>
@@ -1299,7 +1299,7 @@
     <div class="modal-title">계정 추가</div>
     <div class="form-group" style="margin-bottom:14px"><label class="form-label">이름 <span class="form-required">*</span></label><input class="form-input" id="nu-name" placeholder="이름" /></div>
     <div class="form-group" style="margin-bottom:14px"><label class="form-label">아이디 <span class="form-required">*</span></label><input class="form-input" id="nu-id" placeholder="아이디" /></div>
-    <div class="form-group" style="margin-bottom:14px"><label class="form-label">비밀번호 <span class="form-required">*</span></label><input class="form-input" id="nu-pw" type="password" placeholder="초기 비밀번호" /></div>
+    <div class="form-group" style="margin-bottom:14px"><label class="form-label">비밀번호 <span class="form-required">*</span></label><input class="form-input" id="nu-pw" type="password" placeholder="초기 비밀번호" autocomplete="new-password" /></div>
     <div class="modal-footer">
       <button class="btn-sm btn-ghost" onclick="closeModal('modal-add-user')">취소</button>
       <button class="btn-sm btn-primary" onclick="addUser()">추가</button>
@@ -1336,15 +1336,15 @@
     <div class="modal-title">🔑 비밀번호 변경</div>
     <div class="form-group" style="margin-bottom:14px">
       <label class="form-label">현재 비밀번호 <span class="form-required">*</span></label>
-      <input class="form-input" id="cpw-current" type="password" placeholder="현재 비밀번호 입력" />
+      <input class="form-input" id="cpw-current" type="password" placeholder="현재 비밀번호 입력" autocomplete="current-password" />
     </div>
     <div class="form-group" style="margin-bottom:14px">
       <label class="form-label">새 비밀번호 <span class="form-required">*</span></label>
-      <input class="form-input" id="cpw-new" type="password" placeholder="새 비밀번호 (8자 이상)" />
+      <input class="form-input" id="cpw-new" type="password" placeholder="새 비밀번호 (10자 이상)" autocomplete="new-password" />
     </div>
     <div class="form-group" style="margin-bottom:6px">
       <label class="form-label">새 비밀번호 확인 <span class="form-required">*</span></label>
-      <input class="form-input" id="cpw-confirm" type="password" placeholder="새 비밀번호 다시 입력" />
+      <input class="form-input" id="cpw-confirm" type="password" placeholder="새 비밀번호 다시 입력" autocomplete="new-password" />
     </div>
     <div id="cpw-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
     <div class="modal-footer">
@@ -1364,11 +1364,11 @@
     </div>
     <div class="form-group" style="margin-bottom:14px">
       <label class="form-label">새 비밀번호 <span class="form-required">*</span></label>
-      <input class="form-input" id="rpw-new" type="password" placeholder="새 비밀번호 입력" />
+      <input class="form-input" id="rpw-new" type="password" placeholder="새 비밀번호 입력" autocomplete="new-password" />
     </div>
     <div class="form-group" style="margin-bottom:6px">
       <label class="form-label">새 비밀번호 확인 <span class="form-required">*</span></label>
-      <input class="form-input" id="rpw-confirm" type="password" placeholder="새 비밀번호 다시 입력" />
+      <input class="form-input" id="rpw-confirm" type="password" placeholder="새 비밀번호 다시 입력" autocomplete="new-password" />
     </div>
     <div id="rpw-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
     <div class="modal-footer">
@@ -1563,13 +1563,13 @@
 <div class="toast" id="toast"></div>
 
 <script src="data/client-seed.js?v=20260511-login"></script>
-<script src="js/security.js?v=20260610-security"></script>
+<script src="js/security.js?v=20260620-security-hardening"></script>
 <script src="js/storage.js?v=20260610-security"></script>
 <script src="js/state.js?v=20260613-channel-fix"></script>
 <script src="js/products-grades-erp.js?v=20260620-churn-manager"></script>
-<script src="js/core-auth-nav.js?v=20260613-stats-channel"></script>
+<script src="js/core-auth-nav.js?v=20260620-security-hardening"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
-<script src="js/dashboard-records-users.js?v=20260613-channel-fix"></script>
+<script src="js/dashboard-records-users.js?v=20260620-security-hardening"></script>
 <script src="js/clients.js?v=20260523-features"></script>
 <script src="js/daily-entry.js?v=20260523-cleanup"></script>
 <script src="js/stats-notices.js?v=20260613-channel-fix"></script>

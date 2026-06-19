@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   scan:
-    name: 비밀정보/토큰 검사
+    name: 보안/코드 건강도 검사
     runs-on: ubuntu-latest
     steps:
       - name: 저장소 가져오기
@@ -21,3 +21,7 @@ jobs:
       - name: 보안 스캔
         shell: pwsh
         run: ./scripts/security-scan.ps1
+
+      - name: 코드 건강도 요약
+        shell: pwsh
+        run: ./scripts/code-health.ps1

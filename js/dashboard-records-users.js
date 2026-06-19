@@ -745,7 +745,10 @@ async function addUser() {
   const id   = document.getElementById('nu-id').value.trim();
   const pw   = document.getElementById('nu-pw').value;
   if (!name||!id||!pw) { showToast('모든 항목을 입력하세요','error'); return; }
-  if (!/^[A-Za-z0-9_-]{2,32}$/.test(id)) { showToast('아이디는 영문, 숫자, _, - 조합 2~32자만 가능합니다.','error'); return; }
+  const idPolicyErr = typeof authValidateUserId === 'function'
+    ? authValidateUserId(id)
+    : (!/^[A-Za-z0-9_-]{2,32}$/.test(id) ? '아이디는 영문, 숫자, _, - 조합 2~32자만 가능합니다.' : '');
+  if (idPolicyErr) { showToast(idPolicyErr, 'error'); return; }
   const pwPolicyErr = authValidatePasswordPolicy(pw, { id, name });
   if (pwPolicyErr) { showToast(pwPolicyErr, 'error'); return; }
   if (allUsers.find(u=>u.id===id)) { showToast('이미 존재하는 아이디입니다.','error'); return; }
@@ -815,7 +818,10 @@ async function submitSignup() {
   const pw   = document.getElementById('su-pw').value;
   const pw2  = document.getElementById('su-pw-confirm').value;
   if (!name || !id || !pw || !pw2) { showSignupErr('모든 항목을 입력하세요.'); return; }
-  if (!/^[A-Za-z0-9_-]{2,32}$/.test(id)) { showSignupErr('아이디는 영문, 숫자, _, - 조합 2~32자만 가능합니다.'); return; }
+  const idPolicyErr = typeof authValidateUserId === 'function'
+    ? authValidateUserId(id)
+    : (!/^[A-Za-z0-9_-]{2,32}$/.test(id) ? '아이디는 영문, 숫자, _, - 조합 2~32자만 가능합니다.' : '');
+  if (idPolicyErr) { showSignupErr(idPolicyErr); return; }
   const pwPolicyErr = authValidatePasswordPolicy(pw, { id, name });
   if (pwPolicyErr) { showSignupErr(pwPolicyErr); return; }
   if (pw !== pw2) { showSignupErr('비밀번호가 일치하지 않습니다.'); return; }

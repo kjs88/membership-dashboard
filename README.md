@@ -11,12 +11,13 @@
 ## Security
 
 - 자세한 보안 정책과 남은 한계는 [SECURITY.md](SECURITY.md)를 확인하세요.
-- 배포 전 `scripts/security-scan.ps1`이 Bearer 토큰, Amarans/Bizcube 쿠키, private key, 평문 password literal을 검사합니다.
+- 배포 전 `scripts/security-scan.ps1`이 Bearer 토큰, Amarans/Bizcube 쿠키, private key, 평문 password literal, 위험 실행 API, `javascript:` 링크, 외부 스크립트 SRI 누락을 검사합니다.
 - 신규/변경/초기화 비밀번호는 PBKDF2-SHA256 해시로 저장됩니다.
 - 기존 Firebase 데이터에 남아 있는 평문 비밀번호는 해당 사용자가 로그인에 성공하면 자동으로 해시로 마이그레이션됩니다.
 - 로그인 전에는 Firebase의 사용자/가입대기 정보만 최소 조회하고, 영업/거래처/ERP 데이터는 로그인 성공 뒤에만 동기화합니다.
 - 로그아웃 시 브라우저의 영업/거래처/ERP 로컬 캐시와 작성 중 임시저장을 제거합니다.
 - 세션은 14시간, "로그인 유지"는 7일 만료로 제한됩니다.
+- 로그인 실패가 반복되면 브라우저 세션 기준으로 5분간 추가 시도를 제한합니다.
 - GitHub Pages 정적 사이트 특성상 Firebase Authentication 또는 서버 프록시 없이 Firebase 직접 REST 공격을 완전히 차단할 수는 없습니다.
 
 ## 원클릭 작업
@@ -36,6 +37,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Join-Path $env:TEMP
 - `start-local.cmd`: 로컬 서버 실행 후 브라우저 열기
 - `deploy.cmd`: 수정분을 커밋, 푸시, GitHub Pages 상태 확인
 - `stop-local.cmd`: 로컬 서버 종료
+
+## 코드 체계와 점검
+
+- 코드 역할과 리팩터링 기준은 [CODE_HEALTH.md](CODE_HEALTH.md)를 기준으로 합니다.
+- `scripts/security-scan.ps1`은 비밀정보와 위험 실행 패턴을 차단합니다.
+- `scripts/code-health.ps1`은 큰 파일, `innerHTML`, 인라인 이벤트, 전역 함수가 많은 파일을 요약합니다.
+- `deploy.cmd`는 보안 스캔, 코드 건강도 요약, `git diff --check`를 통과한 뒤 푸시합니다.
 
 ## 운영 구조
 
@@ -113,6 +121,7 @@ git push origin main
 - `scripts/setup-workspace.ps1`: 다른 PC 최초 세팅
 - `scripts/start-local.ps1`: 로컬 서버 실행
 - `scripts/deploy.ps1`: 커밋/푸시/배포 확인
+- `CODE_HEALTH.md`: 파일 책임과 리팩터링 규칙
 
 ## 로컬 실행
 
