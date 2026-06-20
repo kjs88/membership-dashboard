@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260620-page-tabs-contained-dnd">
+<link rel="stylesheet" href="css/style.css?v=20260620-sales-hierarchy">
 </head>
 <body>
 
@@ -190,8 +190,8 @@
     <div class="dash-section">
       <div class="dash-section-title"><span>💰</span>매출현황</div>
       <div class="sales-hero" style="margin-bottom:0">
-      <div class="sales-kpi-row">
-        <div class="sales-kpi primary">
+      <div class="sales-kpi-row sales-kpi-hierarchy">
+        <div class="sales-kpi primary sales-kpi-total-parent">
           <div class="sales-kpi-label">이번달 합계 매출<span>아마란스기준: 사업소+유통사/상품</span></div>
           <div class="sales-kpi-value" id="sh-month"><span id="sh-month-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
@@ -201,8 +201,8 @@
           <div class="sales-kpi-target-label" id="sh-sales-target-label"></div>
           <div class="sales-kpi-sub" id="sh-month-sub">데이터 연동 대기</div>
           <div class="sales-kpi-forecast" id="sh-month-forecast"></div>
-        </div>
-        <div class="sales-kpi office">
+          <div class="sales-kpi-children" aria-label="합계 매출 하위 구성">
+        <div class="sales-kpi office sales-kpi-child">
           <div class="sales-kpi-label">이번달 사업소 매출<span>사업소/상품</span></div>
           <div class="sales-kpi-value"><span id="sh-today-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
@@ -213,7 +213,7 @@
           <div class="sales-kpi-sub" id="sh-today-sub">-</div>
           <div class="sales-kpi-forecast" id="sh-office-forecast"></div>
         </div>
-        <div class="sales-kpi dist">
+        <div class="sales-kpi dist sales-kpi-child">
           <div class="sales-kpi-label">이번달 유통사 매출<span>유통사/상품</span></div>
           <div class="sales-kpi-value"><span id="sh-yesterday-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
@@ -223,6 +223,8 @@
           <div class="sales-kpi-target-label" id="sh-dist-target-label"></div>
           <div class="sales-kpi-sub" id="sh-yesterday-sub">-</div>
           <div class="sales-kpi-forecast" id="sh-dist-forecast"></div>
+        </div>
+          </div>
         </div>
       </div>
       <div class="chart-card" style="padding:16px 20px">

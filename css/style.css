@@ -138,6 +138,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .dash-section-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;}
 .dash-section-title span{font-size:18px;}
 .sales-kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+.sales-kpi-row.sales-kpi-hierarchy{grid-template-columns:1fr;}
 .stats-person-btns{display:flex;flex-wrap:wrap;gap:6px;}
 .stats-person-btn{padding:7px 16px;font-size:13px;font-weight:600;color:var(--text2);background:var(--surface);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;font-family:inherit;}
 .stats-person-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--text3);}
@@ -161,6 +162,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sales-kpi.office{background:linear-gradient(135deg,#006D77,#0A9396);border-color:#006D77;}
 .sales-kpi.dist{background:linear-gradient(135deg,#A75D1B,#C9822B);border-color:#A75D1B;}
 .sales-kpi.office .sales-kpi-value,.sales-kpi.dist .sales-kpi-value{color:#fff;}
+.sales-kpi-total-parent{padding:24px;}
+.sales-kpi-total-parent>.sales-kpi-value{font-size:34px;}
+.sales-kpi-children{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.18);}
+.sales-kpi-child{box-shadow:none;border-color:rgba(255,255,255,.22);padding:18px 20px;}
+.sales-kpi-child .sales-kpi-value{font-size:28px;}
+.sales-kpi-child .sales-kpi-target{margin-top:12px;}
+.sales-kpi-child .sales-kpi-sub,.sales-kpi-child .sales-kpi-forecast{min-height:16px;}
 .sales-kpi .sales-kpi-label span{font-size:10px;font-weight:700;line-height:1;color:rgba(255,255,255,.84);background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);padding:3px 8px;border-radius:5px;letter-spacing:0;}
 .sales-kpi-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;font-weight:800;color:#fff;letter-spacing:0;line-height:1.25;margin-bottom:8px;}
 .sales-kpi-value{font-size:32px;font-weight:800;font-family:var(--mono);color:#fff;line-height:1;letter-spacing:0;}
@@ -521,6 +529,8 @@ td.tm{color:var(--text);font-weight:500;}
   .product-filter-panel{grid-template-columns:1fr;grid-template-areas:"period" "person" "category" "search";}
   .product-category-btns{grid-template-columns:repeat(3,minmax(0,1fr));}
   .sales-kpi-row{flex-wrap:wrap;}
+  .sales-kpi-children{grid-template-columns:1fr;}
+  .sales-kpi-child .sales-kpi-value{font-size:24px;}
   .sales-kpi-card{min-width:calc(50% - 8px);}
   table{font-size:11px;}
   table th, table td{padding:6px 4px;}
