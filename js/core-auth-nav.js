@@ -432,6 +432,7 @@ const PAGE_TAB_STORAGE_PREFIX = 'sj-open-page-tabs-v1';
 const PAGE_TAB_MAX = 20;
 let openPageTabs = [];
 let dashboardHistoryReady = false;
+let pageTabDragState = { route: '', moved: false, suppressClick: false };
 
 function dashboardTabStorageKey() {
   return `${PAGE_TAB_STORAGE_PREFIX}:${currentUser?.id || 'guest'}`;
@@ -513,6 +514,81 @@ function saveOpenPageTabs() {
   catch (err) { console.warn('[page-tabs:save]', err); }
 }
 
+function clearPageTabDragStyles() {
+  document.querySelectorAll('.page-tab.dragging,.page-tab.drag-over-before,.page-tab.drag-over-after').forEach(tab => {
+    tab.classList.remove('dragging', 'drag-over-before', 'drag-over-after');
+  });
+}
+
+function clearPageTabDropMarkers() {
+  document.querySelectorAll('.page-tab.drag-over-before,.page-tab.drag-over-after').forEach(tab => {
+    tab.classList.remove('drag-over-before', 'drag-over-after');
+  });
+}
+
+function moveOpenPageTab(dragRoute, targetRoute, placeAfter) {
+  const dragged = normalizeDashboardRoute(dragRoute);
+  const target = normalizeDashboardRoute(targetRoute);
+  if (!dragged || !target || dragged === target) return false;
+  if (!openPageTabs.includes(dragged) || !openPageTabs.includes(target)) return false;
+
+  const before = openPageTabs.join('\u0001');
+  const next = openPageTabs.filter(route => route !== dragged);
+  const targetIndex = next.indexOf(target);
+  if (targetIndex < 0) return false;
+  next.splice(targetIndex + (placeAfter ? 1 : 0), 0, dragged);
+  const after = next.join('\u0001');
+  if (before === after) return false;
+  openPageTabs = next;
+  saveOpenPageTabs();
+  return true;
+}
+
+function dashboardTabDragStart(event, route) {
+  if (event.target?.closest?.('.page-tab-close')) {
+    event.preventDefault();
+    return;
+  }
+  pageTabDragState = { route, moved: false, suppressClick: false };
+  event.currentTarget.classList.add('dragging');
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', route);
+  }
+}
+
+function dashboardTabDragOver(event, route) {
+  const dragged = pageTabDragState.route || event.dataTransfer?.getData('text/plain');
+  if (!dragged || dragged === route) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  const rect = event.currentTarget.getBoundingClientRect();
+  const placeAfter = event.clientX > rect.left + rect.width / 2;
+  clearPageTabDropMarkers();
+  event.currentTarget.classList.add(placeAfter ? 'drag-over-after' : 'drag-over-before');
+}
+
+function dashboardTabDrop(event, route) {
+  const dragged = pageTabDragState.route || event.dataTransfer?.getData('text/plain');
+  if (!dragged) return;
+  event.preventDefault();
+  const rect = event.currentTarget.getBoundingClientRect();
+  const placeAfter = event.clientX > rect.left + rect.width / 2;
+  const changed = moveOpenPageTab(dragged, route, placeAfter);
+  pageTabDragState.moved = pageTabDragState.moved || changed;
+  clearPageTabDragStyles();
+  renderOpenPageTabs(pageRouteForName(currentPageName()));
+}
+
+function dashboardTabDragEnd() {
+  const shouldSuppressClick = pageTabDragState.moved;
+  clearPageTabDragStyles();
+  pageTabDragState = { route: '', moved: false, suppressClick: shouldSuppressClick };
+  if (shouldSuppressClick) {
+    setTimeout(() => { pageTabDragState.suppressClick = false; }, 0);
+  }
+}
+
 function ensureOpenPageTab(route) {
   const normalized = normalizeDashboardRoute(route);
   if (!userCanOpenRoute(normalized)) return normalized;
@@ -535,6 +611,8 @@ function renderOpenPageTabs(activeRoute = pageRouteForName(currentPageName())) {
     tab.className = 'page-tab' + (route === active ? ' active' : '');
     tab.setAttribute('role', 'button');
     tab.setAttribute('tabindex', '0');
+    tab.setAttribute('draggable', 'true');
+    tab.dataset.route = route;
     tab.title = state.label;
 
     const label = document.createElement('span');
@@ -547,15 +625,28 @@ function renderOpenPageTabs(activeRoute = pageRouteForName(currentPageName())) {
     close.className = 'page-tab-close';
     close.setAttribute('aria-label', `${state.label} 닫기`);
     close.textContent = '×';
+    close.setAttribute('draggable', 'false');
+    close.addEventListener('dragstart', event => event.preventDefault());
     close.addEventListener('click', event => dashboardCloseTab(event, route));
     tab.appendChild(close);
 
-    tab.addEventListener('click', () => dashboardGoTab(route));
+    tab.addEventListener('click', event => {
+      if (pageTabDragState.suppressClick) {
+        event.preventDefault();
+        return;
+      }
+      dashboardGoTab(route);
+    });
     tab.addEventListener('keydown', event => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
       dashboardGoTab(route);
     });
+    tab.addEventListener('dragstart', event => dashboardTabDragStart(event, route));
+    tab.addEventListener('dragover', event => dashboardTabDragOver(event, route));
+    tab.addEventListener('dragleave', () => tab.classList.remove('drag-over-before', 'drag-over-after'));
+    tab.addEventListener('drop', event => dashboardTabDrop(event, route));
+    tab.addEventListener('dragend', dashboardTabDragEnd);
     bar.appendChild(tab);
   });
 }

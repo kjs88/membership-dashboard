@@ -105,9 +105,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .topbar-notice-title:empty{display:none;}
 .topbar-notice-title:hover{color:var(--green-dark);text-decoration:underline;}
 .page-tabbar{min-height:38px;background:#EDF3F1;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;gap:4px;padding:6px 20px 0;position:sticky;top:44px;z-index:49;overflow-x:auto;scrollbar-width:thin;}
-.page-tab{height:32px;max-width:180px;display:flex;align-items:center;gap:7px;padding:0 9px 0 11px;border:1px solid var(--border2);border-bottom-color:var(--border2);border-radius:6px 6px 0 0;background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;font-family:var(--font);white-space:nowrap;cursor:pointer;transition:all .12s;flex:0 0 auto;}
+.page-tab{height:32px;max-width:180px;display:flex;align-items:center;gap:7px;padding:0 9px 0 11px;border:1px solid var(--border2);border-bottom-color:var(--border2);border-radius:6px 6px 0 0;background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;font-family:var(--font);white-space:nowrap;cursor:grab;transition:all .12s;flex:0 0 auto;position:relative;}
 .page-tab:hover{background:var(--green-subtle);color:var(--green-dark);}
 .page-tab.active{height:34px;background:#fff;color:var(--green-dark);border-color:var(--green);border-bottom-color:#fff;box-shadow:0 -1px 0 rgba(0,165,130,.08);}
+.page-tab:active{cursor:grabbing;}
+.page-tab.dragging{opacity:.55;}
+.page-tab.drag-over-before::before,.page-tab.drag-over-after::after{content:"";position:absolute;top:5px;bottom:5px;width:3px;border-radius:3px;background:var(--green);box-shadow:0 0 0 2px rgba(0,165,130,.12);}
+.page-tab.drag-over-before::before{left:-4px;}
+.page-tab.drag-over-after::after{right:-4px;}
 .page-tab-label{overflow:hidden;text-overflow:ellipsis;min-width:0;}
 .page-tab-close{width:18px;height:18px;border:0;background:transparent;color:var(--text3);border-radius:4px;cursor:pointer;font-size:15px;line-height:18px;display:grid;place-items:center;flex:0 0 auto;font-family:var(--font);}
 .page-tab-close:hover{background:var(--red-l);color:var(--red);}
