@@ -132,9 +132,7 @@ function setStatsPerson(id, el) {
 function showStatsChannel(channel, el) {
   statsChannel = (channel === 'dist') ? 'dist' : 'office';
   statsPersonId = 'all';
-  showPage('stats', el);
-  const titleEl = document.getElementById('topbar-title');
-  if (titleEl) titleEl.textContent = statsChannel === 'dist' ? '유통사 분석' : '사업소 분석';
+  showPage('stats', el, { route: statsChannel === 'dist' ? 'stats-dist' : 'stats-office' });
 }
 
 function genReport(mode, el) {

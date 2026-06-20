@@ -104,6 +104,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .topbar-notice-title{max-width:460px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;}
 .topbar-notice-title:empty{display:none;}
 .topbar-notice-title:hover{color:var(--green-dark);text-decoration:underline;}
+.page-tabbar{min-height:38px;background:#EDF3F1;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;gap:4px;padding:6px 20px 0;position:sticky;top:44px;z-index:49;overflow-x:auto;scrollbar-width:thin;}
+.page-tab{height:32px;max-width:180px;display:flex;align-items:center;gap:7px;padding:0 9px 0 11px;border:1px solid var(--border2);border-bottom-color:var(--border2);border-radius:6px 6px 0 0;background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;font-family:var(--font);white-space:nowrap;cursor:pointer;transition:all .12s;flex:0 0 auto;}
+.page-tab:hover{background:var(--green-subtle);color:var(--green-dark);}
+.page-tab.active{height:34px;background:#fff;color:var(--green-dark);border-color:var(--green);border-bottom-color:#fff;box-shadow:0 -1px 0 rgba(0,165,130,.08);}
+.page-tab-label{overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.page-tab-close{width:18px;height:18px;border:0;background:transparent;color:var(--text3);border-radius:4px;cursor:pointer;font-size:15px;line-height:18px;display:grid;place-items:center;flex:0 0 auto;font-family:var(--font);}
+.page-tab-close:hover{background:var(--red-l);color:var(--red);}
 .btn-sm{padding:7px 14px;border-radius:var(--r2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font);border:1px solid transparent;}
 .btn-ghost{background:var(--surface2);border-color:var(--border2);color:var(--text2);}
 .btn-ghost:hover{background:var(--green-light);border-color:var(--green-mid);color:var(--green-dark);}
@@ -490,6 +497,8 @@ td.tm{color:var(--text);font-weight:500;}
   .sidebar.mob-open{transform:translateX(0);}
   .main{margin-left:0 !important;}
   .topbar{padding:0 14px;}
+  .page-tabbar{top:44px;padding-left:14px;padding-right:14px;}
+  .page-tab{max-width:150px;}
   .topbar-notice{gap:6px;max-width:none;flex:1;}
   .topbar-notice-title{max-width:150px;font-size:12px;}
   .erp-upload-grid{grid-template-columns:1fr;}

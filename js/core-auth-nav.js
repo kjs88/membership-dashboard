@@ -93,6 +93,7 @@ async function checkFbConfig() {
     mergeClientsWithSeed(); updateClientBadge();
     setupRealtimeListeners();
     loadAndRender();
+    applyInitialDashboardRoute();
     if (typeof erpRefreshFromRemote === 'function') erpRefreshFromRemote({ silent: true }).then(() => loadAndRender());
   } else {
     if (typeof clearSensitiveLocalCache === 'function') clearSensitiveLocalCache({ keepAuth: true });
@@ -299,6 +300,7 @@ async function doLogin() {
   mergeClientsWithSeed(); updateClientBadge();
   setupRealtimeListeners();
   loadAndRender();
+  applyInitialDashboardRoute();
   if (typeof erpRefreshFromRemote === 'function') erpRefreshFromRemote({ silent: true }).then(() => loadAndRender());
 }
 
@@ -389,6 +391,7 @@ function initUI() {
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
   }
   applyCurrentUserMenuAccess();
+  initDashboardHistory();
   const dateEl = document.getElementById('f-date');
   if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   setTimeout(()=>{ if(getShared('sj-draft-'+currentUser?.id, null)) loadDraft(); }, 500);
@@ -425,6 +428,201 @@ const PAGE_RENDERERS = {
   'mo-settle': () => moSettleInit()
 };
 
+const PAGE_TAB_STORAGE_PREFIX = 'sj-open-page-tabs-v1';
+const PAGE_TAB_MAX = 10;
+let openPageTabs = [];
+let dashboardHistoryReady = false;
+
+function dashboardTabStorageKey() {
+  return `${PAGE_TAB_STORAGE_PREFIX}:${currentUser?.id || 'guest'}`;
+}
+
+function currentPageName() {
+  return document.querySelector('.page.active')?.id?.replace(/^page-/, '') || '';
+}
+
+function pageRouteForName(name) {
+  if (name === 'stats') return statsChannel === 'dist' ? 'stats-dist' : 'stats-office';
+  return name || 'sales';
+}
+
+function pageRouteToState(route) {
+  const clean = String(route || '').replace(/^#/, '').trim();
+  if (clean === 'stats-dist') {
+    return { route: 'stats-dist', page: 'stats', channel: 'dist', label: '유통사 분석', navId: 'nav-stats-dist' };
+  }
+  if (clean === 'stats-office' || clean === 'stats') {
+    return { route: 'stats-office', page: 'stats', channel: 'office', label: '사업소 분석', navId: 'nav-stats-office' };
+  }
+  const page = clean || 'sales';
+  if (!document.getElementById('page-' + page)) {
+    return { route: 'sales', page: 'sales', label: PAGE_TITLES.sales || '대시보드', navId: 'nav-sales' };
+  }
+  return { route: page, page, label: PAGE_TITLES[page] || page, navId: 'nav-' + page };
+}
+
+function normalizeDashboardRoute(route) {
+  try {
+    return pageRouteToState(decodeURIComponent(String(route || ''))).route;
+  } catch (_) {
+    return pageRouteToState(route).route;
+  }
+}
+
+function routeFromHash() {
+  const raw = String(location.hash || '').replace(/^#/, '');
+  if (!raw) return '';
+  try { return normalizeDashboardRoute(decodeURIComponent(raw)); }
+  catch (_) { return normalizeDashboardRoute(raw); }
+}
+
+function userCanOpenRoute(route, user = currentUser) {
+  const state = pageRouteToState(route);
+  return userCanOpenPage(state.page, user);
+}
+
+function fallbackDashboardRoute() {
+  const item = MENU_ACCESS_ITEMS.find(m => m.page && userCanAccessMenu(m.key, currentUser));
+  if (item?.page === 'stats') return 'stats-office';
+  return item?.page || 'sales';
+}
+
+function navElForRoute(route) {
+  const state = pageRouteToState(route);
+  return document.getElementById(state.navId) || document.getElementById('nav-' + state.page);
+}
+
+function loadOpenPageTabs() {
+  const seen = new Set();
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(dashboardTabStorageKey()) || '[]'); }
+  catch (_) { saved = []; }
+  openPageTabs = (Array.isArray(saved) ? saved : [])
+    .map(normalizeDashboardRoute)
+    .filter(route => {
+      if (seen.has(route) || !userCanOpenRoute(route)) return false;
+      seen.add(route);
+      return true;
+    })
+    .slice(-PAGE_TAB_MAX);
+  if (openPageTabs.length === 0) openPageTabs = [fallbackDashboardRoute()];
+}
+
+function saveOpenPageTabs() {
+  try { localStorage.setItem(dashboardTabStorageKey(), JSON.stringify(openPageTabs)); }
+  catch (err) { console.warn('[page-tabs:save]', err); }
+}
+
+function ensureOpenPageTab(route) {
+  const normalized = normalizeDashboardRoute(route);
+  if (!userCanOpenRoute(normalized)) return normalized;
+  if (!openPageTabs.includes(normalized)) {
+    openPageTabs.push(normalized);
+    if (openPageTabs.length > PAGE_TAB_MAX) openPageTabs.shift();
+    saveOpenPageTabs();
+  }
+  return normalized;
+}
+
+function renderOpenPageTabs(activeRoute = pageRouteForName(currentPageName())) {
+  const bar = document.getElementById('page-tabbar');
+  if (!bar) return;
+  const active = normalizeDashboardRoute(activeRoute || fallbackDashboardRoute());
+  bar.innerHTML = '';
+  openPageTabs.forEach(route => {
+    const state = pageRouteToState(route);
+    const tab = document.createElement('div');
+    tab.className = 'page-tab' + (route === active ? ' active' : '');
+    tab.setAttribute('role', 'button');
+    tab.setAttribute('tabindex', '0');
+    tab.title = state.label;
+
+    const label = document.createElement('span');
+    label.className = 'page-tab-label';
+    label.textContent = state.label;
+    tab.appendChild(label);
+
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'page-tab-close';
+    close.setAttribute('aria-label', `${state.label} 닫기`);
+    close.textContent = '×';
+    close.addEventListener('click', event => dashboardCloseTab(event, route));
+    tab.appendChild(close);
+
+    tab.addEventListener('click', () => dashboardGoTab(route));
+    tab.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      dashboardGoTab(route);
+    });
+    bar.appendChild(tab);
+  });
+}
+
+function pushDashboardRoute(route, replace = false) {
+  const normalized = normalizeDashboardRoute(route);
+  const hash = '#' + encodeURIComponent(normalized);
+  const url = `${location.pathname}${location.search}${hash}`;
+  const state = { dashboardRoute: normalized };
+  if (replace || location.hash === hash) history.replaceState(state, '', url);
+  else history.pushState(state, '', url);
+}
+
+function activatePageRoute(route, options = {}) {
+  let state = pageRouteToState(route || fallbackDashboardRoute());
+  if (!userCanOpenPage(state.page, currentUser)) state = pageRouteToState(fallbackDashboardRoute());
+  if (state.channel) statsChannel = state.channel;
+  showPage(state.page, navElForRoute(state.route), {
+    route: state.route,
+    preserveState: options.preserveState === true,
+    pushHistory: options.pushHistory !== false,
+    replaceHistory: options.replaceHistory === true,
+  });
+}
+
+function dashboardGoTab(route) {
+  const state = pageRouteToState(route);
+  const page = document.getElementById('page-' + state.page);
+  activatePageRoute(route, { preserveState: page?.dataset.dashboardRendered === '1' });
+}
+
+function dashboardCloseTab(event, route) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const normalized = normalizeDashboardRoute(route);
+  const active = pageRouteForName(currentPageName());
+  const index = openPageTabs.indexOf(normalized);
+  openPageTabs = openPageTabs.filter(r => r !== normalized);
+  if (openPageTabs.length === 0) openPageTabs = [fallbackDashboardRoute()];
+  saveOpenPageTabs();
+  if (normalized === active) {
+    const nextRoute = openPageTabs[Math.min(Math.max(index, 0), openPageTabs.length - 1)] || fallbackDashboardRoute();
+    activatePageRoute(nextRoute, { preserveState: true, replaceHistory: true });
+    return;
+  }
+  renderOpenPageTabs(active);
+}
+
+function initDashboardHistory() {
+  loadOpenPageTabs();
+  renderOpenPageTabs();
+  if (dashboardHistoryReady) return;
+  dashboardHistoryReady = true;
+  window.addEventListener('popstate', () => {
+    const route = routeFromHash() || fallbackDashboardRoute();
+    activatePageRoute(route, { preserveState: true, pushHistory: false });
+  });
+}
+
+function applyInitialDashboardRoute() {
+  initDashboardHistory();
+  const route = routeFromHash() || pageRouteForName(currentPageName()) || fallbackDashboardRoute();
+  activatePageRoute(route, { replaceHistory: true });
+}
+
 function renderPageByName(name) {
   const renderer = PAGE_RENDERERS[name];
   if (renderer) renderer();
@@ -446,7 +644,7 @@ document.addEventListener('mousedown', e => {
   clearNavTextCaret(target);
 });
 
-function showPage(name, el) {
+function showPage(name, el, options = {}) {
   if (currentUser && !userCanOpenPage(name, currentUser)) {
     if (typeof showToast === 'function') showToast('접근 권한이 없는 메뉴입니다.', 'error');
     return;
@@ -457,17 +655,24 @@ function showPage(name, el) {
     if (typeof showToast === 'function') showToast('화면을 찾을 수 없습니다.', 'error');
     return;
   }
+  const route = ensureOpenPageTab(options.route || pageRouteForName(name));
+  const preserveState = options.preserveState === true && page.dataset.dashboardRendered === '1';
   closeMobMenu();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   page.classList.add('active');
-  const navEl = el || document.getElementById('nav-' + name);
+  const navEl = el || navElForRoute(route) || document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
   clearNavTextCaret(navEl);
   const titleEl = document.getElementById('topbar-title');
-  if (titleEl) titleEl.textContent = PAGE_TITLES[name] || name;
+  if (titleEl) titleEl.textContent = pageRouteToState(route).label;
+  renderOpenPageTabs(route);
+  if (options.pushHistory !== false) pushDashboardRoute(route, options.replaceHistory === true);
   try {
-    renderPageByName(name);
+    if (!preserveState) {
+      renderPageByName(name);
+      page.dataset.dashboardRendered = '1';
+    }
   } catch (err) {
     console.error('[showPage:render]', name, err);
     if (typeof showToast === 'function') showToast('화면을 불러오는 중 오류가 발생했습니다.', 'error');
