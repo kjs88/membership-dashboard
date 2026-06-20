@@ -429,7 +429,7 @@ const PAGE_RENDERERS = {
 };
 
 const PAGE_TAB_STORAGE_PREFIX = 'sj-open-page-tabs-v1';
-const PAGE_TAB_MAX = 10;
+const PAGE_TAB_MAX = 20;
 let openPageTabs = [];
 let dashboardHistoryReady = false;
 
