@@ -663,10 +663,13 @@ function pushDashboardRoute(route, replace = false) {
 function activatePageRoute(route, options = {}) {
   let state = pageRouteToState(route || fallbackDashboardRoute());
   if (!userCanOpenPage(state.page, currentUser)) state = pageRouteToState(fallbackDashboardRoute());
+  const activePage = currentPageName();
+  const activeRoute = pageRouteForName(activePage);
+  const routeChangedInsideSamePage = activePage === state.page && normalizeDashboardRoute(activeRoute) !== state.route;
   if (state.channel) statsChannel = state.channel;
   showPage(state.page, navElForRoute(state.route), {
     route: state.route,
-    preserveState: options.preserveState === true,
+    preserveState: options.preserveState === true && !routeChangedInsideSamePage,
     pushHistory: options.pushHistory !== false,
     replaceHistory: options.replaceHistory === true,
   });
