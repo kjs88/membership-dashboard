@@ -432,7 +432,7 @@ const PAGE_TAB_STORAGE_PREFIX = 'sj-open-page-tabs-v1';
 const PAGE_TAB_MAX = 20;
 let openPageTabs = [];
 let dashboardHistoryReady = false;
-let pageTabDragState = { route: '', moved: false, suppressClick: false };
+let pageTabDragState = { route: '', moved: false, suppressClick: false, ghost: null, ghostWidth: 0, ghostHeight: 0 };
 
 function dashboardTabStorageKey() {
   return `${PAGE_TAB_STORAGE_PREFIX}:${currentUser?.id || 'guest'}`;
@@ -526,6 +526,56 @@ function clearPageTabDropMarkers() {
   });
 }
 
+function removePageTabDragGhost() {
+  if (pageTabDragState.ghost) pageTabDragState.ghost.remove();
+  pageTabDragState.ghost = null;
+}
+
+function setTransparentDragImage(event) {
+  if (!event.dataTransfer) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  event.dataTransfer.setDragImage(canvas, 0, 0);
+}
+
+function updatePageTabDragGhost(event) {
+  const ghost = pageTabDragState.ghost;
+  const bar = document.getElementById('page-tabbar');
+  if (!ghost || !bar) return;
+  const barRect = bar.getBoundingClientRect();
+  const w = pageTabDragState.ghostWidth || ghost.offsetWidth || 120;
+  const h = pageTabDragState.ghostHeight || ghost.offsetHeight || 32;
+  const rawX = Number.isFinite(event.clientX) && event.clientX > 0 ? event.clientX : barRect.left + (w / 2);
+  const rawY = Number.isFinite(event.clientY) && event.clientY > 0 ? event.clientY : barRect.top + (h / 2);
+  const leftMin = barRect.left;
+  const leftMax = Math.max(leftMin, barRect.right - w);
+  const topMin = barRect.top + 3;
+  const topMax = Math.max(topMin, barRect.bottom - h - 1);
+  const left = Math.min(Math.max(rawX - (w / 2), leftMin), leftMax);
+  const top = Math.min(Math.max(rawY - (h / 2), topMin), topMax);
+  ghost.style.transform = `translate3d(${Math.round(left)}px,${Math.round(top)}px,0)`;
+}
+
+function createPageTabDragGhost(tab, event) {
+  removePageTabDragGhost();
+  const rect = tab.getBoundingClientRect();
+  const ghost = tab.cloneNode(true);
+  ghost.className = 'page-tab page-tab-drag-ghost' + (tab.classList.contains('active') ? ' active' : '');
+  ghost.removeAttribute('id');
+  ghost.removeAttribute('role');
+  ghost.removeAttribute('tabindex');
+  ghost.removeAttribute('draggable');
+  ghost.querySelector('.page-tab-close')?.remove();
+  ghost.style.width = `${Math.round(rect.width)}px`;
+  ghost.style.height = `${Math.round(rect.height)}px`;
+  document.body.appendChild(ghost);
+  pageTabDragState.ghost = ghost;
+  pageTabDragState.ghostWidth = rect.width;
+  pageTabDragState.ghostHeight = rect.height;
+  updatePageTabDragGhost(event);
+}
+
 function moveOpenPageTab(dragRoute, targetRoute, placeAfter) {
   const dragged = normalizeDashboardRoute(dragRoute);
   const target = normalizeDashboardRoute(targetRoute);
@@ -544,16 +594,39 @@ function moveOpenPageTab(dragRoute, targetRoute, placeAfter) {
   return true;
 }
 
+function getPageTabDropPlacement(event) {
+  const bar = document.getElementById('page-tabbar');
+  const dragged = pageTabDragState.route;
+  if (!bar || !dragged) return null;
+  const tabs = [...bar.querySelectorAll('.page-tab[data-route]')].filter(tab => tab.dataset.route !== dragged);
+  if (tabs.length === 0) return null;
+  const x = event.clientX || tabs[tabs.length - 1].getBoundingClientRect().right;
+  for (const tab of tabs) {
+    const rect = tab.getBoundingClientRect();
+    if (x < rect.left + rect.width / 2) return { route: tab.dataset.route, placeAfter: false };
+  }
+  return { route: tabs[tabs.length - 1].dataset.route, placeAfter: true };
+}
+
+function showPageTabDropMarker(placement) {
+  clearPageTabDropMarkers();
+  if (!placement?.route) return;
+  const target = [...document.querySelectorAll('.page-tab[data-route]')].find(tab => tab.dataset.route === placement.route);
+  target?.classList.add(placement.placeAfter ? 'drag-over-after' : 'drag-over-before');
+}
+
 function dashboardTabDragStart(event, route) {
   if (event.target?.closest?.('.page-tab-close')) {
     event.preventDefault();
     return;
   }
-  pageTabDragState = { route, moved: false, suppressClick: false };
+  pageTabDragState = { route, moved: false, suppressClick: false, ghost: null, ghostWidth: 0, ghostHeight: 0 };
   event.currentTarget.classList.add('dragging');
+  createPageTabDragGhost(event.currentTarget, event);
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', route);
+    setTransparentDragImage(event);
   }
 }
 
@@ -561,6 +634,7 @@ function dashboardTabDragOver(event, route) {
   const dragged = pageTabDragState.route || event.dataTransfer?.getData('text/plain');
   if (!dragged || dragged === route) return;
   event.preventDefault();
+  updatePageTabDragGhost(event);
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
   const rect = event.currentTarget.getBoundingClientRect();
   const placeAfter = event.clientX > rect.left + rect.width / 2;
@@ -572,18 +646,42 @@ function dashboardTabDrop(event, route) {
   const dragged = pageTabDragState.route || event.dataTransfer?.getData('text/plain');
   if (!dragged) return;
   event.preventDefault();
+  event.stopPropagation();
+  updatePageTabDragGhost(event);
   const rect = event.currentTarget.getBoundingClientRect();
   const placeAfter = event.clientX > rect.left + rect.width / 2;
   const changed = moveOpenPageTab(dragged, route, placeAfter);
   pageTabDragState.moved = pageTabDragState.moved || changed;
   clearPageTabDragStyles();
+  removePageTabDragGhost();
+  renderOpenPageTabs(pageRouteForName(currentPageName()));
+}
+
+function dashboardTabBarDragOver(event) {
+  if (!pageTabDragState.route) return;
+  event.preventDefault();
+  updatePageTabDragGhost(event);
+  if (event.target?.closest?.('.page-tab')) return;
+  showPageTabDropMarker(getPageTabDropPlacement(event));
+}
+
+function dashboardTabBarDrop(event) {
+  if (!pageTabDragState.route || event.target?.closest?.('.page-tab')) return;
+  event.preventDefault();
+  updatePageTabDragGhost(event);
+  const placement = getPageTabDropPlacement(event);
+  const changed = placement ? moveOpenPageTab(pageTabDragState.route, placement.route, placement.placeAfter) : false;
+  pageTabDragState.moved = pageTabDragState.moved || changed;
+  clearPageTabDragStyles();
+  removePageTabDragGhost();
   renderOpenPageTabs(pageRouteForName(currentPageName()));
 }
 
 function dashboardTabDragEnd() {
   const shouldSuppressClick = pageTabDragState.moved;
   clearPageTabDragStyles();
-  pageTabDragState = { route: '', moved: false, suppressClick: shouldSuppressClick };
+  removePageTabDragGhost();
+  pageTabDragState = { route: '', moved: false, suppressClick: shouldSuppressClick, ghost: null, ghostWidth: 0, ghostHeight: 0 };
   if (shouldSuppressClick) {
     setTimeout(() => { pageTabDragState.suppressClick = false; }, 0);
   }
@@ -604,6 +702,11 @@ function renderOpenPageTabs(activeRoute = pageRouteForName(currentPageName())) {
   const bar = document.getElementById('page-tabbar');
   if (!bar) return;
   const active = normalizeDashboardRoute(activeRoute || fallbackDashboardRoute());
+  bar.ondragover = dashboardTabBarDragOver;
+  bar.ondrop = dashboardTabBarDrop;
+  bar.ondragleave = event => {
+    if (!event.relatedTarget || !bar.contains(event.relatedTarget)) clearPageTabDropMarkers();
+  };
   bar.innerHTML = '';
   openPageTabs.forEach(route => {
     const state = pageRouteToState(route);

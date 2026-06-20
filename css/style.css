@@ -113,6 +113,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .page-tab.drag-over-before::before,.page-tab.drag-over-after::after{content:"";position:absolute;top:5px;bottom:5px;width:3px;border-radius:3px;background:var(--green);box-shadow:0 0 0 2px rgba(0,165,130,.12);}
 .page-tab.drag-over-before::before{left:-4px;}
 .page-tab.drag-over-after::after{right:-4px;}
+.page-tab-drag-ghost{position:fixed;left:0;top:0;z-index:1000;max-width:none;margin:0;pointer-events:none;opacity:.96;cursor:grabbing;box-shadow:0 8px 22px rgba(0,95,75,.18);transition:none;transform:translate3d(-9999px,-9999px,0);}
+.page-tab-drag-ghost .page-tab-close{display:none;}
 .page-tab-label{overflow:hidden;text-overflow:ellipsis;min-width:0;}
 .page-tab-close{width:18px;height:18px;border:0;background:transparent;color:var(--text3);border-radius:4px;cursor:pointer;font-size:15px;line-height:18px;display:grid;place-items:center;flex:0 0 auto;font-family:var(--font);}
 .page-tab-close:hover{background:var(--red-l);color:var(--red);}
