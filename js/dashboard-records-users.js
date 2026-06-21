@@ -1,4 +1,6 @@
 // DASHBOARD
+let salesTrendMode = 'amount';
+let salesTrendPayload = null;
 // ════════════════════════════════════
 
 function renderDashboard() {
@@ -133,7 +135,7 @@ function renderSalesPage() {
     : `${erpMonthDist.length}건 · 비중 ${distShare}%`;
 
   const daysInMonth = new Date(parseInt(ym.split('-')[0]), parseInt(ym.split('-')[1]), 0).getDate();
-  const dayLabels = [], daySalesData = [], dailyBarColors = [];
+  const dayLabels = [], daySalesData = [], dailyOfficeSalesData = [], dailyDistSalesData = [];
   const DOW = ['일','월','화','수','목','금','토'];
   const dailyDowType = [];
   for (let d=1; d<=daysInMonth; d++) {
@@ -144,10 +146,15 @@ function renderSalesPage() {
     const isSun = dow === 0, isSat = dow === 6, isRed = holidayName || isSun || isSat;
     dailyDowType.push(holidayName ? 'holiday' : isSun ? 'sun' : isSat ? 'sat' : 'weekday');
     dayLabels.push([d+'일', DOW[dow]]);
-    daySalesData.push(useErpForCharts
-      ? (ds > today ? 0 : Math.round(allOrders.filter(e=>e.date===ds).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
-      : allEntries.filter(e=>e.date===ds).reduce((s,e)=>s+(e.ourPurchase||0),0));
-    dailyBarColors.push(isRed ? '#D94040CC' : '#2B72C8CC');
+    const dayOfficeSales = useErpForCharts
+      ? (ds > today ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isOffice(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
+      : Math.round(allEntries.filter(e=>e.date===ds && isOffice(e)).reduce((s,e)=>s+(e.ourPurchase||0),0));
+    const dayDistSales = useErpForCharts
+      ? (ds > today ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isDist(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
+      : Math.round(allEntries.filter(e=>e.date===ds && isDist(e)).reduce((s,e)=>s+(e.ourPurchase||0),0));
+    dailyOfficeSalesData.push(dayOfficeSales);
+    dailyDistSalesData.push(dayDistSales);
+    daySalesData.push(dayOfficeSales + dayDistSales);
   }
   document.getElementById('sh-chart-label').textContent = ym.replace('-','년 ')+'월';
   const workdays = dailyDowType.filter(t => t === 'weekday').length;
@@ -199,7 +206,25 @@ function renderSalesPage() {
   );
   setForecastText('sh-office-forecast', officeForecast, officeTarget);
   setForecastText('sh-dist-forecast', distForecast, distTarget);
-  rcDaily('chart-sales-daily', dayLabels, daySalesData, dailyBarColors, dailyDowType);
+  let lastSalesDayIndex = 0;
+  daySalesData.forEach((v, i) => { if (v > 0) lastSalesDayIndex = i; });
+  const todayIndex = today.startsWith(ym)
+    ? Math.min(Math.max(parseInt(today.slice(8, 10), 10) - 1, 0), daysInMonth - 1)
+    : daysInMonth - 1;
+  renderSalesTrendChart({
+    ym,
+    labels: dayLabels,
+    dowTypes: dailyDowType,
+    total: daySalesData,
+    office: dailyOfficeSalesData,
+    dist: dailyDistSalesData,
+    avgFlow: buildSalesTrendAverage(ym, daysInMonth, isTrackedSales, useErpForCharts),
+    officeBase: Math.max(monthOfficeSales, officeForecast?.forecast || 0),
+    distBase: Math.max(monthDistSales, distForecast?.forecast || 0),
+    pointIndex: Math.max(0, Math.min(daysInMonth - 1, Math.max(lastSalesDayIndex, Math.min(todayIndex, lastSalesDayIndex || todayIndex)))),
+    workdays,
+    passedWorkdays
+  });
 
   const buildSalesRank = rows => {
     const map = {};
@@ -561,6 +586,295 @@ function rcDaily(id, labels, data, colors, dowTypes) {
       c.restore();
     }
   }]});
+}
+
+function setSalesTrendMode(mode) {
+  salesTrendMode = ['amount', 'flow', 'share'].includes(mode) ? mode : 'amount';
+  document.querySelectorAll('.sales-trend-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.salesTrendMode === salesTrendMode);
+  });
+  if (salesTrendPayload) renderSalesTrendChart(salesTrendPayload);
+}
+
+function buildSalesTrendAverage(ym, daysInMonth, rowFilter, useErpForCharts) {
+  const source = useErpForCharts ? (allOrders || []) : (allEntries || []);
+  const byMonth = {};
+  source.forEach(row => {
+    if (rowFilter && !rowFilter(row)) return;
+    const d = row.date || '';
+    if (d.length < 10) return;
+    const m = d.slice(0, 7);
+    if (m >= ym) return;
+    const day = parseInt(d.slice(8, 10), 10);
+    if (!day) return;
+    const amount = useErpForCharts ? (parseFloat(row.supply) || 0) : (parseFloat(row.ourPurchase) || 0);
+    if (!amount) return;
+    if (!byMonth[m]) byMonth[m] = {};
+    byMonth[m][day] = (byMonth[m][day] || 0) + amount;
+  });
+  const months = Object.keys(byMonth).sort().slice(-6);
+  if (!months.length) return Array.from({ length: daysInMonth }, (_, i) => Math.round((i + 1) / daysInMonth * 100));
+
+  const sums = Array(daysInMonth).fill(0);
+  let count = 0;
+  months.forEach(m => {
+    const days = byMonth[m];
+    const total = Object.values(days).reduce((s, v) => s + v, 0);
+    if (total <= 0) return;
+    const [yy, mm] = m.split('-').map(Number);
+    const monthLen = new Date(yy, mm, 0).getDate();
+    let cum = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (d <= monthLen) cum += (days[d] || 0);
+      sums[d - 1] += Math.min(100, Math.round(cum / total * 100));
+    }
+    count++;
+  });
+  if (!count) return Array.from({ length: daysInMonth }, (_, i) => Math.round((i + 1) / daysInMonth * 100));
+  return sums.map(v => Math.round(v / count));
+}
+
+function salesTrendCum(values) {
+  let total = 0;
+  return values.map(v => {
+    total += Number(v) || 0;
+    return total;
+  });
+}
+
+function salesTrendPct(values, base) {
+  const cum = salesTrendCum(values);
+  const denom = Math.max(Number(base) || 0, cum[cum.length - 1] || 0);
+  if (!denom) return values.map(() => 0);
+  return cum.map(v => Math.min(100, Math.round(v / denom * 1000) / 10));
+}
+
+function salesTrendMoney(v) {
+  return Math.round(Number(v) || 0).toLocaleString() + '원';
+}
+
+function salesTrendClassify(series) {
+  const day5 = series[Math.min(4, series.length - 1)] || 0;
+  const day15 = series[Math.min(14, series.length - 1)] || 0;
+  if (day5 >= 32) return { label: '월초 집중형', text: `초반 5일에 ${Math.round(day5)}%까지 올라가고 이후 상승 속도가 완만해집니다.` };
+  if (day15 >= 70) return { label: '중반 집중형', text: `15일 전후에 ${Math.round(day15)}%까지 진행되어 중반 집중도가 높습니다.` };
+  return { label: '완만한 후행형', text: `초반보다 중후반까지 꾸준히 올라가는 분산형 흐름입니다.` };
+}
+
+function renderSalesTrendInsights(payload, derived) {
+  const el = document.getElementById('sales-trend-insights');
+  if (!el || !payload) return;
+  const sum = arr => arr.reduce((s, v) => s + (Number(v) || 0), 0);
+  const officeTotal = sum(payload.office);
+  const distTotal = sum(payload.dist);
+  const total = officeTotal + distTotal;
+  const idx = Math.max(0, Math.min(payload.pointIndex || 0, payload.labels.length - 1));
+
+  if (salesTrendMode === 'flow') {
+    const officeInfo = salesTrendClassify(derived.officeFlow);
+    const distInfo = salesTrendClassify(derived.distFlow);
+    const diff = Math.round(((derived.officeFlow[idx] || 0) - (derived.distFlow[idx] || 0)) * 10) / 10;
+    el.innerHTML = `
+      <div class="sales-trend-insight">
+        <div class="sales-trend-insight-label">사업소 흐름</div>
+        <div class="sales-trend-insight-value office">${officeInfo.label}</div>
+        <p>${officeInfo.text}</p>
+      </div>
+      <div class="sales-trend-insight">
+        <div class="sales-trend-insight-label">유통사 흐름</div>
+        <div class="sales-trend-insight-value dist">${distInfo.label}</div>
+        <p>${distInfo.text}</p>
+      </div>
+      <div class="sales-trend-insight is-summary">
+        <div class="sales-trend-insight-label">${idx + 1}일차 기준 차이</div>
+        <div class="sales-trend-insight-value">${diff >= 0 ? '+' : ''}${diff}%p</div>
+        <p>${diff >= 0 ? '사업소가 유통사보다 월 매출을 더 빨리 소진하고 있습니다.' : '유통사가 사업소보다 월 매출을 더 빨리 소진하고 있습니다.'}</p>
+      </div>`;
+    return;
+  }
+
+  if (salesTrendMode === 'share') {
+    const distShare = total ? Math.round(distTotal / total * 1000) / 10 : 0;
+    const officeShare = total ? Math.round(officeTotal / total * 1000) / 10 : 0;
+    const validDaily = derived.dailyDistShare.filter(v => v !== null);
+    const avgDaily = validDaily.length ? Math.round(validDaily.reduce((s, v) => s + v, 0) / validDaily.length * 10) / 10 : 0;
+    el.innerHTML = `
+      <div class="sales-trend-insight">
+        <div class="sales-trend-insight-label">누적 사업소 비중</div>
+        <div class="sales-trend-insight-value office">${officeShare}%</div>
+        <p>현재 누적 합계 매출 중 사업소가 차지하는 비율입니다.</p>
+      </div>
+      <div class="sales-trend-insight">
+        <div class="sales-trend-insight-label">누적 유통사 비중</div>
+        <div class="sales-trend-insight-value dist">${distShare}%</div>
+        <p>현재 누적 합계 매출 중 유통사가 차지하는 비율입니다.</p>
+      </div>
+      <div class="sales-trend-insight is-summary">
+        <div class="sales-trend-insight-label">일별 평균 유통사 비중</div>
+        <div class="sales-trend-insight-value">${avgDaily}%</div>
+        <p>매출이 발생한 날짜만 기준으로 계산했습니다.</p>
+      </div>`;
+    return;
+  }
+
+  let topIdx = 0;
+  payload.total.forEach((v, i) => { if (v > payload.total[topIdx]) topIdx = i; });
+  el.innerHTML = `
+    <div class="sales-trend-insight">
+      <div class="sales-trend-insight-label">합계 매출</div>
+      <div class="sales-trend-insight-value">${salesTrendMoney(total)}</div>
+      <p>사업소와 유통사 일별 매출을 합산한 금액입니다.</p>
+    </div>
+    <div class="sales-trend-insight">
+      <div class="sales-trend-insight-label">사업소 / 유통사</div>
+      <div class="sales-trend-insight-value office">${Math.round(total ? officeTotal / total * 100 : 0)}% / ${Math.round(total ? distTotal / total * 100 : 0)}%</div>
+      <p>${salesTrendMoney(officeTotal)} / ${salesTrendMoney(distTotal)}</p>
+    </div>
+    <div class="sales-trend-insight is-summary">
+      <div class="sales-trend-insight-label">최고 매출일</div>
+      <div class="sales-trend-insight-value">${topIdx + 1}일</div>
+      <p>${salesTrendMoney(payload.total[topIdx])} 발생</p>
+    </div>`;
+}
+
+function renderSalesTrendChart(payload) {
+  if (!payload) return;
+  salesTrendPayload = payload;
+  document.querySelectorAll('.sales-trend-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.salesTrendMode === salesTrendMode);
+  });
+
+  const id = 'chart-sales-daily';
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+
+  const chartLabels = payload.labels.map(l => Array.isArray(l) ? l : [l]);
+  const officeFlow = salesTrendPct(payload.office, payload.officeBase);
+  const distFlow = salesTrendPct(payload.dist, payload.distBase);
+  const officeCum = salesTrendCum(payload.office);
+  const distCum = salesTrendCum(payload.dist);
+  const dailyDistShare = payload.total.map((v, i) => v > 0 ? Math.round((payload.dist[i] || 0) / v * 1000) / 10 : null);
+  const cumDistShare = payload.total.map((_, i) => {
+    const total = (officeCum[i] || 0) + (distCum[i] || 0);
+    return total > 0 ? Math.round((distCum[i] || 0) / total * 1000) / 10 : null;
+  });
+  const derived = { officeFlow, distFlow, dailyDistShare, cumDistShare };
+  renderSalesTrendInsights(payload, derived);
+
+  const dailyAxisLabels = {
+    id: 'salesTrendAxisLabels',
+    afterDraw(chart) {
+      const { ctx: c, chartArea: { bottom }, scales: { x } } = chart;
+      c.save();
+      c.textAlign = 'center';
+      c.textBaseline = 'top';
+      x.ticks.forEach((tick, i) => {
+        const xPos = x.getPixelForTick(i);
+        const dt = payload.dowTypes ? payload.dowTypes[i] : 'weekday';
+        const isRed = dt === 'holiday' || dt === 'sun' || dt === 'sat';
+        const lbl = Array.isArray(chartLabels[i]) ? chartLabels[i] : [chartLabels[i]];
+        c.fillStyle = '#9AB0AA';
+        c.font = '11px Noto Sans KR';
+        c.fillText(lbl[0] || '', xPos, bottom + 4);
+        if (lbl[1]) {
+          c.fillStyle = isRed ? '#D94040' : '#9AB0AA';
+          c.font = isRed ? 'bold 13px Noto Sans KR' : '13px Noto Sans KR';
+          c.fillText(lbl[1], xPos, bottom + 20);
+        }
+      });
+      c.restore();
+    }
+  };
+
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: true, position: 'top', align: 'end', labels: { color: '#5A706A', font: { size: 11, family: 'Noto Sans KR', weight: '700' }, boxWidth: 10, padding: 14 } },
+      datalabels: { display: false },
+    },
+    scales: {
+      x: { ticks: { display: false }, grid: { color: 'rgba(0,100,60,.06)' }, border: { display: false }, afterFit(scale) { scale.paddingBottom = 42; } },
+      y: { ticks: { color: '#9AB0AA', font: { size: 10, family: 'Noto Sans KR' } }, grid: { color: 'rgba(0,100,60,.06)' }, border: { display: false } },
+    },
+  };
+
+  if (salesTrendMode === 'flow') {
+    charts[id] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          { label: '사업소 누적 진행률', data: officeFlow, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
+          { label: '유통사 누적 진행률', data: distFlow, borderColor: '#76A8E3', backgroundColor: '#76A8E3', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
+          { label: '과거 평균', data: payload.avgFlow, borderColor: '#9AB0AA', backgroundColor: '#9AB0AA', borderWidth: 2, borderDash: [6, 6], pointRadius: 0, tension: .25 },
+        ]
+      },
+      options: {
+        ...commonOptions,
+        plugins: {
+          ...commonOptions.plugins,
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? 0}%` } }
+        },
+        scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, min: 0, max: 100, ticks: { ...commonOptions.scales.y.ticks, callback: v => v + '%' } } }
+      },
+      plugins: [dailyAxisLabels]
+    });
+    return;
+  }
+
+  if (salesTrendMode === 'share') {
+    charts[id] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          { label: '일별 유통사 비중', data: dailyDistShare, borderColor: '#76A8E3', backgroundColor: 'rgba(118,168,227,.16)', borderWidth: 2, pointRadius: 3, spanGaps: true, tension: .25 },
+          { label: '누적 유통사 비중', data: cumDistShare, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.5, spanGaps: true, tension: .25 },
+        ]
+      },
+      options: {
+        ...commonOptions,
+        plugins: {
+          ...commonOptions.plugins,
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? 0}%` } }
+        },
+        scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, min: 0, max: 100, ticks: { ...commonOptions.scales.y.ticks, callback: v => v + '%' } } }
+      },
+      plugins: [dailyAxisLabels]
+    });
+    return;
+  }
+
+  charts[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: chartLabels,
+      datasets: [
+        { label: '사업소', data: payload.office, backgroundColor: '#2B72C8CC', borderColor: '#2B72C8', borderWidth: 0, borderRadius: 5, stack: 'sales', maxBarThickness: 42 },
+        { label: '유통사', data: payload.dist, backgroundColor: '#76A8E3CC', borderColor: '#76A8E3', borderWidth: 0, borderRadius: 5, stack: 'sales', maxBarThickness: 42 },
+      ]
+    },
+    options: {
+      ...commonOptions,
+      plugins: {
+        ...commonOptions.plugins,
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${salesTrendMoney(ctx.parsed.y || 0)}`,
+            footer: items => items.length ? `합계: ${salesTrendMoney(payload.total[items[0].dataIndex] || 0)}` : ''
+          }
+        }
+      },
+      scales: {
+        x: { ...commonOptions.scales.x, stacked: true },
+        y: { ...commonOptions.scales.y, stacked: true, ticks: { ...commonOptions.scales.y.ticks, callback: v => Number(v).toLocaleString() } }
+      }
+    },
+    plugins: [dailyAxisLabels]
+  });
 }
 
 function rc(id,type,labels,data,color,horizontal) {
