@@ -221,7 +221,8 @@ function renderSalesPage() {
     avgFlow: buildSalesTrendAverage(ym, daysInMonth, isTrackedSales, useErpForCharts),
     officeBase: Math.max(monthOfficeSales, officeForecast?.forecast || 0),
     distBase: Math.max(monthDistSales, distForecast?.forecast || 0),
-    pointIndex: Math.max(0, Math.min(daysInMonth - 1, Math.max(lastSalesDayIndex, Math.min(todayIndex, lastSalesDayIndex || todayIndex)))),
+    pointIndex: todayIndex,
+    cutoffIndex: todayIndex,
     workdays,
     passedWorkdays
   });
@@ -649,6 +650,11 @@ function salesTrendPct(values, base) {
   return cum.map(v => Math.min(100, Math.round(v / denom * 1000) / 10));
 }
 
+function salesTrendClipFuture(values, cutoffIndex) {
+  const cutoff = Number.isFinite(cutoffIndex) ? cutoffIndex : values.length - 1;
+  return values.map((v, i) => i <= cutoff ? v : null);
+}
+
 function salesTrendMoney(v) {
   return Math.round(Number(v) || 0).toLocaleString() + '원';
 }
@@ -750,6 +756,7 @@ function renderSalesTrendChart(payload) {
   if (!ctx) return;
 
   const chartLabels = payload.labels.map(l => Array.isArray(l) ? l : [l]);
+  const cutoffIndex = Number.isFinite(payload.cutoffIndex) ? payload.cutoffIndex : chartLabels.length - 1;
   const officeFlow = salesTrendPct(payload.office, payload.officeBase);
   const distFlow = salesTrendPct(payload.dist, payload.distBase);
   const officeCum = salesTrendCum(payload.office);
@@ -761,6 +768,13 @@ function renderSalesTrendChart(payload) {
   });
   const derived = { officeFlow, distFlow, dailyDistShare, cumDistShare };
   renderSalesTrendInsights(payload, derived);
+  const officeFlowChart = salesTrendClipFuture(officeFlow, cutoffIndex);
+  const distFlowChart = salesTrendClipFuture(distFlow, cutoffIndex);
+  const avgFlowChart = salesTrendClipFuture(payload.avgFlow || [], cutoffIndex);
+  const dailyDistShareChart = salesTrendClipFuture(dailyDistShare, cutoffIndex);
+  const cumDistShareChart = salesTrendClipFuture(cumDistShare, cutoffIndex);
+  const officeAmountChart = salesTrendClipFuture(payload.office, cutoffIndex);
+  const distAmountChart = salesTrendClipFuture(payload.dist, cutoffIndex);
 
   const dailyAxisLabels = {
     id: 'salesTrendAxisLabels',
@@ -807,9 +821,9 @@ function renderSalesTrendChart(payload) {
       data: {
         labels: chartLabels,
         datasets: [
-          { label: '사업소 누적 진행률', data: officeFlow, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
-          { label: '유통사 누적 진행률', data: distFlow, borderColor: '#76A8E3', backgroundColor: '#76A8E3', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
-          { label: '과거 평균', data: payload.avgFlow, borderColor: '#9AB0AA', backgroundColor: '#9AB0AA', borderWidth: 2, borderDash: [6, 6], pointRadius: 0, tension: .25 },
+          { label: '사업소 누적 진행률', data: officeFlowChart, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
+          { label: '유통사 누적 진행률', data: distFlowChart, borderColor: '#76A8E3', backgroundColor: '#76A8E3', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
+          { label: '과거 평균', data: avgFlowChart, borderColor: '#9AB0AA', backgroundColor: '#9AB0AA', borderWidth: 2, borderDash: [6, 6], pointRadius: 0, tension: .25 },
         ]
       },
       options: {
@@ -831,8 +845,8 @@ function renderSalesTrendChart(payload) {
       data: {
         labels: chartLabels,
         datasets: [
-          { label: '일별 유통사 비중', data: dailyDistShare, borderColor: '#76A8E3', backgroundColor: 'rgba(118,168,227,.16)', borderWidth: 2, pointRadius: 3, spanGaps: true, tension: .25 },
-          { label: '누적 유통사 비중', data: cumDistShare, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.5, spanGaps: true, tension: .25 },
+          { label: '일별 유통사 비중', data: dailyDistShareChart, borderColor: '#76A8E3', backgroundColor: 'rgba(118,168,227,.16)', borderWidth: 2, pointRadius: 3, spanGaps: false, tension: .25 },
+          { label: '누적 유통사 비중', data: cumDistShareChart, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.5, spanGaps: false, tension: .25 },
         ]
       },
       options: {
@@ -853,8 +867,8 @@ function renderSalesTrendChart(payload) {
     data: {
       labels: chartLabels,
       datasets: [
-        { label: '사업소', data: payload.office, backgroundColor: '#2B72C8CC', borderColor: '#2B72C8', borderWidth: 0, borderRadius: 5, stack: 'sales', maxBarThickness: 42 },
-        { label: '유통사', data: payload.dist, backgroundColor: '#76A8E3CC', borderColor: '#76A8E3', borderWidth: 0, borderRadius: 5, stack: 'sales', maxBarThickness: 42 },
+        { label: '사업소', data: officeAmountChart, backgroundColor: '#2B72C8CC', borderColor: '#2B72C8', borderWidth: 0, borderRadius: 5, stack: 'sales', maxBarThickness: 42 },
+        { label: '유통사', data: distAmountChart, backgroundColor: '#76A8E3CC', borderColor: '#76A8E3', borderWidth: 0, borderRadius: 5, stack: 'sales', maxBarThickness: 42 },
       ]
     },
     options: {
