@@ -519,6 +519,7 @@ function clearPageTabDragStyles() {
   document.querySelectorAll('.page-tab.dragging,.page-tab.drag-over-before,.page-tab.drag-over-after').forEach(tab => {
     tab.classList.remove('dragging', 'drag-over-before', 'drag-over-after');
   });
+  document.getElementById('page-tabbar')?.classList.remove('drag-active');
 }
 
 function clearPageTabDropMarkers() {
@@ -623,6 +624,7 @@ function dashboardTabDragStart(event, route) {
   }
   pageTabDragState = { route, moved: false, suppressClick: false, ghost: null, ghostWidth: 0, ghostHeight: 0 };
   event.currentTarget.classList.add('dragging');
+  document.getElementById('page-tabbar')?.classList.add('drag-active');
   createPageTabDragGhost(event.currentTarget, event);
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
