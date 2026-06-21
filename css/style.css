@@ -156,12 +156,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
 .sales-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
 .sales-kpi.primary{background:linear-gradient(135deg,#007A5A,#00916E);border-color:#007A5A;}
-.sales-kpi.primary .sales-kpi-label,.sales-kpi.office .sales-kpi-label,.sales-kpi.dist .sales-kpi-label{color:#fff;}
-.sales-kpi.primary .sales-kpi-sub,.sales-kpi.office .sales-kpi-sub,.sales-kpi.dist .sales-kpi-sub{color:rgba(255,255,255,.74);}
+.sales-kpi.primary .sales-kpi-label{color:#fff;}
+.sales-kpi.primary .sales-kpi-sub{color:rgba(255,255,255,.74);}
 .sales-kpi.primary .sales-kpi-value{color:#fff;}
-.sales-kpi.office{background:linear-gradient(135deg,#006D77,#0A9396);border-color:#006D77;}
-.sales-kpi.dist{background:linear-gradient(135deg,#A75D1B,#C9822B);border-color:#A75D1B;}
-.sales-kpi.office .sales-kpi-value,.sales-kpi.dist .sales-kpi-value{color:#fff;}
+.sales-kpi.office{background:linear-gradient(135deg,#DFF3FF,#D6EEFB);border-color:#B8DDEC;}
+.sales-kpi.dist{background:linear-gradient(135deg,#F4E9FF,#EFE0FF);border-color:#D8C3EC;}
+.sales-kpi.office .sales-kpi-label,.sales-kpi.dist .sales-kpi-label{color:#101815;}
+.sales-kpi.office .sales-kpi-value,.sales-kpi.dist .sales-kpi-value{color:#101815;}
+.sales-kpi.office .sales-kpi-unit,.sales-kpi.dist .sales-kpi-unit{color:rgba(16,24,21,.66);}
+.sales-kpi.office .sales-kpi-sub,.sales-kpi.dist .sales-kpi-sub{color:rgba(16,24,21,.68);}
+.sales-kpi.office .sales-kpi-forecast,.sales-kpi.dist .sales-kpi-forecast{color:rgba(16,24,21,.82);}
+.sales-kpi.office .sales-kpi-label span,.sales-kpi.dist .sales-kpi-label span{color:rgba(16,24,21,.66);background:rgba(16,24,21,.05);border-color:rgba(16,24,21,.14);}
+.sales-kpi.office .sales-kpi-target-track,.sales-kpi.dist .sales-kpi-target-track{background:rgba(16,24,21,.18);}
+.sales-kpi.office .sales-kpi-target-fill,.sales-kpi.dist .sales-kpi-target-fill{background:rgba(16,24,21,.62);}
+.sales-kpi.office .sales-kpi-target-pct,.sales-kpi.dist .sales-kpi-target-pct{color:#101815;}
+.sales-kpi.office .sales-kpi-target-label,.sales-kpi.dist .sales-kpi-target-label{color:rgba(16,24,21,.58);}
 .sales-kpi-total-parent{padding:24px;}
 .sales-kpi-total-parent>.sales-kpi-value{font-size:34px;}
 .sales-kpi-children{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.18);}
