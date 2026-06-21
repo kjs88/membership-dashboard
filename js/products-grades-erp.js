@@ -666,18 +666,24 @@ function removeGradeTier(i) {
   renderGrade();
 }
 
-// 이탈위험 거래처: 직전 60일엔 매출이 있었으나 최근 60일에 중단/급감(-50%↓)한 거래처
+// 이탈위험 거래처: 전월엔 매출이 있었으나 이번달에 중단/급감(-50%↓)한 거래처
 function renderChurnRisk() {
   const card = document.getElementById('grade-churn-card');
   if (!card) return;
   const orders = (typeof allOrders !== 'undefined' ? allOrders : []);
   if (!orders.length) { card.style.display = 'none'; return; }
-  const DAY = 86400000;
-  const fmt = d => d.toISOString().slice(0, 10);
-  const now = Date.now();
-  const recentFrom = fmt(new Date(now - 60 * DAY));
-  const priorFrom = fmt(new Date(now - 120 * DAY));
-  const recentMap = {}, priorMap = {}, managerMap = {};
+  const now = new Date();
+  const ymOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const monthName = ym => `${ym.slice(0, 4)}년 ${Number(ym.slice(5, 7))}월`;
+  const currentYm = ymOf(now);
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prev2Date = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  const prevYm = ymOf(prevDate);
+  const prev2Ym = ymOf(prev2Date);
+  const currentLabel = monthName(currentYm);
+  const prevLabel = monthName(prevYm);
+  const prev2Label = monthName(prev2Ym);
+  const currentMap = {}, prevMap = {}, prev2Map = {}, managerMap = {};
   const managerLabel = o => {
     const person = String(o.person || '').trim();
     const custClass = String(o.custClass || '').trim();
@@ -690,22 +696,27 @@ function renderChurnRisk() {
     if (!d || !k) return;
     if (!managerMap[k] || d >= managerMap[k].date) managerMap[k] = { date: d, label: managerLabel(o) };
     const amt = parseFloat(o.supply) || 0;
-    if (d >= recentFrom) recentMap[k] = (recentMap[k] || 0) + amt;
-    else if (d >= priorFrom) priorMap[k] = (priorMap[k] || 0) + amt;
+    const ym = d.slice(0, 7);
+    if (ym === currentYm) currentMap[k] = (currentMap[k] || 0) + amt;
+    else if (ym === prevYm) prevMap[k] = (prevMap[k] || 0) + amt;
+    else if (ym === prev2Ym) prev2Map[k] = (prev2Map[k] || 0) + amt;
   });
-  const FLOOR = 300000; // 이전 60일 매출 30만원 이상만 표시 (노이즈 제거)
+  const FLOOR = 300000; // 전월 매출 30만원 이상만 표시 (노이즈 제거)
   const risk = [];
-  Object.keys(priorMap).forEach(k => {
-    const prev = priorMap[k], rec = recentMap[k] || 0;
+  Object.keys(prevMap).forEach(k => {
+    const prev2 = prev2Map[k] || 0;
+    const prev = prevMap[k] || 0;
+    const current = currentMap[k] || 0;
     if (prev < FLOOR) return;
-    if (rec === 0 || rec <= prev * 0.5) {
-      risk.push({ name: k, prev, rec, drop: Math.round((1 - rec / prev) * 100), lost: rec === 0, manager: managerMap[k]?.label || '-' });
+    if (current === 0 || current <= prev * 0.5) {
+      risk.push({ name: k, prev2, prev, current, drop: Math.round((1 - current / prev) * 100), lost: current === 0, manager: managerMap[k]?.label || '-' });
     }
   });
   risk.sort((a, b) => b.prev - a.prev);
   if (!risk.length) { card.style.display = 'none'; return; }
   const lostCnt = risk.filter(r => r.lost).length;
   _churnList = risk;
+  _churnPeriodLabels = { prev2: prev2Label, prev: prevLabel, current: currentLabel };
   _churnPage = 1;
   card.style.display = 'block';
   card.innerHTML = `
@@ -717,7 +728,7 @@ function renderChurnRisk() {
     </div>
     <div id="grade-churn-collapse">
       <div style="font-size:11px;color:var(--text3);margin:8px 0 10px;line-height:1.5">
-        기준: 직전 60일 매출 <strong>30만원 이상</strong> 거래처 중 · <strong style="color:var(--red)">거래중단</strong> = 최근 60일 매출 0원 · <strong style="color:var(--amber)">급감</strong> = 직전 대비 <strong>50% 이상</strong> 감소
+        기준: <strong>${prevLabel}</strong> 매출 <strong>30만원 이상</strong> 거래처 중 · <strong style="color:var(--red)">거래중단</strong> = ${currentLabel} 매출 0원 · <strong style="color:var(--amber)">급감</strong> = ${prevLabel} 대비 <strong>50% 이상</strong> 감소
       </div>
       <div id="grade-churn-body"></div>
     </div>`;
@@ -726,6 +737,7 @@ function renderChurnRisk() {
 }
 
 let _churnList = [], _churnPage = 1, _churnCollapsed = false;
+let _churnPeriodLabels = { prev2: '전전월', prev: '전월', current: '이번달' };
 function churnRenderPage() {
   const body = document.getElementById('grade-churn-body');
   if (!body) return;
@@ -737,18 +749,19 @@ function churnRenderPage() {
   const slice = list.slice((p - 1) * PAGE, p * PAGE);
   body.innerHTML = `
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px">
-      <thead><tr>${['거래처','직전 60일','최근 60일','감소율','상태','담당자'].map((h,i)=>`<th style="padding:7px 10px;text-align:${i===0?'left':i>=4?'center':'right'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+      <thead><tr>${['거래처',_churnPeriodLabels.prev2,_churnPeriodLabels.prev,_churnPeriodLabels.current,'감소율','상태','담당자'].map((h,i)=>`<th style="padding:7px 10px;text-align:${i===0?'left':i>=5?'center':'right'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap">${h}</th>`).join('')}</tr></thead>
       <tbody>${slice.map(r=>`<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:7px 10px;font-weight:500">${escHtml(r.name)}</td>
-        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text2)">${Math.round(r.prev).toLocaleString()}원</td>
-        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${r.rec?'var(--text)':'var(--red)'};font-weight:600">${Math.round(r.rec).toLocaleString()}원</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text3);white-space:nowrap">${Math.round(r.prev2).toLocaleString()}원</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text2);white-space:nowrap">${Math.round(r.prev).toLocaleString()}원</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${r.current?'var(--text)':'var(--red)'};font-weight:600;white-space:nowrap">${Math.round(r.current).toLocaleString()}원</td>
         <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--red);font-weight:700">▼${r.drop}%</td>
         <td style="padding:7px 10px;text-align:center">${r.lost?'<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">거래중단</span>':'<span style="background:var(--amber-l);color:var(--amber);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">급감</span>'}</td>
         <td style="padding:7px 10px;text-align:center;color:var(--text2);font-weight:600">${escHtml(r.manager || '-')}</td>
       </tr>`).join('')}</tbody>
     </table></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px">
-      <span style="font-size:11px;color:var(--text3)">${(p-1)*PAGE+1}–${Math.min(p*PAGE,list.length)} / 총 ${list.length}곳 (이전 매출 큰 순)</span>
+      <span style="font-size:11px;color:var(--text3)">${(p-1)*PAGE+1}–${Math.min(p*PAGE,list.length)} / 총 ${list.length}곳 (전월 매출 큰 순)</span>
       <div style="display:flex;gap:4px">${renderPageBtns(p, totalPages, 'churnGoPage')}</div>
     </div>`;
 }
