@@ -438,6 +438,19 @@ function dashboardTabStorageKey() {
   return `${PAGE_TAB_STORAGE_PREFIX}:${currentUser?.id || 'guest'}`;
 }
 
+function clearSavedOpenPageTabs() {
+  try {
+    const currentKey = dashboardTabStorageKey();
+    localStorage.removeItem(currentKey);
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(PAGE_TAB_STORAGE_PREFIX + ':')) localStorage.removeItem(key);
+    }
+  } catch (err) {
+    console.warn('[page-tabs:clearSaved]', err);
+  }
+}
+
 function currentPageName() {
   return document.querySelector('.page.active')?.id?.replace(/^page-/, '') || '';
 }
@@ -494,24 +507,12 @@ function navElForRoute(route) {
 }
 
 function loadOpenPageTabs() {
-  const seen = new Set();
-  let saved = [];
-  try { saved = JSON.parse(localStorage.getItem(dashboardTabStorageKey()) || '[]'); }
-  catch (_) { saved = []; }
-  openPageTabs = (Array.isArray(saved) ? saved : [])
-    .map(normalizeDashboardRoute)
-    .filter(route => {
-      if (seen.has(route) || !userCanOpenRoute(route)) return false;
-      seen.add(route);
-      return true;
-    })
-    .slice(-PAGE_TAB_MAX);
-  if (openPageTabs.length === 0) openPageTabs = [fallbackDashboardRoute()];
+  clearSavedOpenPageTabs();
+  openPageTabs = [fallbackDashboardRoute()];
 }
 
 function saveOpenPageTabs() {
-  try { localStorage.setItem(dashboardTabStorageKey(), JSON.stringify(openPageTabs)); }
-  catch (err) { console.warn('[page-tabs:save]', err); }
+  clearSavedOpenPageTabs();
 }
 
 function clearPageTabDragStyles() {
