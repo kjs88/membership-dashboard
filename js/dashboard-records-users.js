@@ -584,7 +584,17 @@ function downloadShRankExcel(kind = 'office') {
   ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, `${label} 매출 순위`);
-  XLSX.writeFile(workbook, `${label}_매출순위_${meta.ym || new Date().toISOString().slice(0, 7)}.xlsx`);
+  const now = new Date();
+  const stamp = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('') + '_' + [
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0'),
+  ].join('');
+  XLSX.writeFile(workbook, `${label}_매출순위_${meta.ym || now.toISOString().slice(0, 7)}_${stamp}.xlsx`);
   showToast(`${label} 매출 순위 엑셀 파일이 다운로드됩니다.`, 'success');
 }
 
