@@ -243,6 +243,12 @@ function renderSalesPage() {
     office: buildSalesRank(officeRankRows),
     dist: buildSalesRank(distRankRows),
   };
+  window._shRankExportMeta = {
+    ym,
+    today,
+    basis: rankBasisText,
+    source: useErpForCharts ? `${basisMeta.label} ERP 공급가` : '당사 구매액',
+  };
   window._shRankPages = { office: 1, dist: 1 };
   shRenderRankPage('office');
   shRenderRankPage('dist');
@@ -539,6 +545,47 @@ function shRankGoPage(kind, p) {
   window._shRankPages = window._shRankPages || {};
   window._shRankPages[kind] = p;
   shRenderRankPage(kind);
+}
+
+function downloadShRankExcel(kind = 'office') {
+  const list = (window._shRankLists && window._shRankLists[kind]) || [];
+  if (!list.length) {
+    showToast('다운로드할 매출 순위 데이터가 없습니다.', 'error');
+    return;
+  }
+  if (typeof XLSX === 'undefined') {
+    showToast('엑셀 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+    return;
+  }
+
+  const meta = window._shRankExportMeta || {};
+  const total = list.reduce((sum, row) => sum + (Number(row[1]) || 0), 0);
+  const label = kind === 'office' ? '사업소' : '유통사';
+  const rows = list.map(([name, amount], index) => {
+    const sales = Math.round(Number(amount) || 0);
+    return {
+      '순위': index + 1,
+      [label]: name,
+      '매출액(원)': sales,
+      '비중(%)': total ? Math.round(sales / total * 100) : 0,
+      '기준': meta.source || '',
+      '기간': meta.ym ? `${meta.ym}-01 ~ ${meta.today || ''}` : '',
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet['!cols'] = [
+    { wch: 8 },
+    { wch: 34 },
+    { wch: 16 },
+    { wch: 10 },
+    { wch: 18 },
+    { wch: 24 },
+  ];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, `${label} 매출 순위`);
+  XLSX.writeFile(workbook, `${label}_매출순위_${meta.ym || new Date().toISOString().slice(0, 7)}.xlsx`);
+  showToast(`${label} 매출 순위 엑셀 파일이 다운로드됩니다.`, 'success');
 }
 
 function rcDaily(id, labels, data, colors, dowTypes) {
