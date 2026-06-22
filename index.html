@@ -1095,6 +1095,57 @@
       <div class="kpi-card"><div class="kpi-label">총 공급가</div><div class="kpi-value" id="prod-sum-sales" style="font-size:26px;color:var(--blue)">0</div><div class="kpi-sub">원</div></div>
       <div class="kpi-card"><div class="kpi-label">평균 단가</div><div class="kpi-value" id="prod-sum-avg" style="font-size:26px;color:var(--amber)">0</div><div class="kpi-sub">원</div></div>
     </div>
+    <div class="chart-card product-flow-card">
+      <div class="chart-card-head product-flow-head">
+        <div>
+          <div class="chart-card-title">월별 상품별 판매 흐름</div>
+          <div class="chart-card-sub" id="prod-flow-sub">선택 기간 기준</div>
+        </div>
+        <button type="button" class="btn-sm btn-ghost" onclick="downloadProdMonthlyFlowExcel()">↓ 엑셀</button>
+      </div>
+      <div class="product-flow-controls">
+        <label>지표
+          <select id="prod-flow-metric" class="form-select" onchange="renderProdMonthlyFlow()">
+            <option value="sales">공급가</option>
+            <option value="qty">수량</option>
+          </select>
+        </label>
+        <label>그래프
+          <select id="prod-flow-top" class="form-select" onchange="renderProdMonthlyFlow()">
+            <option value="5">상위 5</option>
+            <option value="10" selected>상위 10</option>
+            <option value="15">상위 15</option>
+          </select>
+        </label>
+        <label>정렬
+          <select id="prod-flow-sort" class="form-select" onchange="renderProdMonthlyFlow()">
+            <option value="total-desc">합계 높은순</option>
+            <option value="total-asc">합계 낮은순</option>
+            <option value="latest-desc">최근월 높은순</option>
+            <option value="growth-desc">증감률 높은순</option>
+            <option value="growth-asc">증감률 낮은순</option>
+            <option value="name-asc">품명 가나다순</option>
+          </select>
+        </label>
+        <label>표시
+          <select id="prod-flow-limit" class="form-select" onchange="renderProdMonthlyFlow()">
+            <option value="30">상위 30</option>
+            <option value="50" selected>상위 50</option>
+            <option value="100">상위 100</option>
+            <option value="0">전체</option>
+          </select>
+        </label>
+      </div>
+      <div class="product-flow-summary" id="prod-flow-summary"></div>
+      <div class="product-flow-chart"><canvas id="chart-prod-monthly-flow"></canvas></div>
+      <div class="product-flow-table-wrap">
+        <table class="product-flow-table">
+          <thead id="prod-flow-thead"></thead>
+          <tbody id="prod-flow-tbody"></tbody>
+        </table>
+      </div>
+      <div id="prod-flow-empty" class="product-flow-empty" style="display:none">선택한 조건에 해당하는 월별 판매 데이터가 없습니다.</div>
+    </div>
     <!-- 테이블 -->
     <div class="chart-card" style="padding:0;overflow:hidden">
       <div style="overflow-x:auto">
@@ -1582,7 +1633,7 @@
 <script src="js/security.js?v=20260620-security-hardening"></script>
 <script src="js/storage.js?v=20260610-security"></script>
 <script src="js/state.js?v=20260613-channel-fix"></script>
-<script src="js/products-grades-erp.js?v=20260622-churn-monthly"></script>
+<script src="js/products-grades-erp.js?v=20260622-product-flow"></script>
 <script src="js/core-auth-nav.js?v=20260622-page-tab-drag-visual"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
 <script src="js/dashboard-records-users.js?v=20260622-rank-export-stamp"></script>

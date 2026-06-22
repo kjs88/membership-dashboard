@@ -14,6 +14,8 @@ function erpPersonNames(channel) {
 let _prodSortCol = 'sales', _prodSortDir = 'desc';
 let _prodPage = 1, _prodList = [], _prodHasPrev = false;
 let _gradePage = 1, _gradeList = [];
+let _prodMonthlyFlowRows = [];
+let _prodMonthlyFlowMonths = [];
 const PRODUCT_CATEGORY_ORDER = [
   '전동침대',
   '수동휠체어',
@@ -230,6 +232,7 @@ function renderProducts() {
     document.getElementById('prod-sum-qty').textContent   = '0';
     document.getElementById('prod-sum-sales').textContent = '0';
     document.getElementById('prod-sum-avg').textContent   = '0';
+    if (typeof renderProdMonthlyFlow === 'function') renderProdMonthlyFlow();
     return;
   }
 
@@ -308,13 +311,245 @@ function renderProducts() {
   if (!list.length) {
     tbody.innerHTML = ''; empty.style.display = '';
     document.getElementById('prod-pagination').style.display = 'none';
+    _prodList = [];
+    if (typeof renderProdMonthlyFlow === 'function') renderProdMonthlyFlow();
     return;
   }
   empty.style.display = 'none';
   _prodList = list;
   _prodPage = 1;
   prodRenderPage();
+  if (typeof renderProdMonthlyFlow === 'function') renderProdMonthlyFlow();
   if (typeof renderProdAbc === 'function') renderProdAbc();
+}
+
+function prodFlowMonthKey(dateText) {
+  return String(dateText || '').slice(0, 7);
+}
+
+function prodFlowMonthRange(rows, dateFrom, dateTo) {
+  const dates = rows.map(r => r.date).filter(Boolean).sort();
+  const startText = dateFrom || (dates[0] || '');
+  const endText = dateTo || (dates[dates.length - 1] || '');
+  if (!startText || !endText) return [];
+  const start = new Date(startText.slice(0, 7) + '-01');
+  const end = new Date(endText.slice(0, 7) + '-01');
+  const months = [];
+  for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+    months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  return months;
+}
+
+function prodFlowFilteredRows() {
+  const dateFrom = document.getElementById('prod-date-from')?.value || '';
+  const dateTo = document.getElementById('prod-date-to')?.value || '';
+  const personF = productPersonId || 'all';
+  const catF = productCategoryId || 'all';
+  const searchV = (document.getElementById('prod-search')?.value || '').toLowerCase();
+  const rows = (allOrders || []).filter(o => {
+    if (!o.date || !o.product) return false;
+    if (dateFrom && o.date < dateFrom) return false;
+    if (dateTo && o.date > dateTo) return false;
+    if (personF !== 'all' && o.person !== personF) return false;
+    if (catF !== 'all' && (o.category || '') !== catF) return false;
+    if (searchV && !String(o.product || '').toLowerCase().includes(searchV)) return false;
+    return true;
+  });
+  return { rows, dateFrom, dateTo, personF, catF, searchV };
+}
+
+function buildProdMonthlyFlow() {
+  const metric = document.getElementById('prod-flow-metric')?.value || 'sales';
+  const sortMode = document.getElementById('prod-flow-sort')?.value || 'total-desc';
+  const { rows, dateFrom, dateTo, catF } = prodFlowFilteredRows();
+  const months = prodFlowMonthRange(rows, dateFrom, dateTo);
+  const map = {};
+
+  rows.forEach(o => {
+    const month = prodFlowMonthKey(o.date);
+    if (!month || !months.includes(month)) return;
+    const name = o.product || '(품명 없음)';
+    if (!map[name]) {
+      map[name] = {
+        name,
+        category: o.category || '-',
+        months: Object.fromEntries(months.map(m => [m, 0])),
+        qty: 0,
+        sales: 0,
+      };
+    }
+    const value = metric === 'qty' ? (parseFloat(o.qty) || 0) : (parseFloat(o.supply) || 0);
+    map[name].months[month] += value;
+    map[name].qty += parseFloat(o.qty) || 0;
+    map[name].sales += parseFloat(o.supply) || 0;
+  });
+
+  const items = Object.values(map).map(item => {
+    const values = months.map(m => item.months[m] || 0);
+    const firstNonZero = values.find(v => v > 0) || 0;
+    const latest = values.length ? values[values.length - 1] : 0;
+    const prev = values.length > 1 ? values[values.length - 2] : 0;
+    const total = values.reduce((s, v) => s + v, 0);
+    const avg = values.length ? total / values.length : 0;
+    const growth = prev ? ((latest - prev) / prev * 100) : (latest > 0 ? 100 : 0);
+    return { ...item, values, firstNonZero, latest, prev, total, avg, growth };
+  });
+
+  items.sort((a, b) => {
+    if (sortMode === 'total-asc') return a.total - b.total;
+    if (sortMode === 'latest-desc') return b.latest - a.latest;
+    if (sortMode === 'growth-desc') return b.growth - a.growth;
+    if (sortMode === 'growth-asc') return a.growth - b.growth;
+    if (sortMode === 'name-asc') return a.name.localeCompare(b.name, 'ko');
+    return b.total - a.total;
+  });
+
+  const basisMeta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고기준' };
+  return { metric, months, items, basisMeta, catF };
+}
+
+function renderProdMonthlyFlow() {
+  const thead = document.getElementById('prod-flow-thead');
+  const tbody = document.getElementById('prod-flow-tbody');
+  const empty = document.getElementById('prod-flow-empty');
+  const sub = document.getElementById('prod-flow-sub');
+  const summary = document.getElementById('prod-flow-summary');
+  const canvas = document.getElementById('chart-prod-monthly-flow');
+  if (!thead || !tbody || !canvas) return;
+
+  if (charts['chart-prod-monthly-flow']) {
+    charts['chart-prod-monthly-flow'].destroy();
+    delete charts['chart-prod-monthly-flow'];
+  }
+
+  const data = buildProdMonthlyFlow();
+  const metricLabel = data.metric === 'qty' ? '수량' : '공급가';
+  const unit = data.metric === 'qty' ? '개' : '원';
+  const tableLimit = parseInt(document.getElementById('prod-flow-limit')?.value || '50', 10);
+  const topN = parseInt(document.getElementById('prod-flow-top')?.value || '10', 10);
+  const tableRows = tableLimit > 0 ? data.items.slice(0, tableLimit) : data.items;
+  const chartRows = data.items.slice(0, topN);
+  _prodMonthlyFlowRows = tableRows;
+  _prodMonthlyFlowMonths = data.months;
+
+  if (sub) {
+    const range = data.months.length ? `${data.months[0]} ~ ${data.months[data.months.length - 1]}` : '선택 기간';
+    sub.textContent = `${range} · ${data.basisMeta.label} · ${metricLabel} 기준`;
+  }
+
+  if (!data.items.length || !data.months.length) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+    if (summary) summary.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  const total = data.items.reduce((s, r) => s + r.total, 0);
+  const latestTotal = data.items.reduce((s, r) => s + r.latest, 0);
+  const leader = data.items[0];
+  if (summary) {
+    summary.innerHTML = [
+      `<div class="product-flow-chip">상품 <strong>${data.items.length.toLocaleString()}</strong></div>`,
+      `<div class="product-flow-chip">합계 <strong>${Math.round(total).toLocaleString()}${unit}</strong></div>`,
+      `<div class="product-flow-chip">최근월 <strong>${Math.round(latestTotal).toLocaleString()}${unit}</strong></div>`,
+      `<div class="product-flow-chip">1위 <strong>${escHtml(leader?.name || '-')}</strong></div>`,
+    ].join('');
+  }
+
+  const monthHeads = data.months.map(m => `<th>${m.slice(2).replace('-', '.')}</th>`).join('');
+  thead.innerHTML = `<tr>
+    <th>품목명</th>
+    <th>품목군</th>
+    <th>합계</th>
+    <th>월평균</th>
+    <th>최근월</th>
+    <th>전월比</th>
+    ${monthHeads}
+  </tr>`;
+  tbody.innerHTML = tableRows.map(r => {
+    const growthCls = r.growth > 0 ? 'up' : r.growth < 0 ? 'down' : '';
+    const growthText = r.prev || r.latest ? `${r.growth >= 0 ? '+' : ''}${r.growth.toFixed(1)}%` : '-';
+    return `<tr>
+      <td class="product-flow-name">${escHtml(r.name)}</td>
+      <td>${escHtml(r.category || '-')}</td>
+      <td class="product-flow-total">${Math.round(r.total).toLocaleString()}</td>
+      <td>${Math.round(r.avg).toLocaleString()}</td>
+      <td>${Math.round(r.latest).toLocaleString()}</td>
+      <td class="product-flow-growth ${growthCls}">${growthText}</td>
+      ${r.values.map(v => `<td>${v ? Math.round(v).toLocaleString() : '-'}</td>`).join('')}
+    </tr>`;
+  }).join('');
+
+  const colors = ['#009E6A','#2B72C8','#E8900A','#7856C8','#D94040','#3DB8A0','#6C8EBF','#C75BAB','#8BC34A','#FF7043','#607D8B','#00ACC1','#7E57C2','#EC407A','#5D8A35'];
+  charts['chart-prod-monthly-flow'] = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: data.months.map(m => m.slice(2).replace('-', '.')),
+      datasets: chartRows.map((r, i) => ({
+        label: r.name,
+        data: r.values,
+        borderColor: colors[i % colors.length],
+        backgroundColor: colors[i % colors.length] + '22',
+        borderWidth: 2,
+        pointRadius: 2.5,
+        tension: .25,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, family: 'Noto Sans KR' } } },
+        datalabels: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${Math.round(ctx.parsed.y || 0).toLocaleString()}${unit}` } },
+      },
+      scales: {
+        x: { ticks: { color: '#9AB0AA', font: { size: 10, family: 'Noto Sans KR' } }, grid: { color: 'rgba(0,100,60,.06)' }, border: { display: false } },
+        y: { ticks: { color: '#9AB0AA', font: { size: 10, family: 'Noto Sans KR' }, callback: v => Number(v).toLocaleString() }, grid: { color: 'rgba(0,100,60,.06)' }, border: { display: false } },
+      },
+    },
+  });
+}
+
+function downloadProdMonthlyFlowExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast('엑셀 라이브러리를 불러오지 못했습니다.', 'error');
+    return;
+  }
+  if (!_prodMonthlyFlowRows.length) {
+    renderProdMonthlyFlow();
+  }
+  if (!_prodMonthlyFlowRows.length) {
+    showToast('다운로드할 월별 상품 데이터가 없습니다.', 'error');
+    return;
+  }
+  const metric = document.getElementById('prod-flow-metric')?.value || 'sales';
+  const metricLabel = metric === 'qty' ? '수량' : '공급가';
+  const rows = _prodMonthlyFlowRows.map((r, i) => {
+    const row = {
+      '순위': i + 1,
+      '품목명': r.name,
+      '품목군': r.category || '',
+      [`합계(${metricLabel})`]: Math.round(r.total),
+      [`월평균(${metricLabel})`]: Math.round(r.avg),
+      [`최근월(${metricLabel})`]: Math.round(r.latest),
+      '전월비(%)': Number(r.growth.toFixed(2)),
+    };
+    _prodMonthlyFlowMonths.forEach((m, idx) => { row[m] = Math.round(r.values[idx] || 0); });
+    return row;
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = Object.keys(rows[0] || {}).map((key, i) => ({ wch: i === 1 ? 34 : i === 2 ? 18 : 13 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '월별 상품 판매 흐름');
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `월별_상품별_판매흐름_${stamp}.xlsx`);
+  showToast('월별 상품별 판매 흐름 엑셀 파일이 다운로드됩니다.', 'success');
 }
 
 function renderProdAbc() {
