@@ -1172,7 +1172,7 @@ function setManualGrade(name, grade) {
 // ════════════════════════════════════
 let erpParsedByBasis = { order: [], ship: [] };
 const ERP_REMOTE_DATA_PATH = 'erp/latest';
-const ERP_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000;
+const ERP_AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_CHECK_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
 const ERP_AUTO_SYNC_LOCK_MS = 10 * 60 * 1000;

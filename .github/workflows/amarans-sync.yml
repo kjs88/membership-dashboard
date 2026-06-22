@@ -12,8 +12,8 @@ on:
           - recent60
           - full
   schedule:
-    # KST 09:17-20:17 weekdays hourly (recent). Minute 17 avoids GitHub's top-of-hour schedule congestion.
-    - cron: '17 0-11 * * 1-5'
+    # KST 09:00-20:55 weekdays every 5 minutes (recent).
+    - cron: '*/5 0-11 * * 1-5'
     # KST 08:17 weekdays full. UTC 23:17 = next-day KST 08:17, so UTC days 0-4.
     - cron: '17 23 * * 0-4'
 
