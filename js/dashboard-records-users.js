@@ -494,7 +494,7 @@ function shRenderRankPage(kind = 'office') {
     ? '<div style="color:var(--text3);font-size:13px;padding:24px 0">이번달 매출 데이터가 없습니다</div>'
     : pageItems.map(([name, amt], idx) => {
         const globalIdx = start + idx;
-        const pct = totalRankAmt ? Math.round(amt/totalRankAmt*100) : 0;
+        const pct = totalRankAmt ? (amt / totalRankAmt * 100).toFixed(2) : '0.00';
         const medal = globalIdx < 3 ? `<span style="font-size:15px;line-height:1;width:24px;text-align:center;flex-shrink:0">${medalIcons[globalIdx]}</span>` : `<div class="leader-rank">${globalIdx+1}</div>`;
         return `<div class="leader-item">
           ${medal}
@@ -567,7 +567,7 @@ function downloadShRankExcel(kind = 'office') {
       '순위': index + 1,
       [label]: name,
       '매출액(원)': sales,
-      '비중(%)': total ? Math.round(sales / total * 100) : 0,
+      '비중(%)': total ? Number((sales / total * 100).toFixed(2)) : 0,
       '기준': meta.source || '',
       '기간': meta.ym ? `${meta.ym}-01 ~ ${meta.today || ''}` : '',
     };
