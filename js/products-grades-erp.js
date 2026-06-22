@@ -329,16 +329,9 @@ function prodFlowMonthKey(dateText) {
 
 function prodFlowMonthRange(rows, dateFrom, dateTo) {
   const dates = rows.map(r => r.date).filter(Boolean).sort();
-  const startText = dateFrom || (dates[0] || '');
-  const endText = dateTo || (dates[dates.length - 1] || '');
-  if (!startText || !endText) return [];
-  const start = new Date(startText.slice(0, 7) + '-01');
-  const end = new Date(endText.slice(0, 7) + '-01');
-  const months = [];
-  for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
-    months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
-  }
-  return months;
+  const baseText = dateFrom || dateTo || dates[0] || new Date().toISOString().slice(0, 10);
+  const year = String(baseText).slice(0, 4);
+  return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 }
 
 function prodFlowFilteredRows() {
@@ -367,10 +360,12 @@ function buildProdMonthlyFlow() {
   const { rows, dateFrom, dateTo, catF, rangeMode } = prodFlowFilteredRows();
   const months = prodFlowMonthRange(rows, dateFrom, dateTo);
   const map = {};
+  let latestDataMonth = '';
 
   rows.forEach(o => {
     const month = prodFlowMonthKey(o.date);
     if (!month || !months.includes(month)) return;
+    if (month > latestDataMonth) latestDataMonth = month;
     const name = o.product || '(품명 없음)';
     if (!map[name]) {
       map[name] = {
@@ -387,13 +382,16 @@ function buildProdMonthlyFlow() {
     map[name].sales += parseFloat(o.supply) || 0;
   });
 
+  const latestIndex = Math.max(0, months.indexOf(latestDataMonth));
+  const prevIndex = Math.max(0, latestIndex - 1);
+  const activeMonthCount = latestDataMonth ? latestIndex + 1 : months.length;
   const items = Object.values(map).map(item => {
     const values = months.map(m => item.months[m] || 0);
     const firstNonZero = values.find(v => v > 0) || 0;
-    const latest = values.length ? values[values.length - 1] : 0;
-    const prev = values.length > 1 ? values[values.length - 2] : 0;
+    const latest = values.length ? values[latestIndex] : 0;
+    const prev = values.length > 1 ? values[prevIndex] : 0;
     const total = values.reduce((s, v) => s + v, 0);
-    const avg = values.length ? total / values.length : 0;
+    const avg = activeMonthCount ? total / activeMonthCount : 0;
     const growth = prev ? ((latest - prev) / prev * 100) : (latest > 0 ? 100 : 0);
     return { ...item, values, firstNonZero, latest, prev, total, avg, growth };
   });
@@ -408,7 +406,7 @@ function buildProdMonthlyFlow() {
   });
 
   const basisMeta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고기준' };
-  return { metric, months, items, basisMeta, catF, rangeMode };
+  return { metric, months, items, basisMeta, catF, rangeMode, latestDataMonth };
 }
 
 function renderProdMonthlyFlow() {
@@ -438,7 +436,8 @@ function renderProdMonthlyFlow() {
   if (sub) {
     const range = data.months.length ? `${data.months[0]} ~ ${data.months[data.months.length - 1]}` : '선택 기간';
     const rangeLabel = data.rangeMode === 'filter' ? '현재 기간 필터' : '전체 데이터';
-    sub.textContent = `${rangeLabel} ${range} · ${data.basisMeta.label} · ${metricLabel} 기준`;
+    const latestLabel = data.latestDataMonth ? ` · 최근월 ${data.latestDataMonth}` : '';
+    sub.textContent = `${rangeLabel} ${range}${latestLabel} · ${data.basisMeta.label} · ${metricLabel} 기준`;
   }
 
   if (!data.items.length || !data.months.length) {
