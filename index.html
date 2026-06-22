@@ -1104,6 +1104,12 @@
         <button type="button" class="btn-sm btn-ghost" onclick="downloadProdMonthlyFlowExcel()">↓ 엑셀</button>
       </div>
       <div class="product-flow-controls">
+        <label>기간
+          <select id="prod-flow-range" class="form-select" onchange="renderProdMonthlyFlow()">
+            <option value="all" selected>전체 데이터</option>
+            <option value="filter">현재 기간 필터</option>
+          </select>
+        </label>
         <label>지표
           <select id="prod-flow-metric" class="form-select" onchange="renderProdMonthlyFlow()">
             <option value="sales">공급가</option>
@@ -1633,7 +1639,7 @@
 <script src="js/security.js?v=20260620-security-hardening"></script>
 <script src="js/storage.js?v=20260610-security"></script>
 <script src="js/state.js?v=20260613-channel-fix"></script>
-<script src="js/products-grades-erp.js?v=20260622-product-flow"></script>
+<script src="js/products-grades-erp.js?v=20260622-product-flow-all-data"></script>
 <script src="js/core-auth-nav.js?v=20260622-page-tab-drag-visual"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
 <script src="js/dashboard-records-users.js?v=20260622-rank-export-stamp"></script>

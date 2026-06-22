@@ -342,8 +342,10 @@ function prodFlowMonthRange(rows, dateFrom, dateTo) {
 }
 
 function prodFlowFilteredRows() {
-  const dateFrom = document.getElementById('prod-date-from')?.value || '';
-  const dateTo = document.getElementById('prod-date-to')?.value || '';
+  const rangeMode = document.getElementById('prod-flow-range')?.value || 'all';
+  const useDateFilter = rangeMode === 'filter';
+  const dateFrom = useDateFilter ? (document.getElementById('prod-date-from')?.value || '') : '';
+  const dateTo = useDateFilter ? (document.getElementById('prod-date-to')?.value || '') : '';
   const personF = productPersonId || 'all';
   const catF = productCategoryId || 'all';
   const searchV = (document.getElementById('prod-search')?.value || '').toLowerCase();
@@ -356,13 +358,13 @@ function prodFlowFilteredRows() {
     if (searchV && !String(o.product || '').toLowerCase().includes(searchV)) return false;
     return true;
   });
-  return { rows, dateFrom, dateTo, personF, catF, searchV };
+  return { rows, dateFrom, dateTo, personF, catF, searchV, rangeMode };
 }
 
 function buildProdMonthlyFlow() {
   const metric = document.getElementById('prod-flow-metric')?.value || 'sales';
   const sortMode = document.getElementById('prod-flow-sort')?.value || 'total-desc';
-  const { rows, dateFrom, dateTo, catF } = prodFlowFilteredRows();
+  const { rows, dateFrom, dateTo, catF, rangeMode } = prodFlowFilteredRows();
   const months = prodFlowMonthRange(rows, dateFrom, dateTo);
   const map = {};
 
@@ -406,7 +408,7 @@ function buildProdMonthlyFlow() {
   });
 
   const basisMeta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고기준' };
-  return { metric, months, items, basisMeta, catF };
+  return { metric, months, items, basisMeta, catF, rangeMode };
 }
 
 function renderProdMonthlyFlow() {
@@ -435,7 +437,8 @@ function renderProdMonthlyFlow() {
 
   if (sub) {
     const range = data.months.length ? `${data.months[0]} ~ ${data.months[data.months.length - 1]}` : '선택 기간';
-    sub.textContent = `${range} · ${data.basisMeta.label} · ${metricLabel} 기준`;
+    const rangeLabel = data.rangeMode === 'filter' ? '현재 기간 필터' : '전체 데이터';
+    sub.textContent = `${rangeLabel} ${range} · ${data.basisMeta.label} · ${metricLabel} 기준`;
   }
 
   if (!data.items.length || !data.months.length) {
