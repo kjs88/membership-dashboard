@@ -84,11 +84,11 @@ function renderSalesPage() {
   const monthStart = ym + '-01';
   const monthLabel = salesDashboardMonthLabel(ym);
   const shortMonthLabel = isCurrentMonth ? '이번달' : `${selectedMonth}월`;
-  ['sh-month-nav-label', 'sh-chart-month-nav-label'].forEach(id => {
+  ['sh-month-nav-label', 'sh-chart-month-nav-label', 'sh-rank-month-nav-label'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = monthLabel;
   });
-  ['sh-month-next', 'sh-chart-month-next'].forEach(id => {
+  ['sh-month-next', 'sh-chart-month-next', 'sh-rank-month-next'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = isCurrentMonth;
   });
@@ -99,7 +99,7 @@ function renderSalesPage() {
   if (totalTitle) totalTitle.textContent = `${shortMonthLabel} 합계 매출`;
   if (officeTitle) officeTitle.textContent = `${shortMonthLabel} 사업소 매출`;
   if (distTitle) distTitle.textContent = `${shortMonthLabel} 유통사 매출`;
-  if (rankSectionTitle) rankSectionTitle.textContent = `${shortMonthLabel} 사업소 매출 순위`;
+  if (rankSectionTitle) rankSectionTitle.textContent = `${shortMonthLabel} 사업소·유통사 매출 순위`;
   const basisMeta = getOrderBasisMeta();
   const monthEntries = allEntries.filter(e => e.date?.startsWith(ym));
   const erpMonth = allOrders.filter(e => {
@@ -297,7 +297,7 @@ function renderSalesPage() {
   };
   window._shRankExportMeta = {
     ym,
-    today,
+    periodEnd,
     basis: rankBasisText,
     source: useErpForCharts ? `${basisMeta.label} ERP 공급가` : '당사 구매액',
   };
@@ -543,7 +543,7 @@ function shRenderRankPage(kind = 'office') {
   const pagerEl = document.getElementById(`sh-rank-${kind}-pager`);
   if (!listEl || !pagerEl) return;
   listEl.innerHTML = pageItems.length === 0
-    ? '<div style="color:var(--text3);font-size:13px;padding:24px 0">이번달 매출 데이터가 없습니다</div>'
+    ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${salesDashboardMonthLabel(salesDashboardMonth)} 매출 데이터가 없습니다</div>`
     : pageItems.map(([name, amt], idx) => {
         const globalIdx = start + idx;
         const pct = totalRankAmt ? (amt / totalRankAmt * 100).toFixed(2) : '0.00';
@@ -621,7 +621,7 @@ function downloadShRankExcel(kind = 'office') {
       '매출액(원)': sales,
       '비중(%)': total ? Number((sales / total * 100).toFixed(2)) : 0,
       '기준': meta.source || '',
-      '기간': meta.ym ? `${meta.ym}-01 ~ ${meta.today || ''}` : '',
+      '기간': meta.ym ? `${meta.ym}-01 ~ ${meta.periodEnd || ''}` : '',
     };
   });
 

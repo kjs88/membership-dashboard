@@ -212,6 +212,10 @@ button.sales-month-current{cursor:pointer;}
 .sales-month-nav-light .sales-month-arrow{background:#fff;color:var(--text2);border:1px solid var(--border);}
 .sales-month-nav-light .sales-month-arrow:hover{color:var(--green-dark);border-color:var(--green-mid);}
 .sales-month-nav-light .sales-month-current{color:var(--text);min-width:112px;}
+.sales-rank-section-head{justify-content:space-between;gap:14px;}
+.sales-rank-section-label{display:flex;align-items:center;gap:8px;min-width:0;}
+.sales-rank-section-head .sales-month-current{font-size:12px;}
+.sales-rank-month-nav{margin:0 0 -2px auto;}
 .sales-kpi-total-parent>.sales-kpi-value{font-size:34px;}
 .sales-kpi-children{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.18);}
 .sales-kpi-child{box-shadow:none;border-color:rgba(255,255,255,.22);padding:18px 20px;}
@@ -599,6 +603,8 @@ td.tm{color:var(--text);font-weight:500;}
   .chart-grid-3{grid-template-columns:1fr;}
   .sales-trend-head{align-items:flex-start;flex-direction:column;}
   .sales-trend-title-wrap{width:100%;align-items:flex-start;flex-direction:column;gap:8px;}
+  .sales-rank-section-head{align-items:flex-start;flex-direction:column;gap:8px;}
+  .sales-rank-month-nav{margin:0;}
   .sales-trend-tabs{width:100%;display:grid;grid-template-columns:repeat(3,1fr);}
   .sales-trend-tab{min-width:0;}
   .sales-trend-body{grid-template-columns:1fr;}
