@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260625-independent-month-nav">
+<link rel="stylesheet" href="css/style.css?v=20260625-person-sales-month-nav">
 </head>
 <body>
 
@@ -299,7 +299,14 @@
 
     <!-- ══ 영업자별 매출 ══ -->
     <div class="dash-section">
-      <div class="dash-section-title"><span>👤</span>영업자별 매출</div>
+      <div class="dash-section-title sales-person-section-head">
+        <div class="sales-person-section-label"><span>👤</span><span>영업자별 매출</span></div>
+        <div class="sales-month-nav sales-month-nav-light sales-person-month-nav" aria-label="영업자별 매출 조회 월 이동">
+          <button type="button" class="sales-month-arrow" onclick="shiftSalesMonth('person',-1)" title="이전 달" aria-label="이전 달">‹</button>
+          <span class="sales-month-current" id="sh-person-month-label">2026년 06월</span>
+          <button type="button" class="sales-month-arrow" id="sh-person-month-next" onclick="shiftSalesMonth('person',1)" title="다음 달" aria-label="다음 달">›</button>
+        </div>
+      </div>
       <div class="chart-grid">
         <div class="chart-card">
           <div class="chart-card-title">영업사원별 매출 현황</div>
@@ -308,7 +315,7 @@
         </div>
         <div class="chart-card">
           <div class="chart-card-title">영업사원 매출 비중</div>
-          <div class="chart-card-sub">이번달 기준</div>
+          <div class="chart-card-sub" id="sh-person-share-sub">이번달 기준</div>
           <div style="position:relative;height:260px"><canvas id="chart-person-sales"></canvas></div>
         </div>
       </div>
@@ -1673,7 +1680,7 @@
 <script src="js/products-grades-erp.js?v=20260622-erp-sync-5min"></script>
 <script src="js/core-auth-nav.js?v=20260622-page-tab-drag-visual"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
-<script src="js/dashboard-records-users.js?v=20260625-independent-month-render"></script>
+<script src="js/dashboard-records-users.js?v=20260625-person-sales-month-nav"></script>
 <script src="js/clients.js?v=20260523-features"></script>
 <script src="js/daily-entry.js?v=20260523-cleanup"></script>
 <script src="js/stats-notices.js?v=20260613-channel-fix"></script>

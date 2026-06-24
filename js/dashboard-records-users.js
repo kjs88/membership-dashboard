@@ -1,7 +1,7 @@
 // DASHBOARD
 let salesTrendMode = 'amount';
 let salesTrendPayload = null;
-const salesSectionMonths = { summary: '', trend: '', office: '', dist: '' };
+const salesSectionMonths = { summary: '', trend: '', office: '', dist: '', person: '' };
 
 function salesDashboardCurrentYm() {
   const now = new Date();
@@ -49,6 +49,7 @@ function shiftSalesMonth(section, offset) {
   salesSectionMonths[section] = nextYm;
   if (section === 'summary') renderSalesPage({ refreshIndependentSections: false });
   else if (section === 'trend') renderSalesTrendMonth();
+  else if (section === 'person') renderSalesPersonMonth();
   else renderSalesRankMonth(section);
 }
 // ════════════════════════════════════
@@ -123,9 +124,6 @@ function renderSalesPage(options = {}) {
     return d >= monthStart && d <= periodEnd;
   });
   const useErpForCharts = erpMonth.length > 0;
-  const personSub = document.getElementById('sh-person-sub');
-  if (personSub) personSub.textContent = useErpForCharts ? `${shortMonthLabel} ${basisMeta.label} 공급가 기준 (원)` : `${shortMonthLabel} 당사 구매액 기준 (원)`;
-
   // ── 채널 분류 (사업소 / 유통사) ──
   //  · 사업소: 영업사원이 이기현·장재순·이민우·안성종 중 한 명 (고객분류 도매(이름))
   //  · 유통사: 고객분류 == "도도매/유통사" (수집 시 channel='dist'로 표시)
@@ -251,36 +249,11 @@ function renderSalesPage(options = {}) {
   );
   setForecastText('sh-office-forecast', officeForecast, officeTarget);
   setForecastText('sh-dist-forecast', distForecast, distTarget);
-  const salesByPerson = {};
-  const personSalesRows = useErpForCharts ? erpMonthOffice : monthEntries.filter(e => !isDist(e));
-  personSalesRows.forEach(e => {
-    const person = (e.person || '').trim();
-    if (!person || person === '도도매/유통사') return;
-    const amount = useErpForCharts ? (parseFloat(e.supply) || 0) : (parseFloat(e.ourPurchase) || 0);
-    salesByPerson[person] = (salesByPerson[person] || 0) + amount;
-  });
-  const personList = Object.entries(salesByPerson).sort((a,b) => b[1]-a[1]);
-  const maxPerson = personList[0]?.[1] || 1;
-  const personSalesTgt = {};
-  allUsers.forEach(u => { personSalesTgt[u.name] = (targets.personalSales||{})[u.id] || 0; });
-  const PERSON_COLORS = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
-  const getPersonColor = (name, i) => { const u = allUsers.find(u => u.name === name); return u ? u.color : PERSON_COLORS[i % PERSON_COLORS.length]; };
-  document.getElementById('sh-person-list').innerHTML = personList.length === 0
-    ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${monthLabel} 데이터가 없습니다</div>`
-    : personList.map(([name, amt], i) => {
-        const tgt = personSalesTgt[name] || 0;
-        const achPct = tgt ? Math.min(Math.round(amt/tgt*100), 999) : null;
-        const pc = getPersonColor(name, i);
-        const barWidth = tgt ? Math.min(amt/tgt*100, 100) : (amt/maxPerson*100);
-        const metaRight = tgt ? `<span style="font-size:11px;color:var(--text3)">목표 ${tgt.toLocaleString()}만</span>` : '<span style="font-size:11px;color:var(--text3)">목표 미설정</span>';
-        const pctBadge = achPct !== null ? `<span style="font-size:13px;font-weight:700;font-family:var(--mono);color:${pc}">${achPct}%</span>` : '<span style="font-size:11px;color:var(--text3)">-</span>';
-        return `<div class="leader-item"><div class="leader-rank ${['r1','r2','r3'][i]||''}">${i+1}</div><div class="leader-name">${name}<div class="leader-meta">${(useErpForCharts ? erpMonth : monthEntries).filter(e=>e.person===name).length}건 ${useErpForCharts?basisMeta.action:''} ${metaRight}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${barWidth}%;background:${pc}"></div></div><div class="leader-num" style="color:${pc};font-weight:700">${Math.round(amt).toLocaleString()}<br>${pctBadge}</div></div>`;
-      }).join('');
-  rc('chart-person-sales','doughnut', personList.map(p=>p[0]), personList.map(p=>p[1]), personList.map((p,i)=>getPersonColor(p[0],i)));
   if (refreshIndependentSections) {
     renderSalesTrendMonth();
     renderSalesRankMonth('office');
     renderSalesRankMonth('dist');
+    renderSalesPersonMonth();
   }
 }
 
@@ -474,6 +447,84 @@ function renderDashPending() {
       <td style="padding:8px 12px;color:var(--text3);white-space:nowrap">${escHtml(p.year)}년 ${escHtml(p.week)}주차</td>
     </tr>`).join('')}</tbody>
   </table>`;
+}
+
+function renderSalesPersonMonth() {
+  const {
+    ym,
+    isCurrentMonth,
+    periodEnd,
+    monthStart,
+    monthLabel,
+    shortMonthLabel,
+  } = salesMonthContext('person');
+  const monthLabelEl = document.getElementById('sh-person-month-label');
+  const nextEl = document.getElementById('sh-person-month-next');
+  if (monthLabelEl) monthLabelEl.textContent = monthLabel;
+  if (nextEl) nextEl.disabled = isCurrentMonth;
+
+  const basisMeta = getOrderBasisMeta();
+  const monthEntries = allEntries.filter(row => row.date?.startsWith(ym));
+  const erpMonth = allOrders.filter(row => {
+    const date = row.date || '';
+    return date >= monthStart && date <= periodEnd;
+  });
+  const useErp = erpMonth.length > 0;
+  const sourceRows = useErp
+    ? erpMonth.filter(row => orderChannel(row) === 'office')
+    : monthEntries.filter(row => orderChannel(row) !== 'dist');
+  const salesByPerson = {};
+  const countByPerson = {};
+  sourceRows.forEach(row => {
+    const person = String(row.person || '').trim();
+    if (!person || person === '도도매/유통사') return;
+    const amount = useErp ? (parseFloat(row.supply) || 0) : (parseFloat(row.ourPurchase) || 0);
+    salesByPerson[person] = (salesByPerson[person] || 0) + amount;
+    countByPerson[person] = (countByPerson[person] || 0) + 1;
+  });
+
+  const personList = Object.entries(salesByPerson).sort((a, b) => b[1] - a[1]);
+  const maxPerson = personList[0]?.[1] || 1;
+  const personSalesTargets = {};
+  allUsers.forEach(user => {
+    personSalesTargets[user.name] = (targets.personalSales || {})[user.id] || 0;
+  });
+  const personColors = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
+  const getPersonColor = (name, index) => {
+    const user = allUsers.find(item => item.name === name);
+    return user?.color || personColors[index % personColors.length];
+  };
+  const basisText = useErp ? `${shortMonthLabel} ${basisMeta.label} 공급가 기준 (원)` : `${shortMonthLabel} 당사 구매액 기준 (원)`;
+  const personSub = document.getElementById('sh-person-sub');
+  const shareSub = document.getElementById('sh-person-share-sub');
+  if (personSub) personSub.textContent = basisText;
+  if (shareSub) shareSub.textContent = `${shortMonthLabel} 기준`;
+
+  const listEl = document.getElementById('sh-person-list');
+  if (listEl) {
+    listEl.innerHTML = personList.length === 0
+      ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${monthLabel} 데이터가 없습니다</div>`
+      : personList.map(([name, amount], index) => {
+          const target = personSalesTargets[name] || 0;
+          const achievement = target ? Math.min(Math.round(amount / target * 100), 999) : null;
+          const color = getPersonColor(name, index);
+          const barWidth = target ? Math.min(amount / target * 100, 100) : (amount / maxPerson * 100);
+          const targetText = target
+            ? `<span style="font-size:11px;color:var(--text3)">목표 ${target.toLocaleString()}만</span>`
+            : '<span style="font-size:11px;color:var(--text3)">목표 미설정</span>';
+          const achievementText = achievement !== null
+            ? `<span style="font-size:13px;font-weight:700;font-family:var(--mono);color:${color}">${achievement}%</span>`
+            : '<span style="font-size:11px;color:var(--text3)">-</span>';
+          return `<div class="leader-item"><div class="leader-rank ${['r1','r2','r3'][index] || ''}">${index + 1}</div><div class="leader-name">${escHtml(name)}<div class="leader-meta">${countByPerson[name] || 0}건 ${useErp ? basisMeta.action : ''} ${targetText}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${barWidth}%;background:${color}"></div></div><div class="leader-num" style="color:${color};font-weight:700">${Math.round(amount).toLocaleString()}<br>${achievementText}</div></div>`;
+        }).join('');
+  }
+  rc(
+    'chart-person-sales',
+    'doughnut',
+    personList.map(item => item[0]),
+    personList.map(item => item[1]),
+    personList.map((item, index) => getPersonColor(item[0], index))
+  );
 }
 
 function renderSalesTrendMonth() {
