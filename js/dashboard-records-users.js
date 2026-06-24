@@ -47,7 +47,7 @@ function shiftSalesMonth(section, offset) {
   const nextYm = `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
   if (nextYm > currentYm) return;
   salesSectionMonths[section] = nextYm;
-  if (section === 'summary') renderSalesPage();
+  if (section === 'summary') renderSalesPage({ refreshIndependentSections: false });
   else if (section === 'trend') renderSalesTrendMonth();
   else renderSalesRankMonth(section);
 }
@@ -93,7 +93,8 @@ function forecastMonthByPacing(ym, todayStr, rowFilter) {
   return fracs.reduce((s, v) => s + v, 0) / fracs.length;
 }
 
-function renderSalesPage() {
+function renderSalesPage(options = {}) {
+  const refreshIndependentSections = options.refreshIndependentSections !== false;
   const {
     ym,
     today,
@@ -276,9 +277,11 @@ function renderSalesPage() {
         return `<div class="leader-item"><div class="leader-rank ${['r1','r2','r3'][i]||''}">${i+1}</div><div class="leader-name">${name}<div class="leader-meta">${(useErpForCharts ? erpMonth : monthEntries).filter(e=>e.person===name).length}건 ${useErpForCharts?basisMeta.action:''} ${metaRight}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${barWidth}%;background:${pc}"></div></div><div class="leader-num" style="color:${pc};font-weight:700">${Math.round(amt).toLocaleString()}<br>${pctBadge}</div></div>`;
       }).join('');
   rc('chart-person-sales','doughnut', personList.map(p=>p[0]), personList.map(p=>p[1]), personList.map((p,i)=>getPersonColor(p[0],i)));
-  renderSalesTrendMonth();
-  renderSalesRankMonth('office');
-  renderSalesRankMonth('dist');
+  if (refreshIndependentSections) {
+    renderSalesTrendMonth();
+    renderSalesRankMonth('office');
+    renderSalesRankMonth('dist');
+  }
 }
 
 function renderDashPage() {
