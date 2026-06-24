@@ -192,7 +192,14 @@
       <div class="sales-hero" style="margin-bottom:0">
       <div class="sales-kpi-row sales-kpi-hierarchy">
         <div class="sales-kpi primary sales-kpi-total-parent">
-          <div class="sales-kpi-label">이번달 합계 매출<span>아마란스기준: 사업소+유통사/상품</span></div>
+          <div class="sales-kpi-heading">
+            <div class="sales-kpi-label"><strong id="sh-total-title">이번달 합계 매출</strong><span>아마란스기준: 사업소+유통사/상품</span></div>
+            <div class="sales-month-nav" aria-label="매출 조회 월 이동">
+              <button type="button" class="sales-month-arrow" onclick="shiftSalesDashboardMonth(-1)" title="이전 달" aria-label="이전 달">‹</button>
+              <button type="button" class="sales-month-current" id="sh-month-nav-label" onclick="resetSalesDashboardMonth()" title="이번 달로 이동">2026년 06월</button>
+              <button type="button" class="sales-month-arrow" id="sh-month-next" onclick="shiftSalesDashboardMonth(1)" title="다음 달" aria-label="다음 달">›</button>
+            </div>
+          </div>
           <div class="sales-kpi-value" id="sh-month"><span id="sh-month-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
             <div class="sales-kpi-target-track"><div class="sales-kpi-target-fill" id="sh-sales-target-bar"></div></div>
@@ -203,7 +210,7 @@
           <div class="sales-kpi-forecast" id="sh-month-forecast"></div>
           <div class="sales-kpi-children" aria-label="합계 매출 하위 구성">
         <div class="sales-kpi office sales-kpi-child">
-          <div class="sales-kpi-label">이번달 사업소 매출<span>사업소/상품</span></div>
+          <div class="sales-kpi-label"><strong id="sh-office-title">이번달 사업소 매출</strong><span>사업소/상품</span></div>
           <div class="sales-kpi-value"><span id="sh-today-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
             <div class="sales-kpi-target-track"><div class="sales-kpi-target-fill" id="sh-office-target-bar"></div></div>
@@ -214,7 +221,7 @@
           <div class="sales-kpi-forecast" id="sh-office-forecast"></div>
         </div>
         <div class="sales-kpi dist sales-kpi-child">
-          <div class="sales-kpi-label">이번달 유통사 매출<span>유통사/상품</span></div>
+          <div class="sales-kpi-label"><strong id="sh-dist-title">이번달 유통사 매출</strong><span>유통사/상품</span></div>
           <div class="sales-kpi-value"><span id="sh-yesterday-val">0</span><span class="sales-kpi-unit">원</span></div>
           <div class="sales-kpi-target">
             <div class="sales-kpi-target-track"><div class="sales-kpi-target-fill" id="sh-dist-target-bar"></div></div>
@@ -229,7 +236,14 @@
       </div>
       <div class="chart-card sales-trend-card">
         <div class="sales-trend-head">
-          <div class="chart-card-title">📈 일별 매출 추이 <span style="font-weight:600;color:var(--text2);font-size:15px" id="sh-chart-label">이번달</span> <span style="font-weight:400;color:var(--text3);font-size:12px" id="sh-workdays-label"></span></div>
+          <div class="sales-trend-title-wrap">
+            <div class="chart-card-title">📈 일별 매출 추이 <span style="font-weight:600;color:var(--text2);font-size:15px" id="sh-chart-label">이번달</span> <span style="font-weight:400;color:var(--text3);font-size:12px" id="sh-workdays-label"></span></div>
+            <div class="sales-month-nav sales-month-nav-light" aria-label="일별 매출 조회 월 이동">
+              <button type="button" class="sales-month-arrow" onclick="shiftSalesDashboardMonth(-1)" title="이전 달" aria-label="이전 달">‹</button>
+              <span class="sales-month-current" id="sh-chart-month-nav-label">2026년 06월</span>
+              <button type="button" class="sales-month-arrow" id="sh-chart-month-next" onclick="shiftSalesDashboardMonth(1)" title="다음 달" aria-label="다음 달">›</button>
+            </div>
+          </div>
           <div class="sales-trend-tabs" aria-label="일별 매출 추이 보기 방식">
             <button type="button" class="sales-trend-tab active" data-sales-trend-mode="amount" onclick="setSalesTrendMode('amount')">금액</button>
             <button type="button" class="sales-trend-tab" data-sales-trend-mode="flow" onclick="setSalesTrendMode('flow')">흐름</button>
@@ -246,7 +260,7 @@
 
     <!-- ══ 사업소 매출 순위 ══ -->
     <div class="dash-section">
-      <div class="dash-section-title"><span>🏆</span>이번달 사업소 매출 순위</div>
+      <div class="dash-section-title"><span>🏆</span><span id="sh-rank-section-title">이번달 사업소 매출 순위</span></div>
       <div class="chart-grid sales-rank-grid">
         <div class="chart-card">
           <div class="chart-card-head">
@@ -1642,7 +1656,7 @@
 <script src="js/products-grades-erp.js?v=20260622-erp-sync-5min"></script>
 <script src="js/core-auth-nav.js?v=20260622-page-tab-drag-visual"></script>
 <script src="js/journals-weekly-monthly.js?v=20260523-cleanup"></script>
-<script src="js/dashboard-records-users.js?v=20260622-rank-export-stamp"></script>
+<script src="js/dashboard-records-users.js?v=20260624-sales-month-nav"></script>
 <script src="js/clients.js?v=20260523-features"></script>
 <script src="js/daily-entry.js?v=20260523-cleanup"></script>
 <script src="js/stats-notices.js?v=20260613-channel-fix"></script>

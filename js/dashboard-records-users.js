@@ -1,6 +1,33 @@
 // DASHBOARD
 let salesTrendMode = 'amount';
 let salesTrendPayload = null;
+let salesDashboardMonth = '';
+
+function salesDashboardCurrentYm() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function salesDashboardMonthLabel(ym) {
+  const [year, month] = String(ym || '').split('-');
+  return `${year}년 ${month}월`;
+}
+
+function shiftSalesDashboardMonth(offset) {
+  const currentYm = salesDashboardCurrentYm();
+  const baseYm = salesDashboardMonth || currentYm;
+  const [year, month] = baseYm.split('-').map(Number);
+  const shifted = new Date(year, month - 1 + offset, 1);
+  const nextYm = `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
+  if (nextYm > currentYm) return;
+  salesDashboardMonth = nextYm;
+  renderSalesPage();
+}
+
+function resetSalesDashboardMonth() {
+  salesDashboardMonth = salesDashboardCurrentYm();
+  renderSalesPage();
+}
 // ════════════════════════════════════
 
 function renderDashboard() {
@@ -47,13 +74,37 @@ function renderSalesPage() {
   const fmtYmd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const now = new Date();
   const today = fmtYmd(now);
-  const ym = today.slice(0,7);
+  const currentYm = today.slice(0,7);
+  if (!salesDashboardMonth || salesDashboardMonth > currentYm) salesDashboardMonth = currentYm;
+  const ym = salesDashboardMonth;
+  const isCurrentMonth = ym === currentYm;
+  const [selectedYear, selectedMonth] = ym.split('-').map(Number);
+  const monthEnd = `${ym}-${String(new Date(selectedYear, selectedMonth, 0).getDate()).padStart(2, '0')}`;
+  const periodEnd = isCurrentMonth ? today : monthEnd;
   const monthStart = ym + '-01';
+  const monthLabel = salesDashboardMonthLabel(ym);
+  const shortMonthLabel = isCurrentMonth ? '이번달' : `${selectedMonth}월`;
+  ['sh-month-nav-label', 'sh-chart-month-nav-label'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = monthLabel;
+  });
+  ['sh-month-next', 'sh-chart-month-next'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = isCurrentMonth;
+  });
+  const totalTitle = document.getElementById('sh-total-title');
+  const officeTitle = document.getElementById('sh-office-title');
+  const distTitle = document.getElementById('sh-dist-title');
+  const rankSectionTitle = document.getElementById('sh-rank-section-title');
+  if (totalTitle) totalTitle.textContent = `${shortMonthLabel} 합계 매출`;
+  if (officeTitle) officeTitle.textContent = `${shortMonthLabel} 사업소 매출`;
+  if (distTitle) distTitle.textContent = `${shortMonthLabel} 유통사 매출`;
+  if (rankSectionTitle) rankSectionTitle.textContent = `${shortMonthLabel} 사업소 매출 순위`;
   const basisMeta = getOrderBasisMeta();
   const monthEntries = allEntries.filter(e => e.date?.startsWith(ym));
   const erpMonth = allOrders.filter(e => {
     const d = e.date || '';
-    return d >= monthStart && d <= today;
+    return d >= monthStart && d <= periodEnd;
   });
   const useErpForCharts = erpMonth.length > 0;
   const rankBasisText = useErpForCharts ? `${basisMeta.label} 공급가 기준 (원)` : '당사 구매액 기준 (원)';
@@ -80,7 +131,7 @@ function renderSalesPage() {
     ? (monthOfficeSales + monthDistSales)
     : monthEntries.reduce((s,e) => s+(e.ourPurchase||0),0);
 
-  const prevM = new Date(); prevM.setMonth(prevM.getMonth()-1);
+  const prevM = new Date(selectedYear, selectedMonth - 2, 1);
   const prevYm = prevM.getFullYear()+'-'+String(prevM.getMonth()+1).padStart(2,'0');
   const prevMonthRows = allOrders.filter(e => (e.date||'').startsWith(prevYm));
   const prevMonthSales = useErpForCharts
@@ -95,8 +146,9 @@ function renderSalesPage() {
   const officeShare = monthSales > 0 ? Math.round(monthOfficeSales / monthSales * 100) : 0;
   const distShare = monthSales > 0 ? Math.round(monthDistSales / monthSales * 100) : 0;
   const isTrackedSales = o => isOffice(o) || isDist(o);
-  const officeTarget = parseFloat(targets.officeSalesTarget) || 0;
-  const distTarget = parseFloat(targets.distSalesTarget) || 0;
+  const selectedPlanTarget = getPlanSalesTargetsForMonth(ym);
+  const officeTarget = selectedPlanTarget?.office || parseFloat(targets.officeSalesTarget) || 0;
+  const distTarget = selectedPlanTarget?.dist || parseFloat(targets.distSalesTarget) || 0;
   const teamSalesTarget = (officeTarget + distTarget) || (parseFloat(targets.salesTarget) || 0);
   const setSalesKpiTarget = (barId, pctId, labelId, actual, target) => {
     const bar = document.getElementById(barId);
@@ -147,24 +199,24 @@ function renderSalesPage() {
     dailyDowType.push(holidayName ? 'holiday' : isSun ? 'sun' : isSat ? 'sat' : 'weekday');
     dayLabels.push([d+'일', DOW[dow]]);
     const dayOfficeSales = useErpForCharts
-      ? (ds > today ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isOffice(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
+      ? (ds > periodEnd ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isOffice(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
       : Math.round(allEntries.filter(e=>e.date===ds && isOffice(e)).reduce((s,e)=>s+(e.ourPurchase||0),0));
     const dayDistSales = useErpForCharts
-      ? (ds > today ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isDist(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
+      ? (ds > periodEnd ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isDist(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
       : Math.round(allEntries.filter(e=>e.date===ds && isDist(e)).reduce((s,e)=>s+(e.ourPurchase||0),0));
     dailyOfficeSalesData.push(dayOfficeSales);
     dailyDistSalesData.push(dayDistSales);
     daySalesData.push(dayOfficeSales + dayDistSales);
   }
-  document.getElementById('sh-chart-label').textContent = ym.replace('-','년 ')+'월';
+  document.getElementById('sh-chart-label').textContent = monthLabel;
   const workdays = dailyDowType.filter(t => t === 'weekday').length;
-  const passedWorkdays = dailyDowType.filter((t,i) => { const ds = ym+'-'+String(i+1).padStart(2,'0'); return t === 'weekday' && ds <= today; }).length;
+  const passedWorkdays = dailyDowType.filter((t,i) => { const ds = ym+'-'+String(i+1).padStart(2,'0'); return t === 'weekday' && ds <= periodEnd; }).length;
   const wdEl = document.getElementById('sh-workdays-label');
   if (wdEl) wdEl.textContent = `영업일 ${workdays}일 (경과 ${passedWorkdays}일)`;
   // 월말 매출 예측 (과거 월별 페이싱 반영 — 월초 집중/월말 감소 패턴 보정, 데이터 부족 시 선형 fallback)
   // 합계 카드는 사업소+유통사 예측을 다시 합산해서 실제 매출 집계식과 맞춘다.
   const calcForecast = (actual, rowFilter) => {
-    if (!(useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays)) return null;
+    if (!(isCurrentMonth && useErpForCharts && passedWorkdays > 0 && passedWorkdays < workdays)) return null;
     if (actual <= 0) return { forecast: 0, empty: true };
     const pace = forecastMonthByPacing(ym, today, rowFilter);
     const usePace = pace && pace >= 0.05;
@@ -208,7 +260,7 @@ function renderSalesPage() {
   setForecastText('sh-dist-forecast', distForecast, distTarget);
   let lastSalesDayIndex = 0;
   daySalesData.forEach((v, i) => { if (v > 0) lastSalesDayIndex = i; });
-  const todayIndex = today.startsWith(ym)
+  const todayIndex = isCurrentMonth
     ? Math.min(Math.max(parseInt(today.slice(8, 10), 10) - 1, 0), daysInMonth - 1)
     : daysInMonth - 1;
   renderSalesTrendChart({
