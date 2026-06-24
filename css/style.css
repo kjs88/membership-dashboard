@@ -202,7 +202,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sales-kpi-heading .sales-kpi-label{margin-bottom:8px;}
 .sales-kpi-heading .sales-month-nav{margin-left:2px;}
 .sales-month-nav{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:3px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:7px;}
-.sales-month-arrow,.sales-month-current{height:30px;border:0;border-radius:5px;font-family:inherit;font-weight:800;letter-spacing:0;}
+.sales-month-arrow,.sales-month-current{display:inline-flex;align-items:center;justify-content:center;height:30px;border:0;border-radius:5px;font-family:inherit;font-weight:800;line-height:1;letter-spacing:0;}
 .sales-month-arrow{width:30px;background:rgba(255,255,255,.12);color:#fff;font-size:22px;line-height:1;cursor:pointer;}
 .sales-month-arrow:hover{background:rgba(255,255,255,.24);}
 .sales-month-arrow:disabled{opacity:.35;cursor:not-allowed;}
