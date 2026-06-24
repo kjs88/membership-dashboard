@@ -1,7 +1,7 @@
 // DASHBOARD
 let salesTrendMode = 'amount';
 let salesTrendPayload = null;
-let salesDashboardMonth = '';
+const salesSectionMonths = { summary: '', trend: '', office: '', dist: '' };
 
 function salesDashboardCurrentYm() {
   const now = new Date();
@@ -13,20 +13,43 @@ function salesDashboardMonthLabel(ym) {
   return `${year}년 ${month}월`;
 }
 
-function shiftSalesDashboardMonth(offset) {
+function salesMonthContext(section) {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const currentYm = salesDashboardCurrentYm();
-  const baseYm = salesDashboardMonth || currentYm;
+  let ym = salesSectionMonths[section] || currentYm;
+  if (ym > currentYm) ym = currentYm;
+  salesSectionMonths[section] = ym;
+  const [year, month] = ym.split('-').map(Number);
+  const isCurrentMonth = ym === currentYm;
+  const monthEnd = `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+  return {
+    ym,
+    today,
+    currentYm,
+    isCurrentMonth,
+    year,
+    month,
+    monthStart: `${ym}-01`,
+    monthEnd,
+    periodEnd: isCurrentMonth ? today : monthEnd,
+    monthLabel: salesDashboardMonthLabel(ym),
+    shortMonthLabel: isCurrentMonth ? '이번달' : `${month}월`,
+  };
+}
+
+function shiftSalesMonth(section, offset) {
+  if (!Object.prototype.hasOwnProperty.call(salesSectionMonths, section)) return;
+  const currentYm = salesDashboardCurrentYm();
+  const baseYm = salesSectionMonths[section] || currentYm;
   const [year, month] = baseYm.split('-').map(Number);
   const shifted = new Date(year, month - 1 + offset, 1);
   const nextYm = `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
   if (nextYm > currentYm) return;
-  salesDashboardMonth = nextYm;
-  renderSalesPage();
-}
-
-function resetSalesDashboardMonth() {
-  salesDashboardMonth = salesDashboardCurrentYm();
-  renderSalesPage();
+  salesSectionMonths[section] = nextYm;
+  if (section === 'summary') renderSalesPage();
+  else if (section === 'trend') renderSalesTrendMonth();
+  else renderSalesRankMonth(section);
 }
 // ════════════════════════════════════
 
@@ -71,35 +94,27 @@ function forecastMonthByPacing(ym, todayStr, rowFilter) {
 }
 
 function renderSalesPage() {
-  const fmtYmd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  const now = new Date();
-  const today = fmtYmd(now);
-  const currentYm = today.slice(0,7);
-  if (!salesDashboardMonth || salesDashboardMonth > currentYm) salesDashboardMonth = currentYm;
-  const ym = salesDashboardMonth;
-  const isCurrentMonth = ym === currentYm;
-  const [selectedYear, selectedMonth] = ym.split('-').map(Number);
-  const monthEnd = `${ym}-${String(new Date(selectedYear, selectedMonth, 0).getDate()).padStart(2, '0')}`;
-  const periodEnd = isCurrentMonth ? today : monthEnd;
-  const monthStart = ym + '-01';
-  const monthLabel = salesDashboardMonthLabel(ym);
-  const shortMonthLabel = isCurrentMonth ? '이번달' : `${selectedMonth}월`;
-  ['sh-month-nav-label', 'sh-chart-month-nav-label', 'sh-rank-month-nav-label'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = monthLabel;
-  });
-  ['sh-month-next', 'sh-chart-month-next', 'sh-rank-month-next'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = isCurrentMonth;
-  });
+  const {
+    ym,
+    today,
+    isCurrentMonth,
+    year: selectedYear,
+    month: selectedMonth,
+    periodEnd,
+    monthStart,
+    monthLabel,
+    shortMonthLabel,
+  } = salesMonthContext('summary');
+  const monthNavLabel = document.getElementById('sh-month-nav-label');
+  const monthNext = document.getElementById('sh-month-next');
+  if (monthNavLabel) monthNavLabel.textContent = monthLabel;
+  if (monthNext) monthNext.disabled = isCurrentMonth;
   const totalTitle = document.getElementById('sh-total-title');
   const officeTitle = document.getElementById('sh-office-title');
   const distTitle = document.getElementById('sh-dist-title');
-  const rankSectionTitle = document.getElementById('sh-rank-section-title');
   if (totalTitle) totalTitle.textContent = `${shortMonthLabel} 합계 매출`;
   if (officeTitle) officeTitle.textContent = `${shortMonthLabel} 사업소 매출`;
   if (distTitle) distTitle.textContent = `${shortMonthLabel} 유통사 매출`;
-  if (rankSectionTitle) rankSectionTitle.textContent = `${shortMonthLabel} 사업소·유통사 매출 순위`;
   const basisMeta = getOrderBasisMeta();
   const monthEntries = allEntries.filter(e => e.date?.startsWith(ym));
   const erpMonth = allOrders.filter(e => {
@@ -107,13 +122,8 @@ function renderSalesPage() {
     return d >= monthStart && d <= periodEnd;
   });
   const useErpForCharts = erpMonth.length > 0;
-  const rankBasisText = useErpForCharts ? `${basisMeta.label} 공급가 기준 (원)` : '당사 구매액 기준 (원)';
-  const rankOfficeSub = document.getElementById('sh-rank-office-sub');
-  const rankDistSub = document.getElementById('sh-rank-dist-sub');
-  if (rankOfficeSub) rankOfficeSub.textContent = rankBasisText;
-  if (rankDistSub) rankDistSub.textContent = rankBasisText;
   const personSub = document.getElementById('sh-person-sub');
-  if (personSub) personSub.textContent = useErpForCharts ? `이번달 ${basisMeta.label} 공급가 기준 (원)` : '이번달 당사 구매액 기준 (원)';
+  if (personSub) personSub.textContent = useErpForCharts ? `${shortMonthLabel} ${basisMeta.label} 공급가 기준 (원)` : `${shortMonthLabel} 당사 구매액 기준 (원)`;
 
   // ── 채널 분류 (사업소 / 유통사) ──
   //  · 사업소: 영업사원이 이기현·장재순·이민우·안성종 중 한 명 (고객분류 도매(이름))
@@ -145,7 +155,6 @@ function renderSalesPage() {
   const distDiff   = prevMonthDistSales   > 0 ? ((monthDistSales   - prevMonthDistSales)   / prevMonthDistSales   * 100) : 0;
   const officeShare = monthSales > 0 ? Math.round(monthOfficeSales / monthSales * 100) : 0;
   const distShare = monthSales > 0 ? Math.round(monthDistSales / monthSales * 100) : 0;
-  const isTrackedSales = o => isOffice(o) || isDist(o);
   const selectedPlanTarget = getPlanSalesTargetsForMonth(ym);
   const officeTarget = selectedPlanTarget?.office || parseFloat(targets.officeSalesTarget) || 0;
   const distTarget = selectedPlanTarget?.dist || parseFloat(targets.distSalesTarget) || 0;
@@ -187,32 +196,15 @@ function renderSalesPage() {
     : `${erpMonthDist.length}건 · 비중 ${distShare}%`;
 
   const daysInMonth = new Date(parseInt(ym.split('-')[0]), parseInt(ym.split('-')[1]), 0).getDate();
-  const dayLabels = [], daySalesData = [], dailyOfficeSalesData = [], dailyDistSalesData = [];
-  const DOW = ['일','월','화','수','목','금','토'];
   const dailyDowType = [];
   for (let d=1; d<=daysInMonth; d++) {
     const ds = ym + '-' + String(d).padStart(2,'0');
     const dow = new Date(ds).getDay();
-    const mmdd = ds.slice(5);
     const holidayName = krHolidayName(ds);
-    const isSun = dow === 0, isSat = dow === 6, isRed = holidayName || isSun || isSat;
-    dailyDowType.push(holidayName ? 'holiday' : isSun ? 'sun' : isSat ? 'sat' : 'weekday');
-    dayLabels.push([d+'일', DOW[dow]]);
-    const dayOfficeSales = useErpForCharts
-      ? (ds > periodEnd ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isOffice(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
-      : Math.round(allEntries.filter(e=>e.date===ds && isOffice(e)).reduce((s,e)=>s+(e.ourPurchase||0),0));
-    const dayDistSales = useErpForCharts
-      ? (ds > periodEnd ? 0 : Math.round(allOrders.filter(e=>e.date===ds && isDist(e)).reduce((s,e)=>s+(parseFloat(e.supply)||0),0)))
-      : Math.round(allEntries.filter(e=>e.date===ds && isDist(e)).reduce((s,e)=>s+(e.ourPurchase||0),0));
-    dailyOfficeSalesData.push(dayOfficeSales);
-    dailyDistSalesData.push(dayDistSales);
-    daySalesData.push(dayOfficeSales + dayDistSales);
+    dailyDowType.push(holidayName ? 'holiday' : dow === 0 ? 'sun' : dow === 6 ? 'sat' : 'weekday');
   }
-  document.getElementById('sh-chart-label').textContent = monthLabel;
   const workdays = dailyDowType.filter(t => t === 'weekday').length;
   const passedWorkdays = dailyDowType.filter((t,i) => { const ds = ym+'-'+String(i+1).padStart(2,'0'); return t === 'weekday' && ds <= periodEnd; }).length;
-  const wdEl = document.getElementById('sh-workdays-label');
-  if (wdEl) wdEl.textContent = `영업일 ${workdays}일 (경과 ${passedWorkdays}일)`;
   // 월말 매출 예측 (과거 월별 페이싱 반영 — 월초 집중/월말 감소 패턴 보정, 데이터 부족 시 선형 fallback)
   // 합계 카드는 사업소+유통사 예측을 다시 합산해서 실제 매출 집계식과 맞춘다.
   const calcForecast = (actual, rowFilter) => {
@@ -258,53 +250,6 @@ function renderSalesPage() {
   );
   setForecastText('sh-office-forecast', officeForecast, officeTarget);
   setForecastText('sh-dist-forecast', distForecast, distTarget);
-  let lastSalesDayIndex = 0;
-  daySalesData.forEach((v, i) => { if (v > 0) lastSalesDayIndex = i; });
-  const todayIndex = isCurrentMonth
-    ? Math.min(Math.max(parseInt(today.slice(8, 10), 10) - 1, 0), daysInMonth - 1)
-    : daysInMonth - 1;
-  renderSalesTrendChart({
-    ym,
-    labels: dayLabels,
-    dowTypes: dailyDowType,
-    total: daySalesData,
-    office: dailyOfficeSalesData,
-    dist: dailyDistSalesData,
-    avgFlow: buildSalesTrendAverage(ym, daysInMonth, isTrackedSales, useErpForCharts),
-    officeBase: Math.max(monthOfficeSales, officeForecast?.forecast || 0),
-    distBase: Math.max(monthDistSales, distForecast?.forecast || 0),
-    pointIndex: todayIndex,
-    cutoffIndex: todayIndex,
-    workdays,
-    passedWorkdays
-  });
-
-  const buildSalesRank = rows => {
-    const map = {};
-    rows.forEach(e => {
-      const name = String(e.client || e.institution || '').trim();
-      if (!name) return;
-      const amount = useErpForCharts ? (parseFloat(e.supply) || 0) : (parseFloat(e.ourPurchase) || 0);
-      map[name] = (map[name] || 0) + amount;
-    });
-    return Object.entries(map).sort((a,b) => b[1] - a[1]);
-  };
-  const officeRankRows = useErpForCharts ? erpMonthOffice : monthEntries.filter(isOffice);
-  const distRankRows = useErpForCharts ? erpMonthDist : monthEntries.filter(isDist);
-  window._shRankLists = {
-    office: buildSalesRank(officeRankRows),
-    dist: buildSalesRank(distRankRows),
-  };
-  window._shRankExportMeta = {
-    ym,
-    periodEnd,
-    basis: rankBasisText,
-    source: useErpForCharts ? `${basisMeta.label} ERP 공급가` : '당사 구매액',
-  };
-  window._shRankPages = { office: 1, dist: 1 };
-  shRenderRankPage('office');
-  shRenderRankPage('dist');
-
   const salesByPerson = {};
   const personSalesRows = useErpForCharts ? erpMonthOffice : monthEntries.filter(e => !isDist(e));
   personSalesRows.forEach(e => {
@@ -320,7 +265,7 @@ function renderSalesPage() {
   const PERSON_COLORS = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
   const getPersonColor = (name, i) => { const u = allUsers.find(u => u.name === name); return u ? u.color : PERSON_COLORS[i % PERSON_COLORS.length]; };
   document.getElementById('sh-person-list').innerHTML = personList.length === 0
-    ? '<div style="color:var(--text3);font-size:13px;padding:24px 0">이번달 데이터가 없습니다</div>'
+    ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${monthLabel} 데이터가 없습니다</div>`
     : personList.map(([name, amt], i) => {
         const tgt = personSalesTgt[name] || 0;
         const achPct = tgt ? Math.min(Math.round(amt/tgt*100), 999) : null;
@@ -331,6 +276,9 @@ function renderSalesPage() {
         return `<div class="leader-item"><div class="leader-rank ${['r1','r2','r3'][i]||''}">${i+1}</div><div class="leader-name">${name}<div class="leader-meta">${(useErpForCharts ? erpMonth : monthEntries).filter(e=>e.person===name).length}건 ${useErpForCharts?basisMeta.action:''} ${metaRight}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${barWidth}%;background:${pc}"></div></div><div class="leader-num" style="color:${pc};font-weight:700">${Math.round(amt).toLocaleString()}<br>${pctBadge}</div></div>`;
       }).join('');
   rc('chart-person-sales','doughnut', personList.map(p=>p[0]), personList.map(p=>p[1]), personList.map((p,i)=>getPersonColor(p[0],i)));
+  renderSalesTrendMonth();
+  renderSalesRankMonth('office');
+  renderSalesRankMonth('dist');
 }
 
 function renderDashPage() {
@@ -525,6 +473,146 @@ function renderDashPending() {
   </table>`;
 }
 
+function renderSalesTrendMonth() {
+  const {
+    ym,
+    today,
+    isCurrentMonth,
+    year,
+    month,
+    periodEnd,
+    monthStart,
+    monthLabel,
+  } = salesMonthContext('trend');
+  const labelEl = document.getElementById('sh-chart-month-nav-label');
+  const nextEl = document.getElementById('sh-chart-month-next');
+  const chartLabel = document.getElementById('sh-chart-label');
+  if (labelEl) labelEl.textContent = monthLabel;
+  if (nextEl) nextEl.disabled = isCurrentMonth;
+  if (chartLabel) chartLabel.textContent = monthLabel;
+
+  const monthEntries = allEntries.filter(e => e.date?.startsWith(ym));
+  const erpMonth = allOrders.filter(e => {
+    const date = e.date || '';
+    return date >= monthStart && date <= periodEnd;
+  });
+  const useErp = erpMonth.length > 0;
+  const isOffice = row => orderChannel(row) === 'office';
+  const isDist = row => orderChannel(row) === 'dist';
+  const isTrackedSales = row => isOffice(row) || isDist(row);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const labels = [];
+  const dowTypes = [];
+  const office = [];
+  const dist = [];
+  const total = [];
+  const dayNames = ['일','월','화','수','목','금','토'];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = `${ym}-${String(day).padStart(2, '0')}`;
+    const dow = new Date(date).getDay();
+    const holidayName = krHolidayName(date);
+    dowTypes.push(holidayName ? 'holiday' : dow === 0 ? 'sun' : dow === 6 ? 'sat' : 'weekday');
+    labels.push([`${day}일`, dayNames[dow]]);
+    const officeAmount = useErp
+      ? (date > periodEnd ? 0 : Math.round(allOrders.filter(row => row.date === date && isOffice(row)).reduce((sum, row) => sum + (parseFloat(row.supply) || 0), 0)))
+      : Math.round(monthEntries.filter(row => row.date === date && isOffice(row)).reduce((sum, row) => sum + (parseFloat(row.ourPurchase) || 0), 0));
+    const distAmount = useErp
+      ? (date > periodEnd ? 0 : Math.round(allOrders.filter(row => row.date === date && isDist(row)).reduce((sum, row) => sum + (parseFloat(row.supply) || 0), 0)))
+      : Math.round(monthEntries.filter(row => row.date === date && isDist(row)).reduce((sum, row) => sum + (parseFloat(row.ourPurchase) || 0), 0));
+    office.push(officeAmount);
+    dist.push(distAmount);
+    total.push(officeAmount + distAmount);
+  }
+
+  const workdays = dowTypes.filter(type => type === 'weekday').length;
+  const passedWorkdays = dowTypes.filter((type, index) => {
+    const date = `${ym}-${String(index + 1).padStart(2, '0')}`;
+    return type === 'weekday' && date <= periodEnd;
+  }).length;
+  const workdaysEl = document.getElementById('sh-workdays-label');
+  if (workdaysEl) workdaysEl.textContent = `영업일 ${workdays}일 (경과 ${passedWorkdays}일)`;
+
+  const calcForecast = (actual, rowFilter) => {
+    if (!(isCurrentMonth && useErp && passedWorkdays > 0 && passedWorkdays < workdays) || actual <= 0) return null;
+    const pace = forecastMonthByPacing(ym, today, rowFilter);
+    return Math.round(pace && pace >= 0.05 ? actual / pace : actual / passedWorkdays * workdays);
+  };
+  const officeTotal = office.reduce((sum, value) => sum + value, 0);
+  const distTotal = dist.reduce((sum, value) => sum + value, 0);
+  const pointIndex = isCurrentMonth
+    ? Math.min(Math.max(parseInt(today.slice(8, 10), 10) - 1, 0), daysInMonth - 1)
+    : daysInMonth - 1;
+
+  renderSalesTrendChart({
+    ym,
+    labels,
+    dowTypes,
+    total,
+    office,
+    dist,
+    avgFlow: buildSalesTrendAverage(ym, daysInMonth, isTrackedSales, useErp),
+    officeBase: Math.max(officeTotal, calcForecast(officeTotal, isOffice) || 0),
+    distBase: Math.max(distTotal, calcForecast(distTotal, isDist) || 0),
+    pointIndex,
+    cutoffIndex: pointIndex,
+    workdays,
+    passedWorkdays,
+  });
+}
+
+function renderSalesRankMonth(kind) {
+  if (kind !== 'office' && kind !== 'dist') return;
+  const {
+    ym,
+    isCurrentMonth,
+    periodEnd,
+    monthStart,
+    monthLabel,
+    shortMonthLabel,
+  } = salesMonthContext(kind);
+  const label = kind === 'office' ? '사업소' : '유통사';
+  const monthLabelEl = document.getElementById(`sh-rank-${kind}-month-label`);
+  const nextEl = document.getElementById(`sh-rank-${kind}-next`);
+  const titleEl = document.getElementById(`sh-rank-${kind}-title`);
+  if (monthLabelEl) monthLabelEl.textContent = monthLabel;
+  if (nextEl) nextEl.disabled = isCurrentMonth;
+  if (titleEl) titleEl.textContent = `${shortMonthLabel} ${label} 매출 순위`;
+
+  const basisMeta = getOrderBasisMeta();
+  const monthEntries = allEntries.filter(row => row.date?.startsWith(ym));
+  const erpMonth = allOrders.filter(row => {
+    const date = row.date || '';
+    return date >= monthStart && date <= periodEnd;
+  });
+  const useErp = erpMonth.length > 0;
+  const rowFilter = row => orderChannel(row) === kind;
+  const sourceRows = useErp ? erpMonth.filter(rowFilter) : monthEntries.filter(rowFilter);
+  const rankMap = {};
+  sourceRows.forEach(row => {
+    const name = String(row.client || row.institution || '').trim();
+    if (!name) return;
+    const amount = useErp ? (parseFloat(row.supply) || 0) : (parseFloat(row.ourPurchase) || 0);
+    rankMap[name] = (rankMap[name] || 0) + amount;
+  });
+
+  const basisText = useErp ? `${basisMeta.label} 공급가 기준 (원)` : '당사 구매액 기준 (원)';
+  const subEl = document.getElementById(`sh-rank-${kind}-sub`);
+  if (subEl) subEl.textContent = basisText;
+  window._shRankLists = window._shRankLists || {};
+  window._shRankLists[kind] = Object.entries(rankMap).sort((a, b) => b[1] - a[1]);
+  window._shRankExportMeta = window._shRankExportMeta || {};
+  window._shRankExportMeta[kind] = {
+    ym,
+    periodEnd,
+    basis: basisText,
+    source: useErp ? `${basisMeta.label} ERP 공급가` : '당사 구매액',
+  };
+  window._shRankPages = window._shRankPages || {};
+  window._shRankPages[kind] = 1;
+  shRenderRankPage(kind);
+}
+
 function shRenderRankPage(kind = 'office') {
   const list = (window._shRankLists && window._shRankLists[kind]) || [];
   const PAGE_SIZE = 10;
@@ -542,8 +630,9 @@ function shRenderRankPage(kind = 'office') {
   const listEl = document.getElementById(`sh-rank-${kind}-list`);
   const pagerEl = document.getElementById(`sh-rank-${kind}-pager`);
   if (!listEl || !pagerEl) return;
+  const rankMeta = (window._shRankExportMeta && window._shRankExportMeta[kind]) || {};
   listEl.innerHTML = pageItems.length === 0
-    ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${salesDashboardMonthLabel(salesDashboardMonth)} 매출 데이터가 없습니다</div>`
+    ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${salesDashboardMonthLabel(rankMeta.ym || salesDashboardCurrentYm())} 매출 데이터가 없습니다</div>`
     : pageItems.map(([name, amt], idx) => {
         const globalIdx = start + idx;
         const pct = totalRankAmt ? (amt / totalRankAmt * 100).toFixed(2) : '0.00';
@@ -610,7 +699,7 @@ function downloadShRankExcel(kind = 'office') {
     return;
   }
 
-  const meta = window._shRankExportMeta || {};
+  const meta = (window._shRankExportMeta && window._shRankExportMeta[kind]) || {};
   const total = list.reduce((sum, row) => sum + (Number(row[1]) || 0), 0);
   const label = kind === 'office' ? '사업소' : '유통사';
   const rows = list.map(([name, amount], index) => {
