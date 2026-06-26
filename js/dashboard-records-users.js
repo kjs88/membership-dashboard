@@ -914,9 +914,9 @@ function salesTrendMoney(v) {
 function salesTrendClassify(series) {
   const day5 = series[Math.min(4, series.length - 1)] || 0;
   const day15 = series[Math.min(14, series.length - 1)] || 0;
-  if (day5 >= 32) return { label: '월초 집중형', text: `초반 5일에 ${Math.round(day5)}%까지 올라가고 이후 상승 속도가 완만해집니다.` };
-  if (day15 >= 70) return { label: '중반 집중형', text: `15일 전후에 ${Math.round(day15)}%까지 진행되어 중반 집중도가 높습니다.` };
-  return { label: '완만한 후행형', text: `초반보다 중후반까지 꾸준히 올라가는 분산형 흐름입니다.` };
+  if (day5 >= 32) return { label: '월초 집중형', text: `월 매출의 ${Math.round(day5)}%가 초반 5일 안에 쌓인 패턴입니다.` };
+  if (day15 >= 70) return { label: '중반 집중형', text: `월 매출의 ${Math.round(day15)}%가 15일 전후까지 쌓인 패턴입니다.` };
+  return { label: '완만한 후행형', text: '월 매출이 초반에 몰리지 않고 중후반까지 나누어 쌓이는 패턴입니다.' };
 }
 
 function renderSalesTrendInsights(payload, derived) {
@@ -932,21 +932,23 @@ function renderSalesTrendInsights(payload, derived) {
     const officeInfo = salesTrendClassify(derived.officeFlow);
     const distInfo = salesTrendClassify(derived.distFlow);
     const diff = Math.round(((derived.officeFlow[idx] || 0) - (derived.distFlow[idx] || 0)) * 10) / 10;
+    const officePct = derived.officeFlow[idx] || 0;
+    const distPct = derived.distFlow[idx] || 0;
     el.innerHTML = `
       <div class="sales-trend-insight">
-        <div class="sales-trend-insight-label">사업소 흐름</div>
-        <div class="sales-trend-insight-value office">${officeInfo.label}</div>
-        <p>${officeInfo.text}</p>
+        <div class="sales-trend-insight-label">사업소 누적률</div>
+        <div class="sales-trend-insight-value office">${officePct}%</div>
+        <p>${idx + 1}일까지 사업소 월 매출이 전체의 ${officePct}%까지 쌓였습니다. ${officeInfo.text}</p>
       </div>
       <div class="sales-trend-insight">
-        <div class="sales-trend-insight-label">유통사 흐름</div>
-        <div class="sales-trend-insight-value dist">${distInfo.label}</div>
-        <p>${distInfo.text}</p>
+        <div class="sales-trend-insight-label">유통사 누적률</div>
+        <div class="sales-trend-insight-value dist">${distPct}%</div>
+        <p>${idx + 1}일까지 유통사 월 매출이 전체의 ${distPct}%까지 쌓였습니다. ${distInfo.text}</p>
       </div>
       <div class="sales-trend-insight is-summary">
-        <div class="sales-trend-insight-label">${idx + 1}일차 기준 차이</div>
+        <div class="sales-trend-insight-label">${idx + 1}일 기준 누적률 차이</div>
         <div class="sales-trend-insight-value">${diff >= 0 ? '+' : ''}${diff}%p</div>
-        <p>${diff >= 0 ? '사업소가 유통사보다 월 매출을 더 빨리 소진하고 있습니다.' : '유통사가 사업소보다 월 매출을 더 빨리 소진하고 있습니다.'}</p>
+        <p>${diff >= 0 ? '사업소가 유통사보다 이번 달 매출이 더 빠르게 쌓이고 있습니다.' : '유통사가 사업소보다 이번 달 매출이 더 빠르게 쌓이고 있습니다.'}</p>
       </div>`;
     return;
   }
@@ -1073,9 +1075,9 @@ function renderSalesTrendChart(payload) {
       data: {
         labels: chartLabels,
         datasets: [
-          { label: '사업소 누적 진행률', data: officeFlowChart, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
-          { label: '유통사 누적 진행률', data: distFlowChart, borderColor: '#76A8E3', backgroundColor: '#76A8E3', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
-          { label: '과거 평균', data: avgFlowChart, borderColor: '#9AB0AA', backgroundColor: '#9AB0AA', borderWidth: 2, borderDash: [6, 6], pointRadius: 0, tension: .25 },
+          { label: '사업소 월 매출 누적률', data: officeFlowChart, borderColor: '#2B72C8', backgroundColor: '#2B72C8', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
+          { label: '유통사 월 매출 누적률', data: distFlowChart, borderColor: '#76A8E3', backgroundColor: '#76A8E3', borderWidth: 3, pointRadius: 2.8, pointHoverRadius: 5, tension: .28 },
+          { label: '과거 월 평균 누적률', data: avgFlowChart, borderColor: '#9AB0AA', backgroundColor: '#9AB0AA', borderWidth: 2, borderDash: [6, 6], pointRadius: 0, tension: .25 },
         ]
       },
       options: {
