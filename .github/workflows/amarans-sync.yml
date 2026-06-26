@@ -17,6 +17,10 @@ on:
     - cron: '*/5 23 * * 0-4'
     # GitHub cron is UTC: KST 09:00-23:55 is UTC 00:00-14:55 on the same day.
     - cron: '*/5 0-14 * * 1-5'
+    # KST weekends 08:00, then every 2 hours through 24:00 (recent).
+    - cron: '0 23 * * 5,6'
+    - cron: '0 1-13/2 * * 6,0'
+    - cron: '0 15 * * 6,0'
 
 concurrency:
   group: amarans-erp-sync
@@ -52,7 +56,14 @@ jobs:
           echo "utc_now=$(date -u '+%Y-%m-%d %H:%M:%S')"
           echo "kst_now=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S')"
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            AMARANS_IGNORE_AUTO_HOURS=1 python scripts/amarans_api_v10.py --auto --recent 60
+            case "${{ github.event.schedule }}" in
+              "0 23 * * 5,6"|"0 1-13/2 * * 6,0"|"0 15 * * 6,0")
+                AMARANS_IGNORE_AUTO_HOURS=1 AMARANS_IGNORE_AUTO_WEEKEND=1 python scripts/amarans_api_v10.py --auto --recent 60
+                ;;
+              *)
+                AMARANS_IGNORE_AUTO_HOURS=1 python scripts/amarans_api_v10.py --auto --recent 60
+                ;;
+            esac
           elif [ "${{ inputs.mode }}" = "full" ]; then
             python scripts/amarans_api_v10.py --auto --force --full
           else
