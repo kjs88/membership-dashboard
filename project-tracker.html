@@ -44,6 +44,12 @@
   .quick-tabs{display:inline-flex;gap:4px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:10px}
   .quick-tab{height:30px;background:transparent;color:var(--muted);padding:0 10px;font-size:12px}
   .quick-tab.active{background:var(--green-light);color:var(--green-dark)}
+  .tool-split{height:30px;width:1px;background:var(--line);margin:0 2px}
+  .saved-view-select{height:34px;min-width:130px}
+  .bulk-bar{display:none;align-items:center;gap:7px;background:#fff;border:1px solid var(--green-mid);border-radius:10px;padding:8px 10px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .bulk-bar.on{display:flex}
+  .bulk-bar b{font-size:12px;color:var(--green-dark)}
+  .bulk-bar select{height:30px;font-size:12px}
   .layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px}
   .panel{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
   .panel-head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:13px 15px;border-bottom:1px solid var(--line)}
@@ -77,10 +83,12 @@
   .stat span{font-size:11px;color:rgba(255,255,255,.75)}
   .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
   .table-wrap{overflow:auto}
-  table{width:100%;border-collapse:collapse;min-width:1080px;background:#fff}
+  table{width:100%;border-collapse:collapse;min-width:1320px;background:#fff}
   th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;font-size:12px;vertical-align:middle}
   th{position:sticky;top:0;background:var(--surface2);z-index:2;color:var(--muted);font-size:11px;font-weight:900}
   td.actions{white-space:nowrap;text-align:right}
+  .row-check{width:18px;height:18px;vertical-align:middle}
+  .group-row td{background:var(--surface2);font-weight:900;color:var(--muted);border-top:1px solid var(--line2)}
   .task-title{font-weight:900;color:var(--txt);cursor:pointer}
   .task-title:hover{color:var(--green-dark)}
   .indent{display:inline-block;width:18px}
@@ -98,6 +106,7 @@
   .mini-btn:hover{background:var(--green-light);color:var(--green-dark);border-color:var(--green-mid)}
   .board{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:10px}
   .board-col{background:#fff;border:1px solid var(--line);border-radius:12px;min-height:360px;overflow:hidden}
+  .board-col.over-limit{border-color:rgba(217,64,64,.45);box-shadow:inset 0 0 0 1px rgba(217,64,64,.18)}
   .board-head{display:flex;justify-content:space-between;align-items:center;padding:11px 12px;border-bottom:1px solid var(--line);background:var(--surface2);font-size:12px;font-weight:900}
   .board-body{padding:8px;min-height:320px}
   .task-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.03);cursor:grab}
@@ -107,6 +116,9 @@
   .task-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px}
   .drop-on{outline:2px dashed var(--green-mid);outline-offset:-5px}
   .timeline{overflow:auto;background:#fff}
+  .view-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface2)}
+  .view-nav-title{font-size:13px;font-weight:900;color:var(--txt)}
+  .view-nav-actions{display:flex;align-items:center;gap:6px}
   .timeline-grid{min-width:1180px;display:grid;grid-template-columns:310px 1fr}
   .timeline-left-head,.timeline-months{position:sticky;top:0;background:var(--surface2);z-index:2;border-bottom:1px solid var(--line);height:38px}
   .timeline-left-head{display:flex;align-items:center;padding:0 12px;font-size:11px;color:var(--muted);font-weight:900;border-right:1px solid var(--line)}
@@ -125,6 +137,7 @@
   .drawer-mask{position:fixed;inset:0;background:rgba(26,40,32,.42);display:none;z-index:60}
   .drawer-mask.on{display:block}
   .drawer{position:absolute;top:0;right:0;width:540px;max-width:96vw;height:100%;background:#fff;box-shadow:-18px 0 45px rgba(0,0,0,.16);display:flex;flex-direction:column}
+  .drawer.wide{width:760px}
   .drawer-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
   .drawer-title{font-size:18px;font-weight:900;line-height:1.25}
   .drawer-body{padding:16px 20px;overflow:auto;flex:1}
@@ -147,6 +160,16 @@
   .audit-item{padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px}
   .audit-item:last-child{border-bottom:0}
   .audit-item small{display:block;color:var(--muted);font-size:10px;margin-bottom:2px}
+  .analysis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+  .analysis-card{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+  .analysis-card b{display:block;font-size:20px;color:var(--txt)}
+  .analysis-card span{font-size:11px;color:var(--muted)}
+  .issue-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:#fff}
+  .issue-row strong{font-size:13px}
+  .issue-meta{font-size:11px;color:var(--muted);margin-top:2px}
+  .risk-high{background:var(--danger-light);color:var(--danger)}
+  .risk-mid{background:var(--warn-light);color:var(--warn)}
+  .risk-low{background:#EFF5F3;color:var(--muted)}
   .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--green-deep);color:#fff;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:800;box-shadow:0 8px 24px rgba(0,95,75,.18);display:none;z-index:80}
   .trash-count{display:inline-flex;min-width:18px;height:18px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;align-items:center;justify-content:center;margin-left:3px}
   @media (max-width:1050px){
@@ -170,7 +193,10 @@
     </div>
     <div class="head-actions">
       <button class="btn-ghost" onclick="openAudit()">활동</button>
+      <button class="btn-ghost" onclick="openAnalysis()">분석</button>
+      <button class="btn-ghost" onclick="openIssues()">이슈</button>
       <button class="btn-ghost" onclick="exportWorkspace()">백업</button>
+      <button class="btn-ghost" onclick="exportCsv()">CSV</button>
       <label class="btn-ghost">복원 <input type="file" accept="application/json" onchange="importWorkspace(event)" hidden></label>
       <button class="btn-ghost" onclick="openTrash()">휴지통 <span class="trash-count" id="trashCount">0</span></button>
       <button class="btn-primary" onclick="openProjectDrawer()">+ 프로젝트</button>
@@ -198,7 +224,15 @@
       <option value="manual">기본순</option>
       <option value="due">마감 임박순</option>
       <option value="priority">우선순위순</option>
+      <option value="risk">리스크순</option>
       <option value="progress">진행률순</option>
+    </select>
+    <select id="groupBy" onchange="renderWorkspace()">
+      <option value="">그룹 없음</option>
+      <option value="project">프로젝트별</option>
+      <option value="owner">담당자별</option>
+      <option value="status">상태별</option>
+      <option value="priority">우선순위별</option>
     </select>
     <div class="quick-tabs" aria-label="빠른 필터">
       <button class="quick-tab active" data-quick="" onclick="setQuickFilter('')">전체</button>
@@ -208,6 +242,19 @@
       <button class="quick-tab" data-quick="mine" onclick="setQuickFilter('mine')">내 담당</button>
       <button class="quick-tab" data-quick="nodate" onclick="setQuickFilter('nodate')">날짜없음</button>
     </div>
+    <div class="tool-split"></div>
+    <select id="savedViewSelect" class="saved-view-select" onchange="applySavedView(this.value)"><option value="">저장된 뷰</option></select>
+    <button class="mini-btn" onclick="saveCurrentView()">뷰 저장</button>
+    <button class="mini-btn" onclick="deleteSavedView()">삭제</button>
+    <div class="tool-split"></div>
+    <select id="templateSelect" class="saved-view-select">
+      <option value="">템플릿</option>
+      <option value="meeting">회의 준비</option>
+      <option value="approval">승인 요청</option>
+      <option value="launch">출시/오픈</option>
+      <option value="issue">이슈 해결</option>
+    </select>
+    <button class="mini-btn" onclick="createFromTemplate()">추가</button>
   </div>
 
   <div class="layout">
@@ -228,6 +275,15 @@
     </aside>
     <main class="workspace">
       <section class="project-hero" id="projectHero"></section>
+      <section class="bulk-bar" id="bulkBar">
+        <b id="bulkCount">0개 선택</b>
+        <select id="bulkStatus"><option value="">상태 변경</option></select>
+        <select id="bulkOwner"><option value="">담당 변경</option></select>
+        <select id="bulkPriority"><option value="">우선순위 변경</option></select>
+        <button class="mini-btn" onclick="applyBulk()">적용</button>
+        <button class="mini-btn" onclick="bulkDelete()">삭제</button>
+        <button class="mini-btn" onclick="clearBulkSelection()">해제</button>
+      </section>
       <section class="panel" id="viewHost"></section>
     </main>
   </div>
@@ -282,6 +338,8 @@
           <div class="field"><label>우선순위</label><select id="tPriority"></select></div>
           <div class="field"><label>유형</label><select id="tType"></select></div>
           <div class="field"><label>예상 공수(시간)</label><input type="number" min="0" step="0.5" id="tEffort"></div>
+          <div class="field"><label>리스크</label><select id="tRisk"></select></div>
+          <div class="field"><label>승인 상태</label><select id="tApproval"></select></div>
           <div class="field"><label>시작일</label><input type="date" id="tStart"></div>
           <div class="field"><label>마감일</label><input type="date" id="tEnd"></div>
           <div class="field"><label>진행률 (%)</label><input type="number" min="0" max="100" id="tProgress"></div>
@@ -348,6 +406,32 @@
     </div>
   </div>
 
+  <div class="drawer-mask" id="analysisMask">
+    <div class="drawer wide">
+      <div class="drawer-head">
+        <div>
+          <div class="drawer-title">워크로드 분석</div>
+          <div class="sub">담당자별 공수, 지연, 진행률을 모아 봅니다.</div>
+        </div>
+        <button class="mini-btn" onclick="closeAnalysis()">닫기</button>
+      </div>
+      <div class="drawer-body" id="analysisBody"></div>
+    </div>
+  </div>
+
+  <div class="drawer-mask" id="issueMask">
+    <div class="drawer wide">
+      <div class="drawer-head">
+        <div>
+          <div class="drawer-title">이슈 센터</div>
+          <div class="sub">지연, 의존성 대기, 승인 대기, 고위험 태스크를 한 곳에 모았습니다.</div>
+        </div>
+        <button class="mini-btn" onclick="closeIssues()">닫기</button>
+      </div>
+      <div class="drawer-body" id="issueBody"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
 <script>
@@ -372,7 +456,20 @@ const TYPE = {
   decision:{label:'의사결정'},
   issue:{label:'이슈'}
 };
-const STORE = {p:'pt-projects', t:'pt-tasks', tr:'pt-trash', m:'pt-meta', a:'pt-audit'};
+const RISK = {
+  low:{label:'낮음', cls:'risk-low', rank:2},
+  mid:{label:'보통', cls:'risk-mid', rank:1},
+  high:{label:'높음', cls:'risk-high', rank:0}
+};
+const APPROVAL = {
+  none:{label:'없음'},
+  draft:{label:'초안'},
+  requested:{label:'승인 요청'},
+  approved:{label:'승인 완료'},
+  rejected:{label:'반려'}
+};
+const WIP_LIMITS = {todo:12, progress:6, review:5, done:999};
+const STORE = {p:'pt-projects', t:'pt-tasks', tr:'pt-trash', m:'pt-meta', a:'pt-audit', v:'pt-views'};
 const staffPalette = ['#009E6A','#2B72C8','#7856C8','#E8900A','#43A047','#D94040','#607D8B'];
 const fallbackStaff = [{id:'admin', name:'Admin', color:'#009E6A'}];
 let staff = [];
@@ -380,10 +477,14 @@ let projects = [];
 let tasks = [];
 let trash = [];
 let audit = [];
+let savedViews = [];
 let selectedProjectId = 'all';
 let activeView = 'table';
 let quickFilter = '';
 let projectFilter = 'active';
+let calendarMonth = new Date().getFullYear() === YEAR ? new Date().getMonth() : 5;
+let timelineQuarter = 0;
+let selectedTaskIds = new Set();
 let editingProjectId = null;
 let editingTaskId = null;
 let draggedTaskId = null;
@@ -459,6 +560,26 @@ function fillCommonSelects(){
   fillSelect(document.getElementById('tStatus'), Object.entries(STATUS).map(([value,s])=>({value,label:s.label})));
   fillSelect(document.getElementById('tPriority'), Object.entries(PRIORITY).map(([value,p])=>({value,label:p.label})));
   fillSelect(document.getElementById('tType'), Object.entries(TYPE).map(([value,t])=>({value,label:t.label})));
+  fillSelect(document.getElementById('tRisk'), Object.entries(RISK).map(([value,r])=>({value,label:r.label})));
+  fillSelect(document.getElementById('tApproval'), Object.entries(APPROVAL).map(([value,a])=>({value,label:a.label})));
+  const bulkStatus=document.getElementById('bulkStatus');
+  const bulkOwner=document.getElementById('bulkOwner');
+  const bulkPriority=document.getElementById('bulkPriority');
+  if(bulkStatus){
+    const current=bulkStatus.value;
+    bulkStatus.innerHTML='<option value="">상태 변경</option>'+Object.entries(STATUS).map(([value,s])=>`<option value="${esc(value)}">${esc(s.label)}</option>`).join('');
+    bulkStatus.value=current;
+  }
+  if(bulkOwner){
+    const current=bulkOwner.value;
+    bulkOwner.innerHTML='<option value="">담당 변경</option>'+staff.map(u=>`<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
+    bulkOwner.value=current;
+  }
+  if(bulkPriority){
+    const current=bulkPriority.value;
+    bulkPriority.innerHTML='<option value="">우선순위 변경</option>'+Object.entries(PRIORITY).map(([value,p])=>`<option value="${esc(value)}">${esc(p.label)}</option>`).join('');
+    bulkPriority.value=current;
+  }
 }
 
 function seedProjects(){
@@ -527,6 +648,8 @@ function migrateTask(t,i){
     notes:t.notes || t.desc || '',
     type:TYPE[t.type] ? t.type : 'task',
     effort:Math.max(0, Number(t.effort)||0),
+    risk:RISK[t.risk] ? t.risk : 'low',
+    approval:APPROVAL[t.approval] ? t.approval : 'none',
     milestone:!!t.milestone,
     checklist:Array.isArray(t.checklist) ? t.checklist.map(c=>typeof c==='string'?{text:c,done:false}:{text:String(c.text||c.txt||''),done:!!c.done}).filter(c=>c.text) : [],
     parentId:t.parentId ? String(t.parentId) : '',
@@ -543,10 +666,12 @@ function loadData(){
     const rawT=JSON.parse(localStorage.getItem(STORE.t)||'null');
     const rawTr=JSON.parse(localStorage.getItem(STORE.tr)||'[]');
     const rawA=JSON.parse(localStorage.getItem(STORE.a)||'[]');
+    const rawV=JSON.parse(localStorage.getItem(STORE.v)||'[]');
     projects = Array.isArray(rawP) && rawP.length ? rawP.map(migrateProject) : seedProjects();
     tasks = Array.isArray(rawT) && rawT.length ? rawT.map(migrateTask) : seedTasks();
     trash = Array.isArray(rawTr) ? rawTr : [];
     audit = Array.isArray(rawA) ? rawA : [];
+    savedViews = Array.isArray(rawV) ? rawV : [];
     if(!projects.some(p=>p.fixed)) projects.push({id:'p-free', name:'프로젝트 외 task', owner:'-', status:'progress', start:'', end:'', desc:'특정 프로젝트에 속하지 않는 단건 업무', fixed:true, order:99});
     if(!meta || !meta.notionLike) saveData();
   }catch(_){
@@ -554,6 +679,7 @@ function loadData(){
     tasks = seedTasks();
     trash = [];
     audit = [];
+    savedViews = [];
     saveData();
   }
 }
@@ -562,6 +688,7 @@ function saveData(){
   localStorage.setItem(STORE.t, JSON.stringify(tasks));
   localStorage.setItem(STORE.tr, JSON.stringify(trash));
   localStorage.setItem(STORE.a, JSON.stringify(audit.slice(0,200)));
+  localStorage.setItem(STORE.v, JSON.stringify(savedViews.slice(0,40)));
   localStorage.setItem(STORE.m, JSON.stringify({notionLike:true, savedAt:new Date().toISOString()}));
 }
 
@@ -602,13 +729,14 @@ function getFilteredTasks(){
     if(quickFilter==='mine' && t.owner!==currentOwner()) return false;
     if(quickFilter==='nodate' && (t.start || t.end)) return false;
     if(q){
-      const hay=[t.name,t.owner,t.notes,TYPE[t.type]?.label,(t.tags||[]).join(' '),projectName(t.pid)].join(' ').toLowerCase();
+      const hay=[t.name,t.owner,t.notes,TYPE[t.type]?.label,RISK[t.risk]?.label,APPROVAL[t.approval]?.label,(t.tags||[]).join(' '),projectName(t.pid)].join(' ').toLowerCase();
       if(!hay.includes(q)) return false;
     }
     return true;
   });
   if(sortBy==='due') rows.sort((a,b)=>(a.end||'9999-99-99').localeCompare(b.end||'9999-99-99'));
   else if(sortBy==='priority') rows.sort((a,b)=>(PRIORITY[a.priority]?.rank??1)-(PRIORITY[b.priority]?.rank??1));
+  else if(sortBy==='risk') rows.sort((a,b)=>(RISK[a.risk]?.rank??2)-(RISK[b.risk]?.rank??2));
   else if(sortBy==='progress') rows.sort((a,b)=>(b.progress||0)-(a.progress||0));
   else rows.sort((a,b)=>(a.order||0)-(b.order||0));
   return rows;
@@ -640,6 +768,7 @@ function depText(t){
 
 function render(){
   fillCommonSelects();
+  renderSavedViews();
   renderProjects();
   renderWorkspace();
 }
@@ -707,6 +836,7 @@ function renderWorkspace(){
   renderHero();
   document.querySelectorAll('.view-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===activeView));
   document.querySelectorAll('.quick-tab').forEach(b=>b.classList.toggle('active', b.dataset.quick===quickFilter));
+  renderBulkBar();
   if(activeView==='board') renderBoard();
   else if(activeView==='timeline') renderTimeline();
   else if(activeView==='calendar') renderCalendar();
@@ -715,6 +845,59 @@ function renderWorkspace(){
 function setView(view){
   activeView=view;
   renderWorkspace();
+}
+function renderSavedViews(){
+  const select=document.getElementById('savedViewSelect');
+  if(!select) return;
+  const current=select.value;
+  select.innerHTML='<option value="">저장된 뷰</option>'+savedViews.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');
+  if(savedViews.some(v=>v.id===current)) select.value=current;
+}
+function captureViewState(){
+  return {
+    selectedProjectId,
+    activeView,
+    quickFilter,
+    projectFilter,
+    q:document.getElementById('q').value||'',
+    owner:document.getElementById('filterOwner').value||'',
+    status:document.getElementById('filterStatus').value||'',
+    sortBy:document.getElementById('sortBy').value||'manual',
+    groupBy:document.getElementById('groupBy').value||''
+  };
+}
+function saveCurrentView(){
+  const name=prompt('저장할 뷰 이름을 입력하세요.');
+  if(!name) return;
+  const id=uid('view');
+  savedViews.unshift({id,name:name.trim(),state:captureViewState(),createdAt:new Date().toISOString()});
+  track('뷰 저장', name.trim());
+  saveData();renderSavedViews();document.getElementById('savedViewSelect').value=id;toast('뷰를 저장했습니다.');
+}
+function applySavedView(id){
+  const view=savedViews.find(v=>v.id===id);
+  if(!view) return;
+  const s=view.state||{};
+  selectedProjectId=s.selectedProjectId||'all';
+  activeView=s.activeView||'table';
+  quickFilter=s.quickFilter||'';
+  projectFilter=s.projectFilter||'active';
+  document.getElementById('q').value=s.q||'';
+  document.getElementById('filterOwner').value=s.owner||'';
+  document.getElementById('filterStatus').value=s.status||'';
+  document.getElementById('sortBy').value=s.sortBy||'manual';
+  document.getElementById('groupBy').value=s.groupBy||'';
+  clearBulkSelection();
+  render();
+}
+function deleteSavedView(){
+  const id=document.getElementById('savedViewSelect').value;
+  if(!id) return;
+  const view=savedViews.find(v=>v.id===id);
+  if(!confirm(`'${view?.name||''}' 뷰를 삭제할까요?`)) return;
+  savedViews=savedViews.filter(v=>v.id!==id);
+  track('뷰 삭제', view?.name||'');
+  saveData();renderSavedViews();toast('뷰를 삭제했습니다.');
 }
 function setQuickFilter(value){
   quickFilter=value || '';
@@ -749,22 +932,45 @@ function renderTable(){
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
   if(!rows.length){host.innerHTML='<div class="empty">조건에 맞는 태스크가 없습니다.</div>';return;}
+  const bodyHtml=groupedRowsHtml(rows);
   host.innerHTML=`<div class="table-wrap"><table>
     <thead><tr>
-      <th>태스크</th><th>프로젝트</th><th>상태</th><th>담당</th><th>우선순위</th><th>유형</th><th>기간</th><th>진행률</th><th>공수</th><th>체크</th><th>태그</th><th></th>
+      <th><input class="row-check" type="checkbox" onchange="toggleAllVisible(this.checked)"></th><th>태스크</th><th>프로젝트</th><th>상태</th><th>담당</th><th>우선순위</th><th>리스크</th><th>승인</th><th>유형</th><th>기간</th><th>진행률</th><th>공수</th><th>체크</th><th>태그</th><th></th>
     </tr></thead>
-    <tbody>${rows.map(t=>taskRow(t)).join('')}</tbody>
+    <tbody>${bodyHtml}</tbody>
   </table></div>`;
+  renderBulkBar();
+}
+function groupedRowsHtml(rows){
+  const groupBy=document.getElementById('groupBy').value;
+  if(!groupBy) return rows.map(t=>taskRow(t)).join('');
+  const groups=new Map();
+  rows.forEach(t=>{
+    const key=groupLabel(t,groupBy);
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(t);
+  });
+  return [...groups.entries()].map(([label,list])=>`<tr class="group-row"><td colspan="15">${esc(label)} · ${list.length}개</td></tr>${list.map(t=>taskRow(t)).join('')}`).join('');
+}
+function groupLabel(t,groupBy){
+  if(groupBy==='project') return projectName(t.pid);
+  if(groupBy==='owner') return t.owner || '-';
+  if(groupBy==='status') return STATUS[t.status]?.label || '상태 없음';
+  if(groupBy==='priority') return PRIORITY[t.priority]?.label || '우선순위 없음';
+  return '기타';
 }
 function taskRow(t){
   const hasParent=!!t.parentId;
   const doneChecks=(t.checklist||[]).filter(c=>c.done).length;
   return `<tr>
+    <td><input class="row-check" type="checkbox" ${selectedTaskIds.has(t.id)?'checked':''} onchange="toggleTaskSelection('${esc(t.id)}',this.checked)"></td>
     <td><span class="${hasParent?'indent':''}"></span><span class="task-title" onclick="openTaskDrawer('${esc(t.id)}')">${hasParent?'↳ ':''}${t.milestone?'◆ ':''}${esc(t.name)}</span> ${depText(t)}</td>
     <td>${esc(projectName(t.pid))}</td>
     <td><select onchange="quickStatus('${esc(t.id)}',this.value)">${Object.entries(STATUS).map(([k,s])=>`<option value="${k}" ${t.status===k?'selected':''}>${s.label}</option>`).join('')}</select></td>
     <td>${ownerAvatar(t.owner)}</td>
     <td>${priorityChip(t.priority)}</td>
+    <td><span class="chip ${RISK[t.risk]?.cls||'risk-low'}">${esc(RISK[t.risk]?.label || '낮음')}</span></td>
+    <td><span class="chip">${esc(APPROVAL[t.approval]?.label || '없음')}</span></td>
     <td><span class="chip">${esc(TYPE[t.type]?.label || '태스크')}</span></td>
     <td>${fmtDate(t.start)} ~ ${fmtDate(t.end)}</td>
     <td><input type="number" min="0" max="100" value="${Number(t.progress)||0}" style="width:74px" onchange="quickProgress('${esc(t.id)}',this.value)">%</td>
@@ -779,8 +985,9 @@ function renderBoard(){
   const host=document.getElementById('viewHost');
   host.innerHTML=`<div class="board">${Object.entries(STATUS).map(([key,s])=>{
     const col=rows.filter(t=>t.status===key);
-    return `<div class="board-col" ondragover="allowDrop(event)" ondragleave="this.classList.remove('drop-on')" ondrop="dropTask(event,'${key}')">
-      <div class="board-head"><span>${s.label}</span><span>${col.length}</span></div>
+    const over=col.length>(WIP_LIMITS[key]||999);
+    return `<div class="board-col ${over?'over-limit':''}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('drop-on')" ondrop="dropTask(event,'${key}')">
+      <div class="board-head"><span>${s.label}</span><span>${col.length}${WIP_LIMITS[key]&&WIP_LIMITS[key]<999?` / ${WIP_LIMITS[key]}`:''}</span></div>
       <div class="board-body">${col.map(boardCard).join('') || '<div class="empty" style="padding:18px 8px">태스크 없음</div>'}</div>
     </div>`;
   }).join('')}</div>`;
@@ -790,7 +997,7 @@ function boardCard(t){
   const doneChecks=checks.filter(c=>c.done).length;
   return `<div class="task-card" draggable="true" ondragstart="dragTask(event,'${esc(t.id)}')" ondragend="this.classList.remove('dragging')" onclick="openTaskDrawer('${esc(t.id)}')">
     <div class="task-card-title">${t.milestone?'◆ ':''}${esc(t.name)}</div>
-    <div>${priorityChip(t.priority)} ${depText(t)}</div>
+    <div>${priorityChip(t.priority)} <span class="chip ${RISK[t.risk]?.cls||'risk-low'}">${esc(RISK[t.risk]?.label||'낮음')}</span> ${depText(t)}</div>
     <div style="font-size:11px;color:var(--muted);margin-top:8px">${esc(projectName(t.pid))} · ${esc(TYPE[t.type]?.label || '태스크')}${t.effort?` · ${t.effort}h`:''}${checks.length?` · 체크 ${doneChecks}/${checks.length}`:''}</div>
     <div class="progress-line"><i style="width:${Number(t.progress)||0}%"></i></div>
     <div class="task-card-foot"><span style="font-size:11px;color:var(--muted)">${fmtDate(t.end)}</span><span>${ownerAvatarIcon(t.owner)}</span></div>
@@ -809,29 +1016,54 @@ function renderTimeline(){
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
   if(!rows.length){host.innerHTML='<div class="empty">표시할 태스크가 없습니다.</div>';return;}
-  const startYear=new Date(`${YEAR}-01-01`);
-  const yearDays=(new Date(`${YEAR+1}-01-01`)-startYear)/MS_DAY;
-  host.innerHTML=`<div class="timeline"><div class="timeline-grid">
+  const startMonth=timelineQuarter ? (timelineQuarter-1)*3 : 0;
+  const endMonth=timelineQuarter ? startMonth+3 : 12;
+  const rangeStart=new Date(YEAR,startMonth,1);
+  const rangeEnd=new Date(YEAR,endMonth,1);
+  const rangeDays=(rangeEnd-rangeStart)/MS_DAY;
+  const months=Array.from({length:endMonth-startMonth},(_,i)=>startMonth+i);
+  const title=timelineQuarter ? `${YEAR}년 ${timelineQuarter}분기` : `${YEAR}년 전체`;
+  host.innerHTML=`<div class="view-nav"><div class="view-nav-title">${title}</div><div class="view-nav-actions">
+      <button class="mini-btn" onclick="shiftTimeline(-1)">‹</button>
+      <button class="mini-btn" onclick="setTimelineQuarter(0)">전체</button>
+      <button class="mini-btn" onclick="shiftTimeline(1)">›</button>
+    </div></div>
+    <div class="timeline"><div class="timeline-grid">
     <div class="timeline-left-head">태스크</div>
-    <div class="timeline-months">${Array.from({length:12},(_,i)=>`<div>${i+1}월</div>`).join('')}</div>
+    <div class="timeline-months" style="grid-template-columns:repeat(${months.length},1fr)">${months.map(i=>`<div>${i+1}월</div>`).join('')}</div>
     ${rows.map(t=>{
       let bar='<span style="color:var(--soft);font-size:11px">일정 없음</span>';
       if(t.start && t.end){
-        const s=Math.max(0,(new Date(t.start)-startYear)/MS_DAY);
-        const e=Math.min(yearDays,(new Date(t.end)-startYear)/MS_DAY+1);
-        const left=Math.max(0,s/yearDays*100);
-        const width=Math.max(2,(e-s)/yearDays*100);
+        const rawS=(new Date(t.start)-rangeStart)/MS_DAY;
+        const rawE=(new Date(t.end)-rangeStart)/MS_DAY+1;
+        if(rawE<0 || rawS>rangeDays){
+          bar='<span style="color:var(--soft);font-size:11px">범위 밖</span>';
+        }else{
+        const s=Math.max(0,rawS);
+        const e=Math.min(rangeDays,rawE);
+        const left=Math.max(0,s/rangeDays*100);
+        const width=Math.max(2,(e-s)/rangeDays*100);
         const color=t.status==='done'?'var(--green)':t.status==='review'?'var(--warn)':t.status==='todo'?'#60756F':staffColor(t.owner);
         bar=`<div class="timeline-bar" style="left:${left}%;width:${width}%;background:${color}">${esc(STATUS[t.status]?.short||'')} · ${Number(t.progress)||0}%</div>`;
+        }
       }
-      return `<div class="timeline-row-name" onclick="openTaskDrawer('${esc(t.id)}')">${esc(t.name)}</div><div class="timeline-row">${bar}</div>`;
+      return `<div class="timeline-row-name" onclick="openTaskDrawer('${esc(t.id)}')">${esc(t.name)}</div><div class="timeline-row" style="background-size:${100/months.length}% 100%">${bar}</div>`;
     }).join('')}
   </div></div>`;
+}
+function setTimelineQuarter(q){
+  timelineQuarter=q;
+  renderTimeline();
+}
+function shiftTimeline(delta){
+  if(!timelineQuarter) timelineQuarter=1;
+  timelineQuarter=Math.max(1,Math.min(4,timelineQuarter+delta));
+  renderTimeline();
 }
 function renderCalendar(){
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
-  const month = new Date().getFullYear() === YEAR ? new Date().getMonth() : 5;
+  const month = calendarMonth;
   const first=new Date(YEAR,month,1);
   const firstDow=first.getDay();
   const days=new Date(YEAR,month+1,0).getDate();
@@ -846,8 +1078,20 @@ function renderCalendar(){
     const items=date ? rows.filter(t=>t.start===date || t.end===date) : [];
     cells.push(`<div class="cal-cell"><div class="cal-day ${dim?'dim':''}">${label}</div>${items.map(t=>`<div class="cal-task" onclick="openTaskDrawer('${esc(t.id)}')">${esc(t.name)}</div>`).join('')}</div>`);
   }
-  host.innerHTML=`<div class="panel-head"><div><div class="panel-title">${month+1}월 일정</div><div class="panel-sub">시작일과 마감일 기준</div></div></div>
+  host.innerHTML=`<div class="view-nav"><div><div class="view-nav-title">${YEAR}년 ${String(month+1).padStart(2,'0')}월 일정</div><div class="panel-sub">시작일과 마감일 기준</div></div><div class="view-nav-actions">
+      <button class="mini-btn" onclick="shiftCalendar(-1)">‹</button>
+      <button class="mini-btn" onclick="goCalendarThisMonth()">이번달</button>
+      <button class="mini-btn" onclick="shiftCalendar(1)">›</button>
+    </div></div>
     <div class="calendar">${['일','월','화','수','목','금','토'].map(d=>`<div class="cal-head">${d}</div>`).join('')}${cells.join('')}</div>`;
+}
+function shiftCalendar(delta){
+  calendarMonth=Math.max(0,Math.min(11,calendarMonth+delta));
+  renderCalendar();
+}
+function goCalendarThisMonth(){
+  calendarMonth=new Date().getFullYear()===YEAR ? new Date().getMonth() : 5;
+  renderCalendar();
 }
 
 function openProjectDrawer(id){
@@ -935,6 +1179,8 @@ function openTaskDrawer(id){
   document.getElementById('tPriority').value=t?.priority||'mid';
   document.getElementById('tType').value=t?.type||'task';
   document.getElementById('tEffort').value=t?.effort||0;
+  document.getElementById('tRisk').value=t?.risk||'low';
+  document.getElementById('tApproval').value=t?.approval||'none';
   document.getElementById('tStart').value=t?.start||'';
   document.getElementById('tEnd').value=t?.end||'';
   document.getElementById('tProgress').value=t?.progress??0;
@@ -997,6 +1243,8 @@ function saveTask(){
     priority:document.getElementById('tPriority').value,
     type:document.getElementById('tType').value,
     effort:Math.max(0,Number(document.getElementById('tEffort').value)||0),
+    risk:document.getElementById('tRisk').value,
+    approval:document.getElementById('tApproval').value,
     start:document.getElementById('tStart').value,
     end:document.getElementById('tEnd').value,
     progress:status==='done' ? 100 : clamp(document.getElementById('tProgress').value,0,100),
@@ -1025,6 +1273,24 @@ function duplicateCurrentTask(){
   tasks.push(copy);
   track('태스크 복제', copy.name);
   saveData();closeTaskDrawer();render();toast('태스크를 복제했습니다.');
+}
+function createFromTemplate(){
+  const key=document.getElementById('templateSelect').value;
+  if(!key){toast('템플릿을 선택하세요.');return;}
+  const pid=selectedProjectId==='all' ? (projects.find(p=>!p.fixed&&!p.archived)?.id || projects[0]?.id) : selectedProjectId;
+  const todayIso=iso(new Date());
+  const templates={
+    meeting:{name:'회의 준비',type:'meeting',priority:'mid',risk:'low',approval:'none',effort:1,checklist:[{text:'안건 정리',done:false},{text:'자료 공유',done:false},{text:'후속 액션 기록',done:false}],tags:['회의']},
+    approval:{name:'승인 요청',type:'decision',priority:'high',risk:'mid',approval:'requested',effort:2,checklist:[{text:'검토 자료 첨부',done:false},{text:'승인권자 확인',done:false},{text:'최종 결정 기록',done:false}],tags:['승인']},
+    launch:{name:'출시/오픈 체크',type:'task',priority:'high',risk:'high',approval:'requested',effort:6,checklist:[{text:'오픈 전 점검',done:false},{text:'담당자 공지',done:false},{text:'오픈 후 모니터링',done:false}],tags:['오픈']},
+    issue:{name:'이슈 해결',type:'issue',priority:'high',risk:'high',approval:'none',effort:3,checklist:[{text:'원인 파악',done:false},{text:'대응안 실행',done:false},{text:'재발 방지 기록',done:false}],tags:['이슈']}
+  };
+  const tpl=templates[key];
+  const task={id:uid('t'),pid,name:tpl.name,owner:currentOwner(),status:'todo',priority:tpl.priority,start:todayIso,end:'',progress:0,parentId:'',deps:[],order:tasks.length+1,logs:[],notes:'',milestone:false,...tpl};
+  tasks.push(task);
+  track('템플릿 태스크 추가', task.name);
+  document.getElementById('templateSelect').value='';
+  saveData();render();toast('템플릿 태스크를 추가했습니다.');
 }
 function deleteCurrentTask(){
   const t=tasks.find(x=>x.id===editingTaskId);
@@ -1064,6 +1330,60 @@ function quickProgress(id,value){
   if(t.progress>=100) t.status='done';
   track('진행률 변경', `${t.name} ${t.progress}%`);
   saveData();renderWorkspace();
+}
+function toggleTaskSelection(id,checked){
+  if(checked) selectedTaskIds.add(id);
+  else selectedTaskIds.delete(id);
+  renderBulkBar();
+}
+function toggleAllVisible(checked){
+  getFilteredTasks().forEach(t=>{
+    if(checked) selectedTaskIds.add(t.id);
+    else selectedTaskIds.delete(t.id);
+  });
+  renderWorkspace();
+}
+function clearBulkSelection(){
+  selectedTaskIds.clear();
+  renderBulkBar();
+}
+function renderBulkBar(){
+  const bar=document.getElementById('bulkBar');
+  if(!bar) return;
+  const count=selectedTaskIds.size;
+  bar.classList.toggle('on', count>0);
+  document.getElementById('bulkCount').textContent=`${count}개 선택`;
+}
+function applyBulk(){
+  const ids=[...selectedTaskIds];
+  if(!ids.length) return;
+  const status=document.getElementById('bulkStatus').value;
+  const owner=document.getElementById('bulkOwner').value;
+  const priority=document.getElementById('bulkPriority').value;
+  if(!status && !owner && !priority){toast('변경할 값을 선택하세요.');return;}
+  tasks.forEach(t=>{
+    if(!selectedTaskIds.has(t.id)) return;
+    if(status){t.status=status;if(status==='done')t.progress=100;}
+    if(owner)t.owner=owner;
+    if(priority)t.priority=priority;
+  });
+  track('일괄 수정', `${ids.length}개 태스크`);
+  selectedTaskIds.clear();
+  document.getElementById('bulkStatus').value='';
+  document.getElementById('bulkOwner').value='';
+  document.getElementById('bulkPriority').value='';
+  saveData();renderWorkspace();toast('일괄 적용했습니다.');
+}
+function bulkDelete(){
+  const ids=[...selectedTaskIds];
+  if(!ids.length) return;
+  if(!confirm(`${ids.length}개 태스크를 휴지통으로 이동할까요?`)) return;
+  const idSet=new Set(ids);
+  tasks.filter(t=>idSet.has(t.id)).forEach(t=>trash.unshift({type:'task',task:t,deletedAt:new Date().toISOString()}));
+  tasks=tasks.filter(t=>!idSet.has(t.id)).map(t=>({...t,parentId:idSet.has(t.parentId)?'':t.parentId,deps:(t.deps||[]).filter(id=>!idSet.has(id))}));
+  track('일괄 삭제', `${ids.length}개 태스크`);
+  selectedTaskIds.clear();
+  saveData();renderWorkspace();toast('휴지통으로 이동했습니다.');
 }
 
 function openTrash(){
@@ -1113,7 +1433,7 @@ function emptyTrash(){
 }
 
 function exportWorkspace(){
-  const payload={version:3, exportedAt:new Date().toISOString(), projects, tasks, trash, audit};
+  const payload={version:4, exportedAt:new Date().toISOString(), projects, tasks, trash, audit, savedViews};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1125,6 +1445,20 @@ function exportWorkspace(){
   URL.revokeObjectURL(url);
   track('백업 생성', a.download);
   saveData();toast('백업 파일을 만들었습니다.');
+}
+function exportCsv(){
+  const rows=getFilteredTasks();
+  const header=['프로젝트','태스크','상태','담당자','우선순위','리스크','승인','유형','시작일','마감일','진행률','공수','태그','메모'];
+  const csv=[header, ...rows.map(t=>[
+    projectName(t.pid), t.name, STATUS[t.status]?.label||'', t.owner, PRIORITY[t.priority]?.label||'', RISK[t.risk]?.label||'', APPROVAL[t.approval]?.label||'', TYPE[t.type]?.label||'', t.start, t.end, t.progress, t.effort||0, (t.tags||[]).join('|'), t.notes||''
+  ])].map(row=>row.map(cell=>`"${String(cell??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`project-tasks-${iso(new Date())}.csv`;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  track('CSV 내보내기', `${rows.length}개 태스크`);
+  saveData();toast('CSV를 만들었습니다.');
 }
 function importWorkspace(event){
   const file=event.target.files?.[0];
@@ -1140,6 +1474,7 @@ function importWorkspace(event){
       tasks=data.tasks.map(migrateTask);
       trash=Array.isArray(data.trash)?data.trash:[];
       audit=Array.isArray(data.audit)?data.audit:[];
+      savedViews=Array.isArray(data.savedViews)?data.savedViews:[];
       selectedProjectId='all';
       activeView='table';
       quickFilter='';
@@ -1162,6 +1497,71 @@ function renderAudit(){
   if(!audit.length){box.innerHTML='<div class="empty">활동 기록이 없습니다.</div>';return;}
   box.innerHTML=audit.slice(0,120).map(a=>`<div class="audit-item"><small>${esc((a.at||'').replace('T',' ').slice(0,16))} · ${esc(a.owner||'-')}</small><b>${esc(a.action||'')}</b> ${esc(a.target||'')}</div>`).join('');
 }
+function openAnalysis(){
+  renderAnalysis();
+  document.getElementById('analysisMask').classList.add('on');
+}
+function closeAnalysis(){document.getElementById('analysisMask').classList.remove('on');}
+function renderAnalysis(){
+  const rows=projectTasks(selectedProjectId);
+  const byOwner=new Map();
+  rows.forEach(t=>{
+    const key=t.owner||'-';
+    if(!byOwner.has(key)) byOwner.set(key,{owner:key,total:0,done:0,overdue:0,blocked:0,effort:0,progress:0});
+    const item=byOwner.get(key);
+    item.total++;
+    if(t.status==='done') item.done++;
+    if(isOverdue(t)) item.overdue++;
+    if(isBlocked(t)) item.blocked++;
+    item.effort+=Number(t.effort)||0;
+    item.progress+=Number(t.progress)||0;
+  });
+  const ownerRows=[...byOwner.values()].map(x=>({...x,avg:x.total?Math.round(x.progress/x.total):0})).sort((a,b)=>b.effort-a.effort);
+  const totalEffort=ownerRows.reduce((a,b)=>a+b.effort,0);
+  const highRisk=rows.filter(t=>t.risk==='high'&&t.status!=='done').length;
+  const approvals=rows.filter(t=>t.approval==='requested').length;
+  const body=document.getElementById('analysisBody');
+  body.innerHTML=`<div class="analysis-grid">
+    <div class="analysis-card"><b>${rows.length}</b><span>분석 대상 태스크</span></div>
+    <div class="analysis-card"><b>${totalEffort}h</b><span>총 예상 공수</span></div>
+    <div class="analysis-card"><b>${highRisk}</b><span>고위험 미완료</span></div>
+    <div class="analysis-card"><b>${approvals}</b><span>승인 대기</span></div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>담당자</th><th>태스크</th><th>완료</th><th>평균 진행률</th><th>공수</th><th>지연</th><th>대기</th></tr></thead>
+  <tbody>${ownerRows.map(r=>`<tr><td>${ownerAvatar(r.owner)}</td><td>${r.total}</td><td>${r.done}</td><td>${r.avg}%</td><td>${r.effort}h</td><td>${r.overdue}</td><td>${r.blocked}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">데이터가 없습니다.</td></tr>'}</tbody></table></div>`;
+}
+function openIssues(){
+  renderIssues();
+  document.getElementById('issueMask').classList.add('on');
+}
+function closeIssues(){document.getElementById('issueMask').classList.remove('on');}
+function renderIssues(){
+  const rows=projectTasks(selectedProjectId).filter(t=>t.status!=='done' && (isOverdue(t)||isBlocked(t)||t.risk==='high'||t.approval==='requested'||!t.end));
+  const body=document.getElementById('issueBody');
+  const counts={
+    overdue:rows.filter(isOverdue).length,
+    blocked:rows.filter(isBlocked).length,
+    risk:rows.filter(t=>t.risk==='high').length,
+    approval:rows.filter(t=>t.approval==='requested').length
+  };
+  body.innerHTML=`<div class="analysis-grid">
+    <div class="analysis-card"><b>${counts.overdue}</b><span>지연</span></div>
+    <div class="analysis-card"><b>${counts.blocked}</b><span>의존성 대기</span></div>
+    <div class="analysis-card"><b>${counts.risk}</b><span>고위험</span></div>
+    <div class="analysis-card"><b>${counts.approval}</b><span>승인 요청</span></div>
+  </div>
+  ${rows.map(t=>`<div class="issue-row">
+    <div style="flex:1"><strong onclick="openIssueTask('${esc(t.id)}')" style="cursor:pointer">${esc(t.name)}</strong><div class="issue-meta">${esc(projectName(t.pid))} · ${esc(t.owner)} · ${fmtDate(t.end)}</div></div>
+    ${isOverdue(t)?'<span class="chip priority-high">지연</span>':''}
+    ${isBlocked(t)?'<span class="chip priority-high">대기</span>':''}
+    ${t.risk==='high'?'<span class="chip risk-high">고위험</span>':''}
+    ${t.approval==='requested'?'<span class="chip status-review">승인 요청</span>':''}
+  </div>`).join('') || '<div class="empty">관리할 이슈가 없습니다.</div>'}`;
+}
+function openIssueTask(id){
+  closeIssues();
+  openTaskDrawer(id);
+}
 
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape'){
@@ -1169,6 +1569,8 @@ document.addEventListener('keydown', e=>{
     closeTaskDrawer();
     closeTrash();
     closeAudit();
+    closeAnalysis();
+    closeIssues();
   }
 });
 
