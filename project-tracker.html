@@ -36,13 +36,20 @@
   label.btn-ghost{display:inline-flex;align-items:center;cursor:pointer}
   .btn-danger{height:34px;background:var(--danger-light);color:var(--danger);padding:0 11px;border:1px solid rgba(217,64,64,.35)}
   .btn-danger:hover{background:var(--danger);color:#fff}
-  .toolbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;overflow:visible;background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 9px;box-shadow:var(--shadow);margin-bottom:8px}
-  .toolbar>*{flex:0 0 auto}
-  .toolbar input{width:clamp(170px,16vw,220px)}
+  .toolbar{display:grid;gap:7px;overflow:visible;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;box-shadow:var(--shadow);margin-bottom:8px}
+  .toolbar-row{display:grid;align-items:center;gap:8px}
+  .toolbar-main{grid-template-columns:auto minmax(260px,1fr) auto}
+  .toolbar-sub{grid-template-columns:auto minmax(420px,1fr) auto;border-top:1px solid var(--line);padding-top:7px}
+  .toolbar-group{display:flex;align-items:center;gap:5px;min-width:0}
+  .toolbar-search input{width:100%}
+  .toolbar-selects{justify-content:flex-end;flex-wrap:nowrap}
+  .toolbar-selects select{min-width:104px}
+  .toolbar-label{font-size:11px;font-weight:900;color:var(--muted);white-space:nowrap;padding-left:2px}
+  .toolbar-tools{display:flex;align-items:center;gap:5px;justify-content:flex-end;white-space:nowrap}
   .view-tabs{display:inline-flex;gap:3px;padding:3px;background:var(--surface2);border:1px solid var(--line);border-radius:10px}
   .view-tab{height:28px;background:transparent;color:var(--muted);padding:0 9px;font-size:11px}
   .view-tab.active{background:var(--green-dark);color:#fff}
-  .quick-tabs{display:inline-flex;gap:3px;padding:3px;background:#fff;border:1px solid var(--line);border-radius:10px;flex:1 1 430px;min-width:320px;flex-wrap:wrap}
+  .quick-tabs{display:flex;gap:3px;padding:3px;background:#fff;border:1px solid var(--line);border-radius:10px;flex-wrap:wrap;min-width:0}
   .quick-tab{height:28px;background:transparent;color:var(--muted);padding:0 8px;font-size:11px}
   .quick-tab.active{background:var(--green-light);color:var(--green-dark)}
   .tool-split{height:26px;width:1px;background:var(--line);margin:0 1px}
@@ -270,60 +277,71 @@
   </div>
 
   <div class="toolbar">
-    <div class="view-tabs" aria-label="보기 방식">
-      <button class="view-tab active" data-view="table" onclick="setView('table')">표</button>
-      <button class="view-tab" data-view="board" onclick="setView('board')">보드</button>
-      <button class="view-tab" data-view="timeline" onclick="setView('timeline')">타임라인</button>
-      <button class="view-tab" data-view="calendar" onclick="setView('calendar')">달력</button>
+    <div class="toolbar-row toolbar-main">
+      <div class="toolbar-group">
+        <div class="view-tabs" aria-label="보기 방식">
+          <button class="view-tab active" data-view="table" onclick="setView('table')">표</button>
+          <button class="view-tab" data-view="board" onclick="setView('board')">보드</button>
+          <button class="view-tab" data-view="timeline" onclick="setView('timeline')">타임라인</button>
+          <button class="view-tab" data-view="calendar" onclick="setView('calendar')">달력</button>
+        </div>
+      </div>
+      <div class="toolbar-group toolbar-search">
+        <input id="q" placeholder="태스크, 태그, 담당자 검색" oninput="renderWorkspace()">
+      </div>
+      <div class="toolbar-group toolbar-selects">
+        <select id="filterOwner" onchange="renderWorkspace()"><option value="">담당자 전체</option></select>
+        <select id="filterStatus" onchange="renderWorkspace()">
+          <option value="">상태 전체</option>
+          <option value="todo">할 일</option>
+          <option value="progress">진행 중</option>
+          <option value="review">검토</option>
+          <option value="done">완료</option>
+        </select>
+        <select id="sortBy" onchange="renderWorkspace()">
+          <option value="manual">기본순</option>
+          <option value="due">마감 임박순</option>
+          <option value="priority">우선순위순</option>
+          <option value="risk">리스크순</option>
+          <option value="progress">진행률순</option>
+        </select>
+        <select id="groupBy" onchange="renderWorkspace()">
+          <option value="">그룹 없음</option>
+          <option value="project">프로젝트별</option>
+          <option value="owner">담당자별</option>
+          <option value="status">상태별</option>
+          <option value="priority">우선순위별</option>
+        </select>
+      </div>
     </div>
-    <input id="q" placeholder="태스크, 태그, 담당자 검색" oninput="renderWorkspace()">
-    <select id="filterOwner" onchange="renderWorkspace()"><option value="">담당자 전체</option></select>
-    <select id="filterStatus" onchange="renderWorkspace()">
-      <option value="">상태 전체</option>
-      <option value="todo">할 일</option>
-      <option value="progress">진행 중</option>
-      <option value="review">검토</option>
-      <option value="done">완료</option>
-    </select>
-    <select id="sortBy" onchange="renderWorkspace()">
-      <option value="manual">기본순</option>
-      <option value="due">마감 임박순</option>
-      <option value="priority">우선순위순</option>
-      <option value="risk">리스크순</option>
-      <option value="progress">진행률순</option>
-    </select>
-    <select id="groupBy" onchange="renderWorkspace()">
-      <option value="">그룹 없음</option>
-      <option value="project">프로젝트별</option>
-      <option value="owner">담당자별</option>
-      <option value="status">상태별</option>
-      <option value="priority">우선순위별</option>
-    </select>
-    <div class="quick-tabs" aria-label="빠른 필터">
-      <button class="quick-tab active" data-quick="" onclick="setQuickFilter('')">전체</button>
-      <button class="quick-tab" data-quick="today" onclick="setQuickFilter('today')">오늘</button>
-      <button class="quick-tab" data-quick="overdue" onclick="setQuickFilter('overdue')">지연</button>
-      <button class="quick-tab" data-quick="week" onclick="setQuickFilter('week')">이번주</button>
-      <button class="quick-tab" data-quick="blocked" onclick="setQuickFilter('blocked')">대기</button>
-      <button class="quick-tab" data-quick="approval" onclick="setQuickFilter('approval')">승인</button>
-      <button class="quick-tab" data-quick="highrisk" onclick="setQuickFilter('highrisk')">고위험</button>
-      <button class="quick-tab" data-quick="pinned" onclick="setQuickFilter('pinned')">핀</button>
-      <button class="quick-tab" data-quick="mine" onclick="setQuickFilter('mine')">내 담당</button>
-      <button class="quick-tab" data-quick="nodate" onclick="setQuickFilter('nodate')">날짜없음</button>
+    <div class="toolbar-row toolbar-sub">
+      <div class="toolbar-label">빠른 필터</div>
+      <div class="quick-tabs" aria-label="빠른 필터">
+        <button class="quick-tab active" data-quick="" onclick="setQuickFilter('')">전체</button>
+        <button class="quick-tab" data-quick="today" onclick="setQuickFilter('today')">오늘</button>
+        <button class="quick-tab" data-quick="overdue" onclick="setQuickFilter('overdue')">지연</button>
+        <button class="quick-tab" data-quick="week" onclick="setQuickFilter('week')">이번주</button>
+        <button class="quick-tab" data-quick="blocked" onclick="setQuickFilter('blocked')">대기</button>
+        <button class="quick-tab" data-quick="approval" onclick="setQuickFilter('approval')">승인</button>
+        <button class="quick-tab" data-quick="highrisk" onclick="setQuickFilter('highrisk')">고위험</button>
+        <button class="quick-tab" data-quick="pinned" onclick="setQuickFilter('pinned')">핀</button>
+        <button class="quick-tab" data-quick="mine" onclick="setQuickFilter('mine')">내 담당</button>
+        <button class="quick-tab" data-quick="nodate" onclick="setQuickFilter('nodate')">날짜없음</button>
+      </div>
+      <div class="toolbar-tools">
+        <select id="savedViewSelect" class="saved-view-select" onchange="applySavedView(this.value)"><option value="">저장된 뷰</option></select>
+        <button class="mini-btn" onclick="saveCurrentView()">뷰 저장</button>
+        <button class="mini-btn" onclick="deleteSavedView()">삭제</button>
+        <select id="templateSelect" class="saved-view-select">
+          <option value="">템플릿</option>
+          <option value="meeting">회의 준비</option>
+          <option value="approval">승인 요청</option>
+          <option value="launch">출시/오픈</option>
+          <option value="issue">이슈 해결</option>
+        </select>
+        <button class="mini-btn" onclick="createFromTemplate()">추가</button>
+      </div>
     </div>
-    <div class="tool-split"></div>
-    <select id="savedViewSelect" class="saved-view-select" onchange="applySavedView(this.value)"><option value="">저장된 뷰</option></select>
-    <button class="mini-btn" onclick="saveCurrentView()">뷰 저장</button>
-    <button class="mini-btn" onclick="deleteSavedView()">삭제</button>
-    <div class="tool-split"></div>
-    <select id="templateSelect" class="saved-view-select">
-      <option value="">템플릿</option>
-      <option value="meeting">회의 준비</option>
-      <option value="approval">승인 요청</option>
-      <option value="launch">출시/오픈</option>
-      <option value="issue">이슈 해결</option>
-    </select>
-    <button class="mini-btn" onclick="createFromTemplate()">추가</button>
   </div>
 
   <div class="quick-add">
