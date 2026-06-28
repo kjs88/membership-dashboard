@@ -73,7 +73,7 @@
   .task-next{max-width:180px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .task-date-chip{display:inline-flex;align-items:center;border-radius:6px;background:var(--surface2);padding:3px 6px;font-size:11px;font-weight:800;color:var(--muted)}
   .task-date-chip.due{background:var(--danger-light);color:var(--danger)}
-  .quick-actions{display:flex;gap:4px;justify-content:flex-end;white-space:nowrap}
+  .task-action-select{width:76px;height:30px;padding:0 8px;border-radius:8px;font-size:11px;font-weight:800;background:#fff}
   .shortcut-hint{font-size:10px;color:var(--soft);font-weight:800;margin-left:4px}
   .bulk-bar{display:none;align-items:center;gap:7px;background:#fff;border:1px solid var(--green-mid);border-radius:10px;padding:8px 10px;margin-bottom:10px;box-shadow:var(--shadow)}
   .bulk-bar.on{display:flex}
@@ -129,11 +129,28 @@
   .stat b{display:block;font-size:14px;line-height:1.05;color:var(--green-dark)}
   .stat span{font-size:10px;color:var(--muted);white-space:nowrap}
   .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
-  .table-wrap{overflow:auto;max-height:calc(100vh - 330px)}
-  table{width:100%;border-collapse:collapse;min-width:1380px;background:#fff}
-  th,td{border-bottom:1px solid var(--line);padding:6px 7px;text-align:left;font-size:11px;vertical-align:middle;white-space:nowrap}
+  .table-wrap{overflow-x:hidden;overflow-y:auto;max-height:calc(100vh - 330px)}
+  table{width:100%;border-collapse:collapse;min-width:0;table-layout:fixed;background:#fff}
+  th,td{border-bottom:1px solid var(--line);padding:6px 7px;text-align:left;font-size:11px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   th{position:sticky;top:0;background:var(--surface2);z-index:2;color:var(--muted);font-size:10px;font-weight:900}
-  td.actions{white-space:nowrap;text-align:right}
+  td.actions{white-space:nowrap;text-align:right;overflow:visible}
+  .table-wrap th:nth-child(1),.table-wrap td:nth-child(1){width:34px}
+  .table-wrap th:nth-child(2),.table-wrap td:nth-child(2){width:18%}
+  .table-wrap th:nth-child(3),.table-wrap td:nth-child(3){width:11%}
+  .table-wrap th:nth-child(4),.table-wrap td:nth-child(4){width:12%}
+  .table-wrap th:nth-child(5),.table-wrap td:nth-child(5){width:86px}
+  .table-wrap th:nth-child(6),.table-wrap td:nth-child(6){width:72px}
+  .table-wrap th:nth-child(7),.table-wrap td:nth-child(7){width:62px}
+  .table-wrap th:nth-child(8),.table-wrap td:nth-child(8){width:62px}
+  .table-wrap th:nth-child(9),.table-wrap td:nth-child(9){width:68px}
+  .table-wrap th:nth-child(10),.table-wrap td:nth-child(10){width:62px}
+  .table-wrap th:nth-child(11),.table-wrap td:nth-child(11){width:96px}
+  .table-wrap th:nth-child(12),.table-wrap td:nth-child(12){width:76px}
+  .table-wrap th:nth-child(13),.table-wrap td:nth-child(13){width:78px}
+  .table-wrap th:nth-child(14),.table-wrap td:nth-child(14){width:48px}
+  .table-wrap th:nth-child(15),.table-wrap td:nth-child(15){width:56px}
+  .table-wrap th:nth-child(16),.table-wrap td:nth-child(16){width:8%}
+  .table-wrap th:nth-child(17),.table-wrap td:nth-child(17){width:82px}
   .row-check{width:18px;height:18px;vertical-align:middle}
   .group-row td{background:var(--surface2);font-weight:900;color:var(--muted);border-top:1px solid var(--line2)}
   .task-title{display:inline-block;max-width:220px;font-weight:900;color:var(--txt);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
@@ -725,7 +742,14 @@ let draggedTaskId = null;
 
 function esc(s){return String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function uid(prefix){return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7);}
-function iso(d){return d ? new Date(d).toISOString().slice(0,10) : '';}
+function iso(d){
+  if(!d) return '';
+  const dt=new Date(d);
+  const y=dt.getFullYear();
+  const m=String(dt.getMonth()+1).padStart(2,'0');
+  const day=String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function todayIso(){return iso(new Date());}
 function addDaysIso(days){const d=new Date();d.setDate(d.getDate()+days);return iso(d);}
 function parseTags(v){return String(v||'').split(',').map(x=>x.trim()).filter(Boolean);}
@@ -1367,7 +1391,14 @@ function taskRow(t){
     <td>${Number(t.effort)||0}h</td>
     <td>${checklistProgress(t)}</td>
     <td>${(t.tags||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</td>
-    <td class="actions"><div class="quick-actions"><button class="mini-btn" title="오늘 집중" onclick="togglePlanToday('${esc(t.id)}')">오늘</button><button class="mini-btn" title="마감 +1일" onclick="quickBumpDue('${esc(t.id)}',1)">+1</button><button class="mini-btn" title="3일 뒤 후속 확인" onclick="quickSetFollowup('${esc(t.id)}',3)">후속</button><button class="mini-btn" title="완료 처리" onclick="quickComplete('${esc(t.id)}')">완료</button><button class="mini-btn" onclick="openTaskDrawer('${esc(t.id)}')">열기</button></div></td>
+    <td class="actions"><select class="task-action-select" aria-label="태스크 작업" onchange="quickTaskAction('${esc(t.id)}',this.value);this.value=''">
+      <option value="">작업</option>
+      <option value="today">오늘 집중</option>
+      <option value="bump">마감 +1일</option>
+      <option value="followup">후속 +3일</option>
+      <option value="done">완료 처리</option>
+      <option value="open">상세 열기</option>
+    </select></td>
   </tr>`;
 }
 function renderBoard(){
@@ -1784,6 +1815,14 @@ function addRecentTask(id){
   if(!id) return;
   recents=[id, ...recents.filter(x=>x!==id)].slice(0,20);
   saveData();
+}
+function quickTaskAction(id,action){
+  if(!action) return;
+  if(action==='today') togglePlanToday(id);
+  else if(action==='bump') quickBumpDue(id,1);
+  else if(action==='followup') quickSetFollowup(id,3);
+  else if(action==='done') quickComplete(id);
+  else if(action==='open') openTaskDrawer(id);
 }
 function toggleTaskPinned(id){
   const t=tasks.find(x=>x.id===id);
