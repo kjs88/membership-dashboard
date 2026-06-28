@@ -143,14 +143,12 @@
   .table-wrap th:nth-child(7),.table-wrap td:nth-child(7){width:62px}
   .table-wrap th:nth-child(8),.table-wrap td:nth-child(8){width:62px}
   .table-wrap th:nth-child(9),.table-wrap td:nth-child(9){width:68px}
-  .table-wrap th:nth-child(10),.table-wrap td:nth-child(10){width:62px}
-  .table-wrap th:nth-child(11),.table-wrap td:nth-child(11){width:96px}
-  .table-wrap th:nth-child(12),.table-wrap td:nth-child(12){width:76px}
-  .table-wrap th:nth-child(13),.table-wrap td:nth-child(13){width:78px}
-  .table-wrap th:nth-child(14),.table-wrap td:nth-child(14){width:48px}
-  .table-wrap th:nth-child(15),.table-wrap td:nth-child(15){width:56px}
-  .table-wrap th:nth-child(16),.table-wrap td:nth-child(16){width:8%}
-  .table-wrap th:nth-child(17),.table-wrap td:nth-child(17){width:82px}
+  .table-wrap th:nth-child(10),.table-wrap td:nth-child(10){width:96px}
+  .table-wrap th:nth-child(11),.table-wrap td:nth-child(11){width:76px}
+  .table-wrap th:nth-child(12),.table-wrap td:nth-child(12){width:78px}
+  .table-wrap th:nth-child(13),.table-wrap td:nth-child(13){width:48px}
+  .table-wrap th:nth-child(14),.table-wrap td:nth-child(14){width:56px}
+  .table-wrap th:nth-child(15),.table-wrap td:nth-child(15){width:82px}
   .row-check{width:18px;height:18px;vertical-align:middle}
   .group-row td{background:var(--surface2);font-weight:900;color:var(--muted);border-top:1px solid var(--line2)}
   .task-title{display:inline-block;max-width:220px;font-weight:900;color:var(--txt);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
@@ -270,15 +268,13 @@
     .table-wrap th:nth-child(7),.table-wrap td:nth-child(7){width:58px}
     .table-wrap th:nth-child(8),.table-wrap td:nth-child(8){width:52px}
     .table-wrap th:nth-child(9),.table-wrap td:nth-child(9){width:58px}
-    .table-wrap th:nth-child(11),.table-wrap td:nth-child(11){width:96px}
-    .table-wrap th:nth-child(13),.table-wrap td:nth-child(13){width:82px}
-    .table-wrap th:nth-child(17),.table-wrap td:nth-child(17){width:150px}
+    .table-wrap th:nth-child(10),.table-wrap td:nth-child(10){width:96px}
+    .table-wrap th:nth-child(12),.table-wrap td:nth-child(12){width:82px}
+    .table-wrap th:nth-child(15),.table-wrap td:nth-child(15){width:82px}
     .table-wrap th:nth-child(3),.table-wrap td:nth-child(3),
-    .table-wrap th:nth-child(10),.table-wrap td:nth-child(10),
-    .table-wrap th:nth-child(12),.table-wrap td:nth-child(12),
-    .table-wrap th:nth-child(14),.table-wrap td:nth-child(14),
-    .table-wrap th:nth-child(15),.table-wrap td:nth-child(15),
-    .table-wrap th:nth-child(16),.table-wrap td:nth-child(16){display:none}
+    .table-wrap th:nth-child(11),.table-wrap td:nth-child(11),
+    .table-wrap th:nth-child(13),.table-wrap td:nth-child(13),
+    .table-wrap th:nth-child(14),.table-wrap td:nth-child(14){display:none}
     .task-title{max-width:170px}
     .quick-actions{gap:2px}
     .quick-actions .mini-btn{padding:0 5px;font-size:10px}
@@ -1347,7 +1343,7 @@ function renderTable(){
   const bodyHtml=groupedRowsHtml(rows);
   host.innerHTML=`<div class="table-wrap"><table>
     <thead><tr>
-      <th><input class="row-check" type="checkbox" onchange="toggleAllVisible(this.checked)"></th><th>태스크</th><th>다음 액션</th><th>프로젝트</th><th>상태</th><th>담당</th><th>우선순위</th><th>리스크</th><th>승인</th><th>유형</th><th>기간</th><th>후속</th><th>진행률</th><th>공수</th><th>체크</th><th>태그</th><th></th>
+      <th><input class="row-check" type="checkbox" onchange="toggleAllVisible(this.checked)"></th><th>태스크</th><th>다음 액션</th><th>프로젝트</th><th>상태</th><th>담당</th><th>우선순위</th><th>리스크</th><th>승인</th><th>기간</th><th>후속</th><th>진행률</th><th>공수</th><th>체크</th><th></th>
     </tr></thead>
     <tbody>${bodyHtml}</tbody>
   </table></div>`;
@@ -1362,7 +1358,7 @@ function groupedRowsHtml(rows){
     if(!groups.has(key)) groups.set(key,[]);
     groups.get(key).push(t);
   });
-  return [...groups.entries()].map(([label,list])=>`<tr class="group-row"><td colspan="17">${esc(label)} · ${list.length}개</td></tr>${list.map(t=>taskRow(t)).join('')}`).join('');
+  return [...groups.entries()].map(([label,list])=>`<tr class="group-row"><td colspan="15">${esc(label)} · ${list.length}개</td></tr>${list.map(t=>taskRow(t)).join('')}`).join('');
 }
 function groupLabel(t,groupBy){
   if(groupBy==='project') return projectName(t.pid);
@@ -1384,13 +1380,11 @@ function taskRow(t){
     <td>${priorityChip(t.priority)}</td>
     <td><span class="chip ${RISK[t.risk]?.cls||'risk-low'}">${esc(RISK[t.risk]?.label || '낮음')}</span></td>
     <td><span class="chip">${esc(APPROVAL[t.approval]?.label || '없음')}</span></td>
-    <td><span class="chip">${esc(TYPE[t.type]?.label || '태스크')}</span></td>
     <td>${fmtDate(t.start)} ~ ${fmtDate(t.end)}</td>
     <td>${dateChip(t.followup)}</td>
     <td><input type="number" min="0" max="100" value="${Number(t.progress)||0}" style="width:74px" onchange="quickProgress('${esc(t.id)}',this.value)">%</td>
     <td>${Number(t.effort)||0}h</td>
     <td>${checklistProgress(t)}</td>
-    <td>${(t.tags||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</td>
     <td class="actions"><select class="task-action-select" aria-label="태스크 작업" onchange="quickTaskAction('${esc(t.id)}',this.value);this.value=''">
       <option value="">작업</option>
       <option value="today">오늘 집중</option>
