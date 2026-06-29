@@ -1172,12 +1172,14 @@ function setManualGrade(name, grade) {
 // ════════════════════════════════════
 let erpParsedByBasis = { order: [], ship: [] };
 const ERP_REMOTE_DATA_PATH = 'erp/latest';
+const ERP_WATCHDOG_DATA_PATH = 'erp/syncWatchdog';
 const ERP_AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_CHECK_MS = 5 * 60 * 1000;
 const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
 const ERP_AUTO_SYNC_LOCK_MS = 10 * 60 * 1000;
 const ERP_AUTO_SYNC_META_KEY = 'sj-erp-auto-sync-meta';
 const ERP_AUTO_SYNC_LOCK_KEY = 'sj-erp-auto-sync-lock';
+let erpWatchdogLastFetchAt = 0;
 const ERP_AUTO_SYNC_HOLIDAYS = {
   '2026-01-01': '신정',
   '2026-02-16': '설날 연휴',
@@ -1616,12 +1618,63 @@ function erpUpdateSidebarSyncStamp(meta = erpReadSyncMeta()) {
   el.classList.toggle('is-empty', !syncedAt);
 }
 
+function erpGetWatchdogUrl() {
+  const base = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
+  return base ? `${base}/${ERP_WATCHDOG_DATA_PATH}.json` : '';
+}
+
+function erpDescribeWatchdog(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return { text: '점검 전', title: '', warn: false, ok: false };
+  }
+  const checked = payload.checkedAt ? erpFormatSidebarUpdatedAt(payload.checkedAt) : '';
+  const age = Number.isFinite(Number(payload.ageMinutes)) ? `${Number(payload.ageMinutes).toLocaleString()}분 지연` : '';
+  const baseTitle = checked ? `감시 점검 ${checked}` : '';
+  if (payload.status === 'stale-dispatched') {
+    return { text: `지연 감지 · 자동 재실행${age ? ` (${age})` : ''}`, title: payload.message || baseTitle, warn: true, ok: false };
+  }
+  if (payload.status === 'stale-sync-already-running') {
+    return { text: `지연 감지 · 실행 중${age ? ` (${age})` : ''}`, title: payload.message || baseTitle, warn: true, ok: false };
+  }
+  if (payload.status === 'sync-failing' || payload.status === 'dispatch-failed' || payload.status === 'firebase-read-failed') {
+    return { text: `동기화 장애${age ? ` (${age})` : ''}`, title: payload.message || baseTitle, warn: true, ok: false };
+  }
+  if (payload.stale) {
+    return { text: `지연 감지${age ? ` (${age})` : ''}`, title: payload.message || baseTitle, warn: true, ok: false };
+  }
+  return { text: checked ? `정상 · ${checked}` : '정상', title: baseTitle, warn: false, ok: true };
+}
+
+async function erpRefreshWatchdogStatus(force = false) {
+  const el = document.getElementById('erp-sync-watchdog-state');
+  if (!el) return;
+  const now = Date.now();
+  if (!force && erpWatchdogLastFetchAt && now - erpWatchdogLastFetchAt < 60 * 1000) return;
+  erpWatchdogLastFetchAt = now;
+  const url = erpGetWatchdogUrl();
+  if (!url) return;
+  try {
+    const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`, { cache: 'no-store' });
+    const payload = res.ok ? await res.json().catch(() => null) : null;
+    const state = erpDescribeWatchdog(payload);
+    el.textContent = state.text;
+    el.title = state.title || '';
+    el.classList.toggle('is-watchdog-warn', state.warn);
+    el.classList.toggle('is-watchdog-ok', state.ok);
+  } catch (_) {
+    el.textContent = '감시 확인 실패';
+    el.classList.add('is-watchdog-warn');
+    el.classList.remove('is-watchdog-ok');
+  }
+}
+
 function erpRefreshSyncStatus() {
   const meta = erpReadSyncMeta();
   const stateEl = document.getElementById('erp-sync-state');
   const orderEl = document.getElementById('erp-sync-order-count');
   const shipEl = document.getElementById('erp-sync-ship-count');
   const autoEl = document.getElementById('erp-sync-auto-state');
+  erpRefreshWatchdogStatus();
   if (!meta) {
     if (stateEl) stateEl.textContent = '아직 동기화 기록 없음';
     if (orderEl) orderEl.textContent = (allOrderOrders || []).length ? `${allOrderOrders.length.toLocaleString()}건 저장됨` : '-';

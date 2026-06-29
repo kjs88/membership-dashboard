@@ -1,0 +1,52 @@
+name: ERP 동기화 감시/복구
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Lightweight health check. The script only dispatches collection during
+    # configured KST collection windows.
+    - cron: '*/10 * * * *'
+
+concurrency:
+  group: erp-sync-watchdog
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  watchdog:
+    name: 최신 업데이트 점검 및 자동 복구
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 저장소 가져오기
+        uses: actions/checkout@v5
+
+      - name: Python 설정
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: ERP 동기화 상태 점검
+        run: |
+          python scripts/erp_sync_watchdog.py --repair-schedule --dispatch-on-stale
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AMARANS_FIREBASE_DB_URL: ${{ secrets.AMARANS_FIREBASE_DB_URL }}
+          AMARANS_FIREBASE_AUTH_TOKEN: ${{ secrets.AMARANS_FIREBASE_AUTH_TOKEN }}
+
+      - name: 스케줄 자동 수정 커밋
+        if: always()
+        run: |
+          if git diff --quiet -- .github/workflows/amarans-sync.yml; then
+            echo "schedule file unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/amarans-sync.yml
+          git commit -m "fix: repair ERP sync schedule"
+          git push

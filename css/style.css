@@ -546,9 +546,11 @@ td.tm{color:var(--text);font-weight:500;}
 .erp-file-sub{font-size:12px;color:var(--text3);line-height:1.5;}
 .erp-file-state{font-size:12px;font-weight:700;margin-top:10px;color:var(--text3);}
 .erp-sync-panel{border:1px solid var(--border);border-radius:var(--r);background:var(--surface2);padding:16px;margin-bottom:14px;}
-.erp-sync-summary{display:grid;grid-template-columns:1.3fr 1fr .75fr .75fr;gap:12px;margin-bottom:14px;}
+.erp-sync-summary{display:grid;grid-template-columns:1.3fr 1fr 1fr .75fr .75fr;gap:12px;margin-bottom:14px;}
 .erp-sync-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;}
 .erp-sync-value{font-size:13px;font-weight:700;color:var(--text);line-height:1.45;}
+.erp-sync-value.is-watchdog-warn{color:var(--red);}
+.erp-sync-value.is-watchdog-ok{color:var(--green-dark);}
 .erp-sync-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
 .erp-manual-fallback{border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;background:var(--surface);}
 .erp-manual-fallback summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text2);user-select:none;}
