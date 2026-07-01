@@ -489,9 +489,16 @@ function renderSalesPersonMonth() {
   allUsers.forEach(user => {
     personSalesTargets[user.name] = (targets.personalSales || {})[user.id] || 0;
   });
-  const personColors = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
+  const fixedPersonColors = {
+    '장재순': '#E53935',
+    '이민우': '#2B72C8',
+    '안성종': '#43A047',
+  };
+  const personColors = ['#E8900A','#7856C8','#26c6da','#8D6E63','#607D8B'];
   const getPersonColor = (name, index) => {
-    const user = allUsers.find(item => item.name === name);
+    const personName = String(name || '').trim();
+    if (fixedPersonColors[personName]) return fixedPersonColors[personName];
+    const user = allUsers.find(item => item.name === personName);
     return user?.color || personColors[index % personColors.length];
   };
   const basisText = useErp ? `${shortMonthLabel} ${basisMeta.label} 공급가 기준 (원)` : `${shortMonthLabel} 당사 구매액 기준 (원)`;
