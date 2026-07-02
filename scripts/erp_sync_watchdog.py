@@ -22,15 +22,15 @@ REMOTE_ERP_PATH = os.environ.get("AMARANS_REMOTE_ERP_PATH", "erp/latest").strip(
 WATCHDOG_PATH = os.environ.get("AMARANS_WATCHDOG_PATH", "erp/syncWatchdog").strip("/")
 
 EXPECTED_SCHEDULE_BLOCK = """  schedule:
-    # KST weekdays 08:00-23:55 every 5 minutes (recent).
-    # GitHub cron is UTC: KST 08:00-08:55 is UTC 23:00-23:55 on the previous day.
-    - cron: '*/5 23 * * 0-4'
-    # GitHub cron is UTC: KST 09:00-23:55 is UTC 00:00-14:55 on the same day.
-    - cron: '*/5 0-14 * * 1-5'
-    # KST weekends 08:00, then every 2 hours through 24:00 (recent).
+    # Session starts. GitHub cron starts the runner; scripts/erp_sync_loop.py
+    # keeps the precise interval inside the job.
+    # KST weekdays 08:00, 14:00, 20:00. UTC 23 previous day, 05, 11.
+    - cron: '0 23 * * 0-4'
+    - cron: '0 5 * * 1-5'
+    - cron: '0 11 * * 1-5'
+    # KST weekends 08:00 and 16:00. The loop runs every 2 hours through 24:00.
     - cron: '0 23 * * 5,6'
-    - cron: '0 1-13/2 * * 6,0'
-    - cron: '0 15 * * 6,0'
+    - cron: '0 7 * * 6,0'
 """
 
 

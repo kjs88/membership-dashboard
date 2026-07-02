@@ -12,15 +12,15 @@ on:
           - recent60
           - full
   schedule:
-    # KST weekdays 08:00-23:55 every 5 minutes (recent).
-    # GitHub cron is UTC: KST 08:00-08:55 is UTC 23:00-23:55 on the previous day.
-    - cron: '*/5 23 * * 0-4'
-    # GitHub cron is UTC: KST 09:00-23:55 is UTC 00:00-14:55 on the same day.
-    - cron: '*/5 0-14 * * 1-5'
-    # KST weekends 08:00, then every 2 hours through 24:00 (recent).
+    # Session starts. GitHub cron starts the runner; scripts/erp_sync_loop.py
+    # keeps the precise interval inside the job.
+    # KST weekdays 08:00, 14:00, 20:00. UTC 23 previous day, 05, 11.
+    - cron: '0 23 * * 0-4'
+    - cron: '0 5 * * 1-5'
+    - cron: '0 11 * * 1-5'
+    # KST weekends 08:00 and 16:00. The loop runs every 2 hours through 24:00.
     - cron: '0 23 * * 5,6'
-    - cron: '0 1-13/2 * * 6,0'
-    - cron: '0 15 * * 6,0'
+    - cron: '0 7 * * 6,0'
 
 concurrency:
   group: amarans-erp-sync
@@ -33,7 +33,7 @@ jobs:
   sync:
     name: 주문/출고현황 수집
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 520
 
     steps:
       - name: 저장소 가져오기
@@ -57,11 +57,17 @@ jobs:
           echo "kst_now=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S')"
           if [ "${{ github.event_name }}" = "schedule" ]; then
             case "${{ github.event.schedule }}" in
-              "0 23 * * 5,6"|"0 1-13/2 * * 6,0"|"0 15 * * 6,0")
-                AMARANS_IGNORE_AUTO_HOURS=1 AMARANS_IGNORE_AUTO_WEEKEND=1 python scripts/amarans_api_v10.py --auto --recent 60
+              "0 23 * * 5,6")
+                python scripts/erp_sync_loop.py --interval-minutes 120 --duration-minutes 370 --recent 60 --include-weekend
+                ;;
+              "0 7 * * 6,0")
+                python scripts/erp_sync_loop.py --interval-minutes 120 --duration-minutes 490 --recent 60 --include-weekend
+                ;;
+              "0 11 * * 1-5")
+                python scripts/erp_sync_loop.py --interval-minutes 5 --duration-minutes 250 --recent 60
                 ;;
               *)
-                AMARANS_IGNORE_AUTO_HOURS=1 python scripts/amarans_api_v10.py --auto --recent 60
+                python scripts/erp_sync_loop.py --interval-minutes 5 --duration-minutes 360 --recent 60
                 ;;
             esac
           elif [ "${{ inputs.mode }}" = "full" ]; then
