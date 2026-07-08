@@ -442,7 +442,7 @@ function renderProdMonthlyFlow() {
   if (sub) {
     const range = data.months.length ? `${data.months[0]} ~ ${data.months[data.months.length - 1]}` : '선택 기간';
     const rangeLabel = data.rangeMode === 'filter' ? '현재 기간 필터' : '전체 데이터';
-    const latestLabel = data.latestDataMonth ? ` · 최근월 ${data.latestDataMonth}` : '';
+    const latestLabel = data.latestDataMonth ? ` · 이번달 ${data.latestDataMonth}` : '';
     sub.textContent = `${rangeLabel} ${range}${latestLabel} · ${data.basisMeta.label} · ${metricLabel} 기준`;
   }
 
@@ -462,14 +462,14 @@ function renderProdMonthlyFlow() {
     summary.innerHTML = [
       `<div class="product-flow-chip">상품 <strong>${data.items.length.toLocaleString()}</strong></div>`,
       `<div class="product-flow-chip">합계 <strong>${Math.round(total).toLocaleString()}${unit}</strong></div>`,
-      `<div class="product-flow-chip">최근월 <strong>${Math.round(latestTotal).toLocaleString()}${unit}</strong></div>`,
+      `<div class="product-flow-chip">이번달 <strong>${Math.round(latestTotal).toLocaleString()}${unit}</strong></div>`,
       `<div class="product-flow-chip">1위 <strong>${escHtml(leader?.name || '-')}</strong></div>`,
     ].join('');
   }
 
   const showQtyColumns = data.metric !== 'qty';
   const qtyHeads = showQtyColumns
-    ? '<th>합계 수량</th><th>월평균 수량</th><th>최근월 수량</th>'
+    ? '<th>합계 수량</th><th>월평균 수량</th><th>이번달 수량</th>'
     : '';
   const monthHeads = data.months.map(m => `<th>${m.slice(2).replace('-', '.')}</th>`).join('');
   thead.innerHTML = `<tr>
@@ -477,7 +477,7 @@ function renderProdMonthlyFlow() {
     <th>품목군</th>
     <th>합계</th>
     <th>월평균</th>
-    <th>최근월</th>
+    <th>이번달</th>
     ${qtyHeads}
     <th>전월比</th>
     ${monthHeads}
@@ -550,13 +550,13 @@ function downloadProdMonthlyFlowExcel() {
       '품목군': r.category || '',
       [`합계(${metricLabel})`]: Math.round(r.total),
       [`월평균(${metricLabel})`]: Math.round(r.avg),
-      [`최근월(${metricLabel})`]: Math.round(r.latest),
+      [`이번달(${metricLabel})`]: Math.round(r.latest),
       '전월비(%)': Number(r.growth.toFixed(2)),
     };
     if (metric !== 'qty') {
       row['합계 수량'] = Math.round(r.qty || 0);
       row['월평균 수량'] = Math.round(r.avgQty || 0);
-      row['최근월 수량'] = Math.round(r.latestQty || 0);
+      row['이번달 수량'] = Math.round(r.latestQty || 0);
     }
     _prodMonthlyFlowMonths.forEach((m, idx) => { row[m] = Math.round(r.values[idx] || 0); });
     return row;
