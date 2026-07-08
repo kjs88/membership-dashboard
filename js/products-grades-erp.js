@@ -469,31 +469,41 @@ function renderProdMonthlyFlow() {
 
   const showQtyColumns = data.metric !== 'qty';
   const qtyHeads = showQtyColumns
-    ? '<th>합계 수량</th><th>월평균 수량</th><th>이번달 수량</th>'
+    ? '<th class="product-flow-qty-col">합계 수량</th><th class="product-flow-qty-avg-col">월평균 수량</th><th class="product-flow-qty-col">이번달 수량</th>'
     : '';
-  const monthHeads = data.months.map(m => `<th>${m.slice(2).replace('-', '.')}</th>`).join('');
+  const monthLabels = data.months.map(m => m.slice(2).replace('-', '.'));
   thead.innerHTML = `<tr>
-    <th>품목명</th>
-    <th>품목군</th>
-    <th>합계</th>
-    <th>월평균</th>
-    <th>이번달</th>
+    <th class="product-flow-name-col">품목명</th>
+    <th class="product-flow-category-col">품목군</th>
+    <th class="product-flow-total-col">합계</th>
+    <th class="product-flow-avg-col">월평균</th>
+    <th class="product-flow-latest-col">이번달</th>
     ${qtyHeads}
-    <th>전월比</th>
-    ${monthHeads}
+    <th class="product-flow-growth-col">전월比</th>
+    <th class="product-flow-month-head">월별 흐름</th>
   </tr>`;
   tbody.innerHTML = tableRows.map(r => {
     const growthCls = r.growth > 0 ? 'up' : r.growth < 0 ? 'down' : '';
     const growthText = r.prev || r.latest ? `${r.growth >= 0 ? '+' : ''}${r.growth.toFixed(1)}%` : '-';
+    const monthGrid = r.values.map((v, idx) => {
+      const fullValueText = v ? Math.round(v).toLocaleString() : '-';
+      const valueText = prodFlowCompactValue(v, data.metric);
+      const isLatest = data.months[idx] === data.latestDataMonth;
+      const isEmpty = !v;
+      return `<span class="product-flow-month-cell ${isLatest ? 'latest' : ''} ${isEmpty ? 'empty' : ''}" title="${escHtml(monthLabels[idx] || '')} ${escHtml(fullValueText)}${unit}">
+        <b>${escHtml(monthLabels[idx] || '')}</b>
+        <em>${valueText}</em>
+      </span>`;
+    }).join('');
     return `<tr>
       <td class="product-flow-name">${escHtml(r.name)}</td>
-      <td>${escHtml(r.category || '-')}</td>
+      <td class="product-flow-category">${escHtml(r.category || '-')}</td>
       <td class="product-flow-total">${Math.round(r.total).toLocaleString()}</td>
-      <td>${Math.round(r.avg).toLocaleString()}</td>
-      <td>${Math.round(r.latest).toLocaleString()}</td>
-      ${showQtyColumns ? `<td>${Math.round(r.qty).toLocaleString()}</td><td>${Math.round(r.avgQty).toLocaleString()}</td><td>${Math.round(r.latestQty).toLocaleString()}</td>` : ''}
+      <td class="product-flow-avg">${Math.round(r.avg).toLocaleString()}</td>
+      <td class="product-flow-latest">${Math.round(r.latest).toLocaleString()}</td>
+      ${showQtyColumns ? `<td class="product-flow-qty">${Math.round(r.qty).toLocaleString()}</td><td class="product-flow-qty-avg">${Math.round(r.avgQty).toLocaleString()}</td><td class="product-flow-qty">${Math.round(r.latestQty).toLocaleString()}</td>` : ''}
       <td class="product-flow-growth ${growthCls}">${growthText}</td>
-      ${r.values.map(v => `<td>${v ? Math.round(v).toLocaleString() : '-'}</td>`).join('')}
+      <td class="product-flow-months"><div class="product-flow-month-grid">${monthGrid}</div></td>
     </tr>`;
   }).join('');
 
@@ -527,6 +537,20 @@ function renderProdMonthlyFlow() {
       },
     },
   });
+}
+
+function prodFlowCompactValue(value, metric) {
+  const n = Math.round(value || 0);
+  if (!n) return '-';
+  if (metric === 'qty') return n.toLocaleString();
+  const abs = Math.abs(n);
+  if (abs >= 100000000) {
+    const raw = n / 100000000;
+    const fixed = raw >= 10 ? raw.toFixed(1) : raw.toFixed(2);
+    return `${fixed.replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1')}억`;
+  }
+  if (abs >= 10000) return `${Math.round(n / 10000).toLocaleString()}만`;
+  return n.toLocaleString();
 }
 
 function downloadProdMonthlyFlowExcel() {

@@ -167,18 +167,46 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .product-flow-chip{border:1px solid var(--border);background:var(--surface2);border-radius:7px;padding:7px 10px;font-size:12px;font-weight:700;color:var(--text2);}
 .product-flow-chip strong{font-family:var(--mono);font-size:13px;color:var(--green-dark);margin-left:4px;}
 .product-flow-chart{position:relative;height:300px;margin-bottom:14px;}
-.product-flow-table-wrap{max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
-.product-flow-table{width:100%;border-collapse:collapse;font-size:12px;min-width:920px;}
+.product-flow-table-wrap{max-height:420px;overflow-x:hidden;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+.product-flow-table{width:100%;border-collapse:collapse;font-size:12px;min-width:0;table-layout:fixed;}
 .product-flow-table thead{position:sticky;top:0;z-index:1;background:var(--surface2);}
-.product-flow-table th,.product-flow-table td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.product-flow-table th,.product-flow-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .product-flow-table th{font-size:11px;font-weight:800;color:var(--text2);text-align:right;}
-.product-flow-table th:first-child,.product-flow-table th:nth-child(2),.product-flow-table td:first-child,.product-flow-table td:nth-child(2){text-align:left;}
+.product-flow-table .product-flow-name-col,.product-flow-table td.product-flow-name{width:17%;text-align:left;}
+.product-flow-table .product-flow-category-col,.product-flow-table td.product-flow-category{width:8%;text-align:left;}
+.product-flow-table .product-flow-total-col,.product-flow-table td.product-flow-total{width:8%;}
+.product-flow-table .product-flow-avg-col,.product-flow-table td.product-flow-avg{width:7%;}
+.product-flow-table .product-flow-latest-col,.product-flow-table td.product-flow-latest{width:7%;}
+.product-flow-table .product-flow-qty-col,.product-flow-table td.product-flow-qty{width:7%;}
+.product-flow-table .product-flow-qty-avg-col,.product-flow-table td.product-flow-qty-avg{width:7%;}
+.product-flow-table .product-flow-growth-col,.product-flow-table td.product-flow-growth{width:6%;}
+.product-flow-table .product-flow-month-head,.product-flow-table td.product-flow-months{width:26%;}
 .product-flow-table td{text-align:right;color:var(--text2);}
-.product-flow-table td.product-flow-name{font-weight:700;color:var(--text);}
+.product-flow-table td.product-flow-name{font-weight:700;color:var(--text);line-height:1.35;word-break:keep-all;}
 .product-flow-table td.product-flow-total{font-family:var(--mono);font-weight:800;color:var(--green-dark);}
+.product-flow-month-head{text-align:left!important;}
+.product-flow-months{text-align:left!important;}
+.product-flow-month-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;min-width:0;}
+.product-flow-month-cell{display:grid;grid-template-columns:1fr;gap:2px;min-width:0;border:1px solid var(--border);border-radius:6px;background:var(--surface2);padding:4px 5px;}
+.product-flow-month-cell b{font-family:var(--mono);font-size:10px;font-weight:800;color:var(--text3);line-height:1;text-align:left;}
+.product-flow-month-cell em{font-family:var(--mono);font-size:11px;font-style:normal;font-weight:800;color:var(--text2);line-height:1.1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.product-flow-month-cell.latest{border-color:rgba(0,158,106,.45);background:#E9F8F3;}
+.product-flow-month-cell.empty{opacity:.55;}
 .product-flow-growth.up{color:var(--green-dark);font-weight:800;}
 .product-flow-growth.down{color:var(--red);font-weight:800;}
 .product-flow-empty{padding:28px;text-align:center;color:var(--text3);font-size:13px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);}
+@media (max-width:1280px){
+  .product-flow-table .product-flow-name-col,.product-flow-table td.product-flow-name{width:20%;}
+  .product-flow-table .product-flow-category-col,.product-flow-table td.product-flow-category{width:8%;}
+  .product-flow-table .product-flow-total-col,.product-flow-table td.product-flow-total{width:9%;}
+  .product-flow-table .product-flow-avg-col,.product-flow-table td.product-flow-avg,
+  .product-flow-table .product-flow-qty-avg-col,.product-flow-table td.product-flow-qty-avg{display:none;}
+  .product-flow-table .product-flow-latest-col,.product-flow-table td.product-flow-latest{width:8%;}
+  .product-flow-table .product-flow-qty-col,.product-flow-table td.product-flow-qty{width:8%;}
+  .product-flow-table .product-flow-growth-col,.product-flow-table td.product-flow-growth{width:7%;}
+  .product-flow-table .product-flow-month-head,.product-flow-table td.product-flow-months{width:32%;}
+  .product-flow-month-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
 .stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
 .sales-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
 .sales-kpi.primary{background:linear-gradient(135deg,#007A5A,#00916E);border-color:#007A5A;}
