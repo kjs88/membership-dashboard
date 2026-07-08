@@ -16,6 +16,7 @@ let _prodPage = 1, _prodList = [], _prodHasPrev = false;
 let _gradePage = 1, _gradeList = [];
 let _prodMonthlyFlowRows = [];
 let _prodMonthlyFlowMonths = [];
+let _prodMonthlyFlowMonthIndexes = [];
 const PRODUCT_CATEGORY_ORDER = [
   '전동침대',
   '수동휠체어',
@@ -334,6 +335,21 @@ function prodFlowMonthRange(rows, dateFrom, dateTo) {
   return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 }
 
+function prodFlowCurrentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function prodFlowDisplayMonths(months) {
+  if (!Array.isArray(months) || !months.length) return [];
+  const currentMonth = prodFlowCurrentMonthKey();
+  const usableMonths = months.filter(m => m <= currentMonth);
+  const source = usableMonths.length ? usableMonths : months;
+  const endMonth = source.includes(currentMonth) ? currentMonth : source[source.length - 1];
+  const endIndex = Math.max(0, months.indexOf(endMonth));
+  return months.slice(Math.max(0, endIndex - 3), endIndex + 1);
+}
+
 function prodFlowFilteredRows() {
   const rangeMode = document.getElementById('prod-flow-range')?.value || 'all';
   const useDateFilter = rangeMode === 'filter';
@@ -436,14 +452,18 @@ function renderProdMonthlyFlow() {
   const topN = parseInt(document.getElementById('prod-flow-top')?.value || '10', 10);
   const tableRows = tableLimit > 0 ? data.items.slice(0, tableLimit) : data.items;
   const chartRows = data.items.slice(0, topN);
+  const displayMonths = prodFlowDisplayMonths(data.months);
+  const displayMonthIndexes = displayMonths.map(m => data.months.indexOf(m)).filter(i => i >= 0);
   _prodMonthlyFlowRows = tableRows;
-  _prodMonthlyFlowMonths = data.months;
+  _prodMonthlyFlowMonths = displayMonths;
+  _prodMonthlyFlowMonthIndexes = displayMonthIndexes;
 
   if (sub) {
     const range = data.months.length ? `${data.months[0]} ~ ${data.months[data.months.length - 1]}` : '선택 기간';
     const rangeLabel = data.rangeMode === 'filter' ? '현재 기간 필터' : '전체 데이터';
     const latestLabel = data.latestDataMonth ? ` · 이번달 ${data.latestDataMonth}` : '';
-    sub.textContent = `${rangeLabel} ${range}${latestLabel} · ${data.basisMeta.label} · ${metricLabel} 기준`;
+    const displayLabel = displayMonths.length ? ` · 표시월 ${displayMonths[0]} ~ ${displayMonths[displayMonths.length - 1]}` : '';
+    sub.textContent = `${rangeLabel} ${range}${latestLabel}${displayLabel} · ${data.basisMeta.label} · ${metricLabel} 기준`;
   }
 
   if (!data.items.length || !data.months.length) {
@@ -471,7 +491,7 @@ function renderProdMonthlyFlow() {
   const qtyHeads = showQtyColumns
     ? '<th class="product-flow-qty-col">합계 수량</th><th class="product-flow-qty-avg-col">월평균 수량</th><th class="product-flow-qty-col">이번달 수량</th>'
     : '';
-  const monthLabels = data.months.map(m => m.slice(2).replace('-', '.'));
+  const monthHeads = displayMonths.map(m => `<th class="product-flow-month-col">${m.slice(2).replace('-', '.')}</th>`).join('');
   thead.innerHTML = `<tr>
     <th class="product-flow-name-col">품목명</th>
     <th class="product-flow-category-col">품목군</th>
@@ -480,20 +500,15 @@ function renderProdMonthlyFlow() {
     <th class="product-flow-latest-col">이번달</th>
     ${qtyHeads}
     <th class="product-flow-growth-col">전월比</th>
-    <th class="product-flow-month-head">월별 흐름</th>
+    ${monthHeads}
   </tr>`;
   tbody.innerHTML = tableRows.map(r => {
     const growthCls = r.growth > 0 ? 'up' : r.growth < 0 ? 'down' : '';
     const growthText = r.prev || r.latest ? `${r.growth >= 0 ? '+' : ''}${r.growth.toFixed(1)}%` : '-';
-    const monthGrid = r.values.map((v, idx) => {
-      const fullValueText = v ? Math.round(v).toLocaleString() : '-';
-      const valueText = prodFlowCompactValue(v, data.metric);
-      const isLatest = data.months[idx] === data.latestDataMonth;
-      const isEmpty = !v;
-      return `<span class="product-flow-month-cell ${isLatest ? 'latest' : ''} ${isEmpty ? 'empty' : ''}" title="${escHtml(monthLabels[idx] || '')} ${escHtml(fullValueText)}${unit}">
-        <b>${escHtml(monthLabels[idx] || '')}</b>
-        <em>${valueText}</em>
-      </span>`;
+    const monthCells = displayMonthIndexes.map(idx => {
+      const value = r.values[idx] || 0;
+      const isCurrent = data.months[idx] === prodFlowCurrentMonthKey();
+      return `<td class="product-flow-month-col ${isCurrent ? 'current' : ''}">${value ? Math.round(value).toLocaleString() : '-'}</td>`;
     }).join('');
     return `<tr>
       <td class="product-flow-name">${escHtml(r.name)}</td>
@@ -503,7 +518,7 @@ function renderProdMonthlyFlow() {
       <td class="product-flow-latest">${Math.round(r.latest).toLocaleString()}</td>
       ${showQtyColumns ? `<td class="product-flow-qty">${Math.round(r.qty).toLocaleString()}</td><td class="product-flow-qty-avg">${Math.round(r.avgQty).toLocaleString()}</td><td class="product-flow-qty">${Math.round(r.latestQty).toLocaleString()}</td>` : ''}
       <td class="product-flow-growth ${growthCls}">${growthText}</td>
-      <td class="product-flow-months"><div class="product-flow-month-grid">${monthGrid}</div></td>
+      ${monthCells}
     </tr>`;
   }).join('');
 
@@ -511,10 +526,10 @@ function renderProdMonthlyFlow() {
   charts['chart-prod-monthly-flow'] = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
-      labels: data.months.map(m => m.slice(2).replace('-', '.')),
+      labels: displayMonths.map(m => m.slice(2).replace('-', '.')),
       datasets: chartRows.map((r, i) => ({
         label: r.name,
-        data: r.values,
+        data: displayMonthIndexes.map(idx => r.values[idx] || 0),
         borderColor: colors[i % colors.length],
         backgroundColor: colors[i % colors.length] + '22',
         borderWidth: 2,
@@ -537,20 +552,6 @@ function renderProdMonthlyFlow() {
       },
     },
   });
-}
-
-function prodFlowCompactValue(value, metric) {
-  const n = Math.round(value || 0);
-  if (!n) return '-';
-  if (metric === 'qty') return n.toLocaleString();
-  const abs = Math.abs(n);
-  if (abs >= 100000000) {
-    const raw = n / 100000000;
-    const fixed = raw >= 10 ? raw.toFixed(1) : raw.toFixed(2);
-    return `${fixed.replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1')}억`;
-  }
-  if (abs >= 10000) return `${Math.round(n / 10000).toLocaleString()}만`;
-  return n.toLocaleString();
 }
 
 function downloadProdMonthlyFlowExcel() {
@@ -582,7 +583,10 @@ function downloadProdMonthlyFlowExcel() {
       row['월평균 수량'] = Math.round(r.avgQty || 0);
       row['이번달 수량'] = Math.round(r.latestQty || 0);
     }
-    _prodMonthlyFlowMonths.forEach((m, idx) => { row[m] = Math.round(r.values[idx] || 0); });
+    _prodMonthlyFlowMonths.forEach((m, idx) => {
+      const monthIndex = _prodMonthlyFlowMonthIndexes[idx];
+      row[m] = Math.round(r.values[monthIndex] || 0);
+    });
     return row;
   });
   const ws = XLSX.utils.json_to_sheet(rows);
