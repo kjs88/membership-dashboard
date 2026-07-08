@@ -372,13 +372,16 @@ function buildProdMonthlyFlow() {
         name,
         category: o.category || '-',
         months: Object.fromEntries(months.map(m => [m, 0])),
+        qtyMonths: Object.fromEntries(months.map(m => [m, 0])),
         qty: 0,
         sales: 0,
       };
     }
     const value = metric === 'qty' ? (parseFloat(o.qty) || 0) : (parseFloat(o.supply) || 0);
+    const qtyValue = parseFloat(o.qty) || 0;
     map[name].months[month] += value;
-    map[name].qty += parseFloat(o.qty) || 0;
+    map[name].qtyMonths[month] += qtyValue;
+    map[name].qty += qtyValue;
     map[name].sales += parseFloat(o.supply) || 0;
   });
 
@@ -392,8 +395,11 @@ function buildProdMonthlyFlow() {
     const prev = values.length > 1 ? values[prevIndex] : 0;
     const total = values.reduce((s, v) => s + v, 0);
     const avg = activeMonthCount ? total / activeMonthCount : 0;
+    const qtyValues = months.map(m => item.qtyMonths?.[m] || 0);
+    const latestQty = qtyValues.length ? qtyValues[latestIndex] : 0;
+    const avgQty = activeMonthCount ? item.qty / activeMonthCount : 0;
     const growth = prev ? ((latest - prev) / prev * 100) : (latest > 0 ? 100 : 0);
-    return { ...item, values, firstNonZero, latest, prev, total, avg, growth };
+    return { ...item, values, qtyValues, firstNonZero, latest, prev, total, avg, latestQty, avgQty, growth };
   });
 
   items.sort((a, b) => {
@@ -461,6 +467,10 @@ function renderProdMonthlyFlow() {
     ].join('');
   }
 
+  const showQtyColumns = data.metric !== 'qty';
+  const qtyHeads = showQtyColumns
+    ? '<th>합계 수량</th><th>월평균 수량</th><th>최근월 수량</th>'
+    : '';
   const monthHeads = data.months.map(m => `<th>${m.slice(2).replace('-', '.')}</th>`).join('');
   thead.innerHTML = `<tr>
     <th>품목명</th>
@@ -468,6 +478,7 @@ function renderProdMonthlyFlow() {
     <th>합계</th>
     <th>월평균</th>
     <th>최근월</th>
+    ${qtyHeads}
     <th>전월比</th>
     ${monthHeads}
   </tr>`;
@@ -480,6 +491,7 @@ function renderProdMonthlyFlow() {
       <td class="product-flow-total">${Math.round(r.total).toLocaleString()}</td>
       <td>${Math.round(r.avg).toLocaleString()}</td>
       <td>${Math.round(r.latest).toLocaleString()}</td>
+      ${showQtyColumns ? `<td>${Math.round(r.qty).toLocaleString()}</td><td>${Math.round(r.avgQty).toLocaleString()}</td><td>${Math.round(r.latestQty).toLocaleString()}</td>` : ''}
       <td class="product-flow-growth ${growthCls}">${growthText}</td>
       ${r.values.map(v => `<td>${v ? Math.round(v).toLocaleString() : '-'}</td>`).join('')}
     </tr>`;
@@ -541,6 +553,11 @@ function downloadProdMonthlyFlowExcel() {
       [`최근월(${metricLabel})`]: Math.round(r.latest),
       '전월비(%)': Number(r.growth.toFixed(2)),
     };
+    if (metric !== 'qty') {
+      row['합계 수량'] = Math.round(r.qty || 0);
+      row['월평균 수량'] = Math.round(r.avgQty || 0);
+      row['최근월 수량'] = Math.round(r.latestQty || 0);
+    }
     _prodMonthlyFlowMonths.forEach((m, idx) => { row[m] = Math.round(r.values[idx] || 0); });
     return row;
   });
