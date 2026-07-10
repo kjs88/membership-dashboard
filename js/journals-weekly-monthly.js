@@ -6,6 +6,24 @@ var _wkWeekNum = getWeekNum(new Date());
 var _wkIssueId = 0;
 var _wkEditingId = null;
 
+function wkAutoResizeTextarea(el) {
+  if (!el || el.tagName !== 'TEXTAREA') return;
+  const minHeight = parseInt(el.dataset.autoMin || el.style.minHeight || '52', 10) || 52;
+  el.style.height = 'auto';
+  el.style.height = Math.max(el.scrollHeight, minHeight) + 'px';
+}
+
+function wkAutoResizeTextareas(root) {
+  const scope = root || document;
+  scope.querySelectorAll('#wk-schedule,#wk-market,#wk-hl-rows textarea').forEach(wkAutoResizeTextarea);
+}
+
+document.addEventListener('input', e => {
+  if (e.target.matches('#wk-schedule,#wk-market,#wk-hl-rows textarea')) {
+    wkAutoResizeTextarea(e.target);
+  }
+});
+
 // 주차 기준: 목요일 시작 ~ 수요일 종료
 function getWeekStart(d) {
   // 주어진 날짜가 속한 주의 목요일(시작)을 반환
@@ -158,7 +176,10 @@ function wkOpenForm(id) {
   };
   const setVal = (inputId, val) => {
     const el = document.getElementById(inputId);
-    if (el) el.value = val || '';
+    if (el) {
+      el.value = val || '';
+      wkAutoResizeTextarea(el);
+    }
   };
 
   // 지난주(현재 주차-1) 보고서에서 nextWeekTarget 불러오기
@@ -215,6 +236,7 @@ function wkOpenForm(id) {
 
   document.getElementById('wk-list-view').style.display = 'none';
   document.getElementById('wk-form-view').style.display = '';
+  requestAnimationFrame(() => wkAutoResizeTextareas(document.getElementById('wk-form-view')));
 }
 
 function wkCloseForm() {
@@ -225,7 +247,7 @@ function wkCloseForm() {
 
 function wkClearForm() {
   ['wk-title','wk-next-new','wk-next-dormant','wk-next-existing','wk-schedule','wk-market','wk-highlights'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
+    const el = document.getElementById(id); if (el) { el.value = ''; wkAutoResizeTextarea(el); }
   });
   const totN = document.getElementById('wk-next-target-total'); if (totN) totN.textContent = '0';
   ['visit','new','dormant','existing'].forEach(k => {
@@ -416,11 +438,12 @@ function wkHlAddRow(name) {
         <button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--text3);font-size:12px" onclick="this.closest('[data-inst]').remove();wkHlSync()">✕</button>
       </div>
     </div>
-    <textarea class="form-textarea" placeholder="이슈 및 요청사항 입력..." style="width:100%;min-height:36px;font-size:13px;resize:vertical;box-sizing:border-box;margin:0" data-hlf="issue" oninput="wkHlSync()"></textarea>
-    <textarea class="form-textarea" placeholder="대응..." style="width:100%;min-height:36px;font-size:13px;resize:vertical;background:var(--bg2);box-sizing:border-box;margin:0" data-hlf="response" oninput="wkHlSync()"></textarea>
+    <textarea class="form-textarea" placeholder="이슈 및 요청사항 입력..." style="width:100%;min-height:36px;font-size:13px;resize:none;overflow:hidden;box-sizing:border-box;margin:0" data-auto-min="36" data-hlf="issue" oninput="wkHlSync()"></textarea>
+    <textarea class="form-textarea" placeholder="대응..." style="width:100%;min-height:36px;font-size:13px;resize:none;overflow:hidden;background:var(--bg2);box-sizing:border-box;margin:0" data-auto-min="36" data-hlf="response" oninput="wkHlSync()"></textarea>
 `;
   div.dataset.inst = name;
   container.appendChild(div);
+  wkAutoResizeTextareas(div);
   div.querySelector('textarea').focus();
   wkHlSync();
 }
@@ -460,6 +483,7 @@ function wkHlDeserialize(str) {
       const ta1 = last.querySelector('[data-hlf="issue"]'); if(ta1) ta1.value = issue;
       const ta2 = last.querySelector('[data-hlf="response"]'); if(ta2) ta2.value = response;
       const sel = last.querySelector('[data-hlf="status"]'); if(sel) sel.value = status;
+      wkAutoResizeTextareas(last);
     }
   });
   wkHlSync();
