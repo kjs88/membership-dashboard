@@ -330,8 +330,8 @@ function cwGetFormData() {
 
 function cwSaveCard() {
   const data = cwGetFormData();
-  if (!data.institution || !data.clientType || !data.attendee || !data.meeting) {
-    showToast('필수 항목을 확인하세요: 기관명 · 거래처유형 · 참석자 · 미팅내용', 'error');
+  if (!data.institution || !data.attendee || !data.meeting) {
+    showToast('필수 항목을 확인하세요: 기관명 · 참석자 · 미팅내용', 'error');
     return;
   }
   if (!data.date) {
@@ -469,32 +469,11 @@ function cwAcKeydown(e) {
   else if (e.key === 'Escape') { cwAcClose(); }
 }
 function cwCheckClient() {
-  const name = (document.getElementById('cw-institution').value||'').trim();
-  if (!name) return;
-  const existing = (allClients||[]).find(c => c.name === name);
-  const ct = document.getElementById('cw-clientType');
-  if (!existing) {
-    if (ct && !ct.value) ct.value = '신규거래처';
-    cwNewClientPopup(name);
-  }
+  return false;
 }
 
 function cwNewClientPopup(name) {
-  const existing = document.getElementById('cw-new-client-popup');
-  if (existing) existing.remove();
-  const overlay = document.createElement('div');
-  overlay.id = 'cw-new-client-popup';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:center;justify-content:center';
-  overlay.innerHTML = `
-    <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2)">
-      <div style="font-size:28px;margin-bottom:12px">🏢</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">신규 거래처입니다</div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:22px">"${escHtml(name)}"의 프로필을 등록해주세요</div>
-      <div style="display:flex;gap:10px;justify-content:center">
-        <button class="submit-btn" onclick="cwOpenNewClientProfile('${name.replace(/'/g,"\\'")}')" style="padding:8px 22px;width:auto">거래처 등록하기</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
+  return false;
 }
 
 function cwOpenNewClientProfile(name) {

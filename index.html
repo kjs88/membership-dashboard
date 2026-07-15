@@ -525,11 +525,11 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div style="position:relative">
             <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">기관명 <span style="color:var(--red)">*</span></div>
-            <input id="cw-institution" class="form-input" type="text" placeholder="기관명 입력 (자동완성)" autocomplete="off" style="width:100%" oninput="cwAcSearch()" onfocus="cwAcSearch()" onblur="setTimeout(()=>{cwAcClose();cwCheckClient()},250)" onkeydown="cwAcKeydown(event)" />
+            <input id="cw-institution" class="form-input" type="text" placeholder="기관명 입력 (자동완성)" autocomplete="off" style="width:100%" oninput="cwAcSearch()" onfocus="cwAcSearch()" onblur="setTimeout(()=>{cwAcClose()},250)" onkeydown="cwAcKeydown(event)" />
             <div class="ss-ac-list" id="cw-ac-list"></div>
           </div>
           <div>
-            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">거래처유형 <span style="color:var(--red)">*</span></div>
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">거래처유형</div>
             <select id="cw-clientType" class="form-select" style="width:100%"><option value="">- 선택 -</option><option>기존 거래처</option><option>신규거래처</option><option>휴면거래처</option></select>
           </div>
         </div>
@@ -1687,8 +1687,8 @@
 <script src="js/core-auth-nav.js?v=20260622-page-tab-drag-visual"></script>
 <script src="js/journals-weekly-monthly.js?v=20260715-weekly-admin-view"></script>
 <script src="js/dashboard-records-users.js?v=20260714-target-plan-update"></script>
-<script src="js/clients.js?v=20260523-features"></script>
-<script src="js/daily-entry.js?v=20260523-cleanup"></script>
+<script src="js/clients.js?v=20260715-freeform-daily-entry"></script>
+<script src="js/daily-entry.js?v=20260715-freeform-institution"></script>
 <script src="js/stats-notices.js?v=20260613-channel-fix"></script>
 <script src="js/bootstrap-datepicker.js?v=20260613-target-plan"></script>
 <script src="js/main.js?v=20260511-login"></script>

@@ -346,29 +346,7 @@ async function syncClientFromEntry(entry) {
       experience: entry.experience || existing.experience,
     };
   } else {
-    // 신규 거래처 자동 등록
-    allClients.push({
-      id: Date.now() + 'c',
-      code: entry.clientCode || genClientCode(),
-      name: entry.institution,
-      clientType: entry.clientType || '',
-      dealPossibility: entry.dealPossibility || '',
-      region: entry.region || '',
-      contact: entry.contact || '',
-      sideBusiness: entry.sideBusiness || '',
-      gender: entry.gender || '',
-      age: entry.age || '',
-      floor: entry.floor || '',
-      area: entry.area || '',
-      experience: entry.experience || '',
-      assignedPerson: entry.person || '',
-      assignedPersonId: entry.personId || '',
-      firstVisit: entry.date,
-      lastVisit: entry.date,
-      visitCount: 1,
-      memo: '',
-      createdAt: new Date().toISOString(),
-    });
+    return;
   }
   setShared('sj-clients', allClients);
   updateClientBadge();
