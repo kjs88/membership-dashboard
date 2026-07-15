@@ -5,6 +5,7 @@ var _wkYear = new Date().getFullYear();
 var _wkWeekNum = getWeekNum(new Date());
 var _wkIssueId = 0;
 var _wkEditingId = null;
+var _wkLoadedReportUserIds = [];
 
 function wkAutoResizeTextarea(el) {
   if (!el || el.tagName !== 'TEXTAREA') return;
@@ -93,12 +94,61 @@ function getWeekRange(year, week) {
   };
 }
 
+function wkReportStorageKey(userId) {
+  return 'sj-weekly-reports-' + userId;
+}
+
+function wkReportOwnerId(report) {
+  return report?.personId || currentUser?.id || 'unknown';
+}
+
+function wkAllReportUserIds() {
+  const ids = new Set();
+  if (Array.isArray(allUsers)) allUsers.forEach(u => { if (u?.id) ids.add(u.id); });
+  if (currentUser?.id) ids.add(currentUser.id);
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const match = key && key.match(/^sj-weekly-reports-(.+)$/);
+      if (match?.[1]) ids.add(match[1]);
+    }
+  } catch (_) {}
+  return [...ids];
+}
+
 function wkLoadReports() {
-  allWeeklyReports = getShared('sj-weekly-reports-' + currentUser.id, []);
+  if (isAdminUser(currentUser)) {
+    const byId = new Map();
+    _wkLoadedReportUserIds = wkAllReportUserIds();
+    _wkLoadedReportUserIds.forEach(userId => {
+      const reports = getShared(wkReportStorageKey(userId), []);
+      if (!Array.isArray(reports)) return;
+      reports.forEach((report, idx) => {
+        const normalized = { ...report, personId: report.personId || userId };
+        const key = normalized.id || `${userId}:${normalized.year || ''}:${normalized.week || ''}:${idx}`;
+        byId.set(key, normalized);
+      });
+    });
+    allWeeklyReports = [...byId.values()];
+    return;
+  }
+  _wkLoadedReportUserIds = [currentUser.id];
+  allWeeklyReports = getShared(wkReportStorageKey(currentUser.id), []);
 }
 
 function wkSaveReports() {
-  setShared('sj-weekly-reports-' + currentUser.id, allWeeklyReports);
+  if (isAdminUser(currentUser)) {
+    const byOwner = new Map(_wkLoadedReportUserIds.map(userId => [userId, []]));
+    allWeeklyReports.forEach(report => {
+      const ownerId = wkReportOwnerId(report);
+      if (!byOwner.has(ownerId)) byOwner.set(ownerId, []);
+      byOwner.get(ownerId).push(report);
+    });
+    byOwner.forEach((reports, userId) => setShared(wkReportStorageKey(userId), reports));
+    _wkLoadedReportUserIds = [...byOwner.keys()];
+    return;
+  }
+  setShared(wkReportStorageKey(currentUser.id), allWeeklyReports);
 }
 
 function wkInit() {
@@ -183,12 +233,12 @@ function wkOpenForm(id) {
   };
 
   // 지난주(현재 주차-1) 보고서에서 nextWeekTarget 불러오기
-  const loadPrevTarget = (year, week) => {
+  const loadPrevTarget = (year, week, personId = currentUser.id) => {
     let py = year, pw = week - 1;
     if (pw < 1) { py--; pw = 52; }
     const prev = allWeeklyReports.find(x =>
       x.year === py && x.week === pw &&
-      (isAdminUser(currentUser) || x.personId === currentUser.id)
+      x.personId === personId
     );
     if (prev?.nextWeekTarget) {
       setDisp('wk-target-new-disp',      prev.nextWeekTarget.new);
@@ -222,7 +272,7 @@ function wkOpenForm(id) {
     wkCalcNextTarget();
     const list = document.getElementById('wk-issues-list');
     if (list) list.innerHTML = '';
-    loadPrevTarget(r.year, r.week);
+    loadPrevTarget(r.year, r.week, r.personId || currentUser.id);
     wkAutoCount();
   } else {
     _wkYear = new Date().getFullYear();
@@ -231,7 +281,7 @@ function wkOpenForm(id) {
     wkUpdateFormPeriod(true);
     const list = document.getElementById('wk-issues-list');
     if (list) list.innerHTML = '';
-    loadPrevTarget(_wkYear, _wkWeekNum);
+    loadPrevTarget(_wkYear, _wkWeekNum, currentUser.id);
   }
 
   document.getElementById('wk-list-view').style.display = 'none';
@@ -536,6 +586,7 @@ function wkCalcKpi() {
 }
 
 function wkSaveReport() {
+  const existingReport = _wkEditingId ? allWeeklyReports.find(r => r.id === _wkEditingId) : null;
   const issues = [];
   document.querySelectorAll('#wk-issues-list > div').forEach(div => {
     const issue = div.querySelector('[data-wki="issue"]')?.value || '';
@@ -563,7 +614,8 @@ function wkSaveReport() {
     notes: '',
     issues, kpi, nextWeekTarget,
     year: _wkYear, week: _wkWeekNum,
-    person: currentUser.name, personId: currentUser.id,
+    person: existingReport?.person || currentUser.name,
+    personId: existingReport?.personId || currentUser.id,
     savedAt: new Date().toISOString(),
   };
   if (_wkEditingId) {
