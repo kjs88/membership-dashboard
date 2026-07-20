@@ -344,10 +344,7 @@ function prodFlowDisplayMonths(months) {
   if (!Array.isArray(months) || !months.length) return [];
   const currentMonth = prodFlowCurrentMonthKey();
   const usableMonths = months.filter(m => m <= currentMonth);
-  const source = usableMonths.length ? usableMonths : months;
-  const endMonth = source.includes(currentMonth) ? currentMonth : source[source.length - 1];
-  const endIndex = Math.max(0, months.indexOf(endMonth));
-  return months.slice(Math.max(0, endIndex - 3), endIndex + 1);
+  return usableMonths.length ? usableMonths : months;
 }
 
 function prodFlowFilteredRows() {
