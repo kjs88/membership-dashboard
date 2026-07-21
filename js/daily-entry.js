@@ -113,6 +113,7 @@ function setSidebizValue(val) {
 var _dlyCY = new Date().getFullYear();
 var _dlyCM = new Date().getMonth();
 var _dlySelectedDate = new Date().toISOString().split('T')[0];
+var _dlySelectedPersonId = '';
 
 function dlyInit() {
   document.getElementById('dly-cal-view').style.display = '';
@@ -169,18 +170,20 @@ function dlyRenderCal() {
     // 영업사원별 그룹핑
     const personMap = {};
     entries.forEach(e => {
-      const pName = e.person || '미입력';
-      if (!personMap[pName]) personMap[pName] = 0;
-      personMap[pName]++;
+      const pId = e.personId || '';
+      const key = pId || (e.person || '미입력');
+      if (!personMap[key]) personMap[key] = { id: pId, name: e.person || '미입력', count: 0 };
+      personMap[key].count++;
     });
     const isAdmin = isAdminUser(currentUser);
-    const summaryLines = Object.entries(personMap).slice(0,5).map(([name, cnt]) =>
+    const personGroups = Object.values(personMap);
+    const summaryLines = personGroups.slice(0,5).map(p =>
       isAdmin
-        ? `<div class="dly-entry-dot">● ${name} / ${cnt}처</div>`
-        : `<div class="dly-entry-dot">● ${cnt}처</div>`
+        ? `<div class="dly-entry-dot" onclick="event.stopPropagation();dlyOpenDate('${ds}','${escInlineJs(p.id)}')">● ${escHtml(p.name)} / ${p.count}처</div>`
+        : `<div class="dly-entry-dot">● ${p.count}처</div>`
     ).join('');
     const dotsHtml = summaryLines;
-    const moreHtml = Object.keys(personMap).length > 5 ? `<div class="dly-more">+${Object.keys(personMap).length-5}명 더</div>` : '';
+    const moreHtml = personGroups.length > 5 ? `<div class="dly-more">+${personGroups.length-5}명 더</div>` : '';
 
     html += `<div class="${cls}" onclick="dlyOpenDate('${ds}')">
       <div class="dly-day-num">${d}</div>
@@ -215,15 +218,21 @@ function dlyCalToday() {
   dlyRenderCal();
 }
 
-function dlyOpenDate(ds) {
+function dlyOpenDate(ds, personId = '') {
   _dlySelectedDate = ds;
+  _dlySelectedPersonId = personId || '';
   document.getElementById('dly-input-view').style.display = 'block';
 
   const [y,m,d] = ds.split('-');
   const days = ['일','월','화','수','목','금','토'];
   const dow = days[new Date(ds).getDay()];
   const lbl = document.getElementById('dly-input-date-label');
-  if (lbl) lbl.textContent = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 (${dow})`;
+  if (lbl) {
+    const personName = _dlySelectedPersonId
+      ? ((allUsers || []).find(u => u.id === _dlySelectedPersonId)?.name || '')
+      : '';
+    lbl.textContent = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 (${dow})${personName ? ' · ' + personName : ''}`;
+  }
   document.getElementById('cw-date').value = ds;
 
   cwRenderSavedList();
@@ -240,6 +249,7 @@ function cwRenderSavedList() {
   const dayEntries = (allEntries||[]).filter(e => {
     if (e.date !== ds) return false;
     if (!isAdminUser(currentUser) && e.personId && e.personId !== currentUser.id) return false;
+    if (isAdminUser(currentUser) && _dlySelectedPersonId && e.personId !== _dlySelectedPersonId) return false;
     return true;
   });
   document.getElementById('cw-count-label').textContent = `등록된 거래처 ${dayEntries.length}건`;
