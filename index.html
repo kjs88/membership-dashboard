@@ -1271,15 +1271,17 @@
   <div id="page-grade" class="page">
     <div class="section-header" style="margin-bottom:20px">
       <div class="section-title-lg">⭐ 거래처 등급</div>
-      <button class="btn-sm btn-primary" onclick="saveGradeSettings()">저장</button>
     </div>
     <!-- 이탈위험 거래처 알림 -->
     <div id="grade-churn-card" style="display:none;background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);padding:12px 16px;margin-bottom:16px"></div>
     <!-- 등급 설정 카드 -->
     <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px" onclick="toggleGradeSettings()">
-        <span>등급 기준 설정</span>
-        <span id="grade-settings-arrow" style="font-size:13px;color:var(--green-dark);transition:transform .2s;font-weight:700">▼</span>
+      <div class="chart-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px" onclick="toggleGradeSettings()">
+          <span>등급 기준 설정</span>
+          <span id="grade-settings-arrow" style="font-size:13px;color:var(--green-dark);transition:transform .2s;font-weight:700">▼</span>
+        </div>
+        <button class="btn-sm btn-primary" onclick="saveGradeSettings()">저장</button>
       </div>
       <div id="grade-settings-body" style="display:none">
         <div style="font-size:12px;color:var(--text3);margin-bottom:14px;margin-top:10px">출고/주문 매출 기준으로 등급을 자동 부여합니다. 기준값은 <strong>원 단위</strong>로 입력하세요. (예: 5천만원 = 50000000)</div>
@@ -1317,6 +1319,10 @@
     <div id="grade-summary-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"></div>
     <!-- 테이블 -->
     <div class="chart-card" style="padding:0;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">거래처 등급 리스트</div>
+        <button type="button" class="btn-sm btn-ghost" onclick="downloadGradeListExcel()">↓ 엑셀</button>
+      </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
@@ -1683,7 +1689,7 @@
 <script src="js/security.js?v=20260620-security-hardening"></script>
 <script src="js/storage.js?v=20260610-security"></script>
 <script src="js/state.js?v=20260613-channel-fix"></script>
-<script src="js/products-grades-erp.js?v=20260720-product-flow-ytd-months"></script>
+<script src="js/products-grades-erp.js?v=20260721-grade-excel-actions"></script>
 <script src="js/core-auth-nav.js?v=20260622-page-tab-drag-visual"></script>
 <script src="js/journals-weekly-monthly.js?v=20260721-weekly-search-reset"></script>
 <script src="js/dashboard-records-users.js?v=20260714-target-plan-update"></script>

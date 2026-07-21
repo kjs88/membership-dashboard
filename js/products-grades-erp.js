@@ -999,11 +999,14 @@ function renderChurnRisk() {
   _churnPage = 1;
   card.style.display = 'block';
   card.innerHTML = `
-    <div onclick="toggleChurnBody()" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none">
-      <span style="font-size:15px">⚠️</span>
-      <span style="font-size:14px;font-weight:700;color:var(--red)">이탈위험 거래처 ${risk.length}곳</span>
-      <span style="font-size:11px;color:var(--text2)">거래중단 ${lostCnt}곳 · 급감 ${risk.length - lostCnt}곳</span>
-      <span id="grade-churn-arrow" style="margin-left:auto;font-size:13px;color:var(--red);transition:transform .2s;font-weight:700">▼</span>
+    <div style="display:flex;align-items:center;gap:8px;user-select:none">
+      <div onclick="toggleChurnBody()" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
+        <span style="font-size:15px">⚠️</span>
+        <span style="font-size:14px;font-weight:700;color:var(--red)">이탈위험 거래처 ${risk.length}곳</span>
+        <span style="font-size:11px;color:var(--text2)">거래중단 ${lostCnt}곳 · 급감 ${risk.length - lostCnt}곳</span>
+      </div>
+      <button type="button" class="btn-sm btn-ghost" onclick="downloadGradeChurnExcel()" style="background:#fff">↓ 엑셀</button>
+      <span id="grade-churn-arrow" onclick="toggleChurnBody()" style="font-size:13px;color:var(--red);transition:transform .2s;font-weight:700;cursor:pointer">▼</span>
     </div>
     <div id="grade-churn-collapse">
       <div style="font-size:11px;color:var(--text3);margin:8px 0 10px;line-height:1.5">
@@ -1052,6 +1055,76 @@ function applyChurnCollapse() {
   if (a) a.style.transform = _churnCollapsed ? '' : 'rotate(180deg)';
 }
 function toggleChurnBody() { _churnCollapsed = !_churnCollapsed; applyChurnCollapse(); }
+
+function gradeExcelStamp() {
+  const now = new Date();
+  return `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+}
+
+function writeGradeWorkbook(rows, sheetName, fileName) {
+  if (typeof XLSX === 'undefined') {
+    showToast('엑셀 라이브러리를 불러오지 못했습니다.', 'error');
+    return false;
+  }
+  if (!rows || !rows.length) {
+    showToast('다운로드할 데이터가 없습니다.', 'error');
+    return false;
+  }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = Object.keys(rows[0] || {}).map(key => {
+    const maxLen = Math.max(String(key).length, ...rows.map(row => String(row[key] ?? '').length));
+    return { wch: Math.min(Math.max(maxLen + 2, 12), 36) };
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileName);
+  return true;
+}
+
+function downloadGradeChurnExcel() {
+  if (!_churnList.length) renderChurnRisk();
+  if (!_churnList.length) {
+    showToast('다운로드할 이탈위험 거래처 데이터가 없습니다.', 'error');
+    return;
+  }
+  const rows = _churnList.map((r, i) => ({
+    '순위': i + 1,
+    '거래처': r.name,
+    [_churnPeriodLabels.prev2 || '전전월']: Math.round(r.prev2 || 0),
+    [_churnPeriodLabels.prev || '전월']: Math.round(r.prev || 0),
+    [_churnPeriodLabels.current || '이번달']: Math.round(r.current || 0),
+    '감소율(%)': r.drop,
+    '상태': r.lost ? '거래중단' : '급감',
+    '담당자': r.manager || '-',
+  }));
+  if (writeGradeWorkbook(rows, '이탈위험 거래처', `이탈위험_거래처_${gradeExcelStamp()}.xlsx`)) {
+    showToast('이탈위험 거래처 엑셀 파일이 다운로드됩니다.', 'success');
+  }
+}
+
+function downloadGradeListExcel() {
+  if (!_gradeList.length) renderGrade();
+  if (!_gradeList.length) {
+    showToast('다운로드할 거래처 등급 데이터가 없습니다.', 'error');
+    return;
+  }
+  const dateFrom = document.getElementById('grade-date-from')?.value || '';
+  const dateTo = document.getElementById('grade-date-to')?.value || '';
+  const period = dateFrom || dateTo ? `${dateFrom || ''}~${dateTo || '현재'}` : `${getOrderBasisMeta().label} 전체`;
+  const rows = _gradeList.map((r, i) => ({
+    '순위': i + 1,
+    '거래처명': r.name,
+    '지역': r.region || '',
+    '조회기간': period,
+    '기간 매출(원)': Math.round(r.sales || 0),
+    '자동 등급': r.autoGrade?.name || '',
+    '수동 등급': r.manualGradeName || '',
+    '최종 등급': r.finalGrade?.name || '',
+  }));
+  if (writeGradeWorkbook(rows, '거래처 등급 리스트', `거래처_등급리스트_${gradeExcelStamp()}.xlsx`)) {
+    showToast('거래처 등급 리스트 엑셀 파일이 다운로드됩니다.', 'success');
+  }
+}
 
 function renderGrade() {
   updateOrderBasisUI();
