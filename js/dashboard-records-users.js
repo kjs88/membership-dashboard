@@ -1,3 +1,5 @@
+// 대시보드/영업현황/계정/목표 화면 렌더링 모듈.
+// ERP 주문·출고 데이터(allOrders)를 월별/담당자별로 집계해 화면 카드와 차트를 갱신한다.
 // DASHBOARD
 let salesTrendMode = 'amount';
 let salesTrendPayload = null;

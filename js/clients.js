@@ -1,3 +1,5 @@
+// 거래처 DB 화면: CSV/XLSX 업로드, 상세 화면, 목록 필터, 선택 일괄 작업을 담당한다.
+// 다른 화면에서 거래처 이름 자동완성이 필요할 때는 findClientByName()/normalizeClientName()만 사용한다.
 // CLIENT BULK UPLOAD
 // ════════════════════════════════════
 let pendingUploadData = [];
@@ -192,8 +194,6 @@ function parseAndImportClientCSV(text) {
   if (lines.length < 2) { showToast('데이터가 없습니다.', 'error'); return; }
 
   const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
-  console.log('헤더:', headers);
-
   // 컬럼 매핑 (유연하게)
   const colMap = {
     code: headers.findIndex(h => h.includes('코드')),

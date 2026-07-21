@@ -1,3 +1,5 @@
+// 품목별 분석/거래처 등급/ERP 데이터 변환 모듈.
+// 전역 ERP 데이터(allOrders/allShipOrders/allOrderOrders)를 읽어 품목 흐름, ABC 분석, 거래처 등급을 렌더링한다.
 // PRODUCTS PAGE
 // ════════════════════════════════════
 let productPersonId = 'all';
@@ -111,6 +113,8 @@ let gradeTiers = (() => {
   ];
 })();
 
+// 이탈위험 거래처의 "급감" 기준.
+// compareMode는 이번달을 제외한 과거 월 기준이며, floor는 거래중단/급감 공통 최소 기준매출이다.
 const DEFAULT_CHURN_SETTINGS = { compareMode: 'prev', dropRate: 50, floor: 300000 };
 
 function getChurnSettings() {
@@ -123,6 +127,7 @@ function getChurnSettings() {
   };
 }
 
+// 설정 UI의 값은 즉시 공유 저장소에 반영한다. renderChurnRisk()가 표/엑셀 원본을 다시 계산한다.
 function saveChurnSettings() {
   const compareMode = document.getElementById('churn-compare-mode')?.value || DEFAULT_CHURN_SETTINGS.compareMode;
   const dropRate = parseFloat(document.getElementById('churn-drop-rate')?.value || '') || DEFAULT_CHURN_SETTINGS.dropRate;
@@ -970,7 +975,8 @@ function removeGradeTier(i) {
   renderGrade();
 }
 
-// 이탈위험 거래처: 설정한 기준매출 이상이던 거래처 중 이번달 중단/급감한 거래처
+// 이탈위험 거래처: 설정한 기준매출 이상이던 거래처 중 이번달 중단/급감한 거래처.
+// 목록 원본(_churnList)은 전체 위험 거래처이고, 화면/엑셀은 churnFilteredList()로 필터링한다.
 function renderChurnRisk() {
   const card = document.getElementById('grade-churn-card');
   if (!card) return;
@@ -1016,6 +1022,7 @@ function renderChurnRisk() {
     else if (ym === prev2Ym) prev2Map[k] = (prev2Map[k] || 0) + amt;
     else if (ym === prev3Ym) prev3Map[k] = (prev3Map[k] || 0) + amt;
   });
+  // 비교기준은 이번달을 제외한다: 전월, 전전월, 최근 2개월 평균, 최근 3개월 평균.
   const getBasisAmount = k => {
     const prev = prevMap[k] || 0;
     const prev2 = prev2Map[k] || 0;
@@ -1113,6 +1120,7 @@ function churnFilteredList() {
   });
 }
 
+// 이탈위험 표 전용 필터. 원본 계산 기준은 유지하고 화면 표시와 엑셀 다운로드 범위만 좁힌다.
 function renderChurnFilters() {
   const el = document.getElementById('grade-churn-filters');
   if (!el) return;

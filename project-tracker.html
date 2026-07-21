@@ -1431,6 +1431,7 @@ function dropTask(e,status){
   draggedTaskId=null;
 }
 function renderTimeline(){
+  // Gantt-style timeline. Calendar view only marks start/end days; this view shows task duration.
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
   if(!rows.length){host.innerHTML='<div class="empty">표시할 태스크가 없습니다.</div>';return;}
@@ -1457,12 +1458,12 @@ function renderTimeline(){
         if(rawE<0 || rawS>rangeDays){
           bar='<span style="color:var(--soft);font-size:11px">범위 밖</span>';
         }else{
-        const s=Math.max(0,rawS);
-        const e=Math.min(rangeDays,rawE);
-        const left=Math.max(0,s/rangeDays*100);
-        const width=Math.max(2,(e-s)/rangeDays*100);
-        const color=t.status==='done'?'var(--green)':t.status==='review'?'var(--warn)':t.status==='todo'?'#60756F':staffColor(t.owner);
-        bar=`<div class="timeline-bar" style="left:${left}%;width:${width}%;background:${color}">${esc(STATUS[t.status]?.short||'')} · ${Number(t.progress)||0}%</div>`;
+          const s=Math.max(0,rawS);
+          const e=Math.min(rangeDays,rawE);
+          const left=Math.max(0,s/rangeDays*100);
+          const width=Math.max(2,(e-s)/rangeDays*100);
+          const color=t.status==='done'?'var(--green)':t.status==='review'?'var(--warn)':t.status==='todo'?'#60756F':staffColor(t.owner);
+          bar=`<div class="timeline-bar" style="left:${left}%;width:${width}%;background:${color}">${esc(STATUS[t.status]?.short||'')} · ${Number(t.progress)||0}%</div>`;
         }
       }
       return `<div class="timeline-row-name" onclick="openTaskDrawer('${esc(t.id)}')">${esc(t.name)}</div><div class="timeline-row" style="background-size:${100/months.length}% 100%">${bar}</div>`;
@@ -1479,6 +1480,7 @@ function shiftTimeline(delta){
   renderTimeline();
 }
 function renderCalendar(){
+  // Month calendar shows tasks on start/end dates for quick schedule scanning.
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
   const month = calendarMonth;
@@ -1513,6 +1515,7 @@ function goCalendarThisMonth(){
 }
 
 function openProjectDrawer(id){
+  // The same drawer handles create/edit; editingProjectId decides whether save updates or inserts.
   editingProjectId = id || null;
   const p = editingProjectId ? projects.find(x=>x.id===editingProjectId) : null;
   document.getElementById('projectDrawerTitle').textContent = p ? '프로젝트 수정' : '프로젝트 추가';
