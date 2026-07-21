@@ -1129,8 +1129,8 @@ function renderChurnFilters() {
       <span style="font-size:12px;font-weight:700;color:var(--text)">목록 필터</span>
       <select id="churn-status-filter" class="form-select" style="width:140px;font-size:12px;padding:6px 10px" onchange="setChurnFilters()">
         <option value="all"${_churnStatusFilter === 'all' ? ' selected' : ''}>전체 상태</option>
-        <option value="lost"${_churnStatusFilter === 'lost' ? ' selected' : ''}>거래중단만</option>
-        <option value="drop"${_churnStatusFilter === 'drop' ? ' selected' : ''}>급감만</option>
+        <option value="lost"${_churnStatusFilter === 'lost' ? ' selected' : ''}>거래중단</option>
+        <option value="drop"${_churnStatusFilter === 'drop' ? ' selected' : ''}>급감</option>
       </select>
       <select id="churn-manager-filter" class="form-select" style="width:150px;font-size:12px;padding:6px 10px" onchange="setChurnFilters()">
         <option value="all"${_churnManagerFilter === 'all' ? ' selected' : ''}>담당자 전체</option>
