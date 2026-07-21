@@ -1093,6 +1093,7 @@ function renderChurnRisk() {
         <span style="font-size:12px;color:var(--text2)">% 이상</span>
         <button type="button" class="btn-sm btn-primary" onclick="event.stopPropagation();saveChurnSettings()" style="margin-left:auto">적용</button>
       </div>
+      <div id="grade-churn-filters"></div>
       <div id="grade-churn-body"></div>
     </div>`;
   churnRenderPage();
@@ -1100,12 +1101,58 @@ function renderChurnRisk() {
 }
 
 let _churnList = [], _churnPage = 1, _churnCollapsed = false;
+let _churnStatusFilter = 'all', _churnManagerFilter = 'all';
 let _churnPeriodLabels = { prev2: '전전월', prev: '전월', current: '이번달', basis: '비교기준' };
+
+function churnFilteredList() {
+  return _churnList.filter(r => {
+    if (_churnStatusFilter === 'lost' && !r.lost) return false;
+    if (_churnStatusFilter === 'drop' && r.lost) return false;
+    if (_churnManagerFilter !== 'all' && (r.manager || '-') !== _churnManagerFilter) return false;
+    return true;
+  });
+}
+
+function renderChurnFilters() {
+  const el = document.getElementById('grade-churn-filters');
+  if (!el) return;
+  const managers = [...new Set(_churnList.map(r => r.manager || '-'))].sort((a, b) => a.localeCompare(b, 'ko'));
+  if (_churnManagerFilter !== 'all' && !managers.includes(_churnManagerFilter)) _churnManagerFilter = 'all';
+  const managerScoped = _churnManagerFilter === 'all'
+    ? _churnList
+    : _churnList.filter(r => (r.manager || '-') === _churnManagerFilter);
+  const lostCount = managerScoped.filter(r => r.lost).length;
+  const dropCount = managerScoped.length - lostCount;
+  const filteredCount = churnFilteredList().length;
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <span style="font-size:12px;font-weight:700;color:var(--text)">목록 필터</span>
+      <select id="churn-status-filter" class="form-select" style="width:140px;font-size:12px;padding:6px 10px" onchange="setChurnFilters()">
+        <option value="all"${_churnStatusFilter === 'all' ? ' selected' : ''}>전체 상태</option>
+        <option value="lost"${_churnStatusFilter === 'lost' ? ' selected' : ''}>거래중단만</option>
+        <option value="drop"${_churnStatusFilter === 'drop' ? ' selected' : ''}>급감만</option>
+      </select>
+      <select id="churn-manager-filter" class="form-select" style="width:150px;font-size:12px;padding:6px 10px" onchange="setChurnFilters()">
+        <option value="all"${_churnManagerFilter === 'all' ? ' selected' : ''}>담당자 전체</option>
+        ${managers.map(m => `<option value="${escHtml(m)}"${_churnManagerFilter === m ? ' selected' : ''}>${escHtml(m)}</option>`).join('')}
+      </select>
+      <span style="font-size:11px;color:var(--text3);margin-left:auto">표시 ${filteredCount}곳 · 거래중단 ${lostCount}곳 · 급감 ${dropCount}곳</span>
+    </div>`;
+}
+
+function setChurnFilters() {
+  _churnStatusFilter = document.getElementById('churn-status-filter')?.value || 'all';
+  _churnManagerFilter = document.getElementById('churn-manager-filter')?.value || 'all';
+  _churnPage = 1;
+  churnRenderPage();
+}
+
 function churnRenderPage() {
   const body = document.getElementById('grade-churn-body');
   if (!body) return;
+  renderChurnFilters();
   const PAGE = 10;
-  const list = _churnList;
+  const list = churnFilteredList();
   const totalPages = Math.max(1, Math.ceil(list.length / PAGE));
   const p = Math.max(1, Math.min(_churnPage, totalPages));
   _churnPage = p;
@@ -1113,7 +1160,7 @@ function churnRenderPage() {
   if (!list.length) {
     body.innerHTML = `
       <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;color:var(--text3);font-size:12px">
-        현재 기준에 해당하는 이탈위험 거래처가 없습니다.
+        현재 필터에 해당하는 이탈위험 거래처가 없습니다.
       </div>`;
     return;
   }
@@ -1172,11 +1219,12 @@ function writeGradeWorkbook(rows, sheetName, fileName) {
 
 function downloadGradeChurnExcel() {
   if (!_churnList.length) renderChurnRisk();
-  if (!_churnList.length) {
+  const list = churnFilteredList();
+  if (!list.length) {
     showToast('다운로드할 이탈위험 거래처 데이터가 없습니다.', 'error');
     return;
   }
-  const rows = _churnList.map((r, i) => ({
+  const rows = list.map((r, i) => ({
     '순위': i + 1,
     '거래처': r.name,
     [_churnPeriodLabels.prev2 || '전전월']: Math.round(r.prev2 || 0),
