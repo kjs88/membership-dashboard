@@ -10,6 +10,7 @@ const FB_SYNC_KEYS = {
   'sj-grade-tiers':       'data/grade-tiers',
   'sj-grade-overrides':   'data/grade-overrides',
   'sj-manual-grades':     'data/manual-grades',
+  'sj-grade-churn-settings': 'data/grade-churn-settings',
 };
 
 const AUTH_LOCAL_KEYS = new Set([
@@ -212,6 +213,7 @@ async function syncFromFirebase() {
         if (data['grade-tiers']   !== undefined) _safeSetJsonStorage('sj-grade-tiers',       data['grade-tiers']);
         if (data['grade-overrides']!==undefined) _safeSetJsonStorage('sj-grade-overrides',   data['grade-overrides']);
         if (data['manual-grades'] !== undefined) _safeSetJsonStorage('sj-manual-grades',     data['manual-grades']);
+        if (data['grade-churn-settings'] !== undefined) _safeSetJsonStorage('sj-grade-churn-settings', data['grade-churn-settings']);
         if (data['weekly-reports'] && typeof data['weekly-reports'] === 'object') {
           Object.entries(data['weekly-reports']).forEach(([uid, val]) => _safeSetJsonStorage('sj-weekly-reports-' + uid, val));
         }
@@ -259,6 +261,7 @@ async function pushAllToFirebase() {
     'grade-tiers':    'sj-grade-tiers',
     'grade-overrides':'sj-grade-overrides',
     'manual-grades':  'sj-manual-grades',
+    'grade-churn-settings': 'sj-grade-churn-settings',
   };
   Object.entries(fixed).forEach(([fbKey, lsKey]) => {
     try {
