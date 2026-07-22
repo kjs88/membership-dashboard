@@ -477,10 +477,10 @@ td.tm{color:var(--text);font-weight:500;}
 .user-card-count{font-size:18px;font-weight:700;font-family:var(--mono);color:var(--green-dark);}
 .user-card-label{font-size:10px;color:var(--text3);}
 .user-card-actions{display:flex;gap:6px;}
-.user-menu-settings{flex:0 0 100%;margin-left:54px;border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px;}
+.user-menu-settings{flex:1 1 calc(100% - 54px);width:calc(100% - 54px);min-width:0;margin-left:54px;border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;}
 .user-menu-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .user-menu-toolbar label{font-size:11px;font-weight:700;color:var(--text2);}
-.user-menu-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;}
+.user-menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;min-width:0;}
 .user-menu-check{display:flex;align-items:center;gap:5px;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;user-select:none;}
 .user-menu-check input{width:13px;height:13px;accent-color:var(--green);flex-shrink:0;}
 .user-menu-check span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
