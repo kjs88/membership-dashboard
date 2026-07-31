@@ -6,6 +6,9 @@ var _wkWeekNum = getWeekNum(new Date());
 var _wkIssueId = 0;
 var _wkEditingId = null;
 var _wkLoadedReportUserIds = [];
+var _wkFiles = [];
+const WK_FILE_MAX_BYTES = 1024 * 1024;
+const WK_FILE_TOTAL_MAX_BYTES = 3 * 1024 * 1024;
 
 function wkAutoResizeTextarea(el) {
   if (!el || el.tagName !== 'TEXTAREA') return;
@@ -201,7 +204,7 @@ function wkRenderList() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="bbs-num">${filtered.length - idx}</td>
-      <td class="bbs-td-title">${escHtml(r.title || range.fullLabel)}</td>
+      <td class="bbs-td-title">${escHtml(r.title || range.fullLabel)}${Array.isArray(r.attachments) && r.attachments.length ? ` <span style="color:var(--green-dark);font-size:11px;font-weight:700">📎 ${r.attachments.length}</span>` : ''}</td>
       <td>${escHtml(range.label)}</td>
       <td>${r.kpi?.visit?.actual ?? '-'}</td>
       <td>${r.kpi?.new?.actual ?? '-'}</td>
@@ -271,6 +274,8 @@ function wkOpenForm(id) {
     setVal('wk-market', r.market);
     wkHlDeserialize(r.highlights || '');
     _wkPhotos = []; _wkPhotoPage = 0; wkRenderPhotoGallery();
+    _wkFiles = Array.isArray(r.attachments) ? r.attachments.map(wkNormalizeFile).filter(Boolean) : [];
+    wkRenderFileList();
     // wk-notes removed
     // 차주 목표 복원
     setVal('wk-next-new',      r.nextWeekTarget?.new);
@@ -312,6 +317,8 @@ function wkClearForm() {
   ['visit','new','dormant','existing'].forEach(k => {
     const r = document.getElementById('wk-kpi-'+k+'-rate'); if (r) r.textContent = '-';
   });
+  _wkFiles = [];
+  wkRenderFileList();
 }
 
 function wkFormPrev() {
@@ -451,6 +458,94 @@ function wkPhotoLightbox(idx) {
     <button onclick="event.stopPropagation();wkPhotoLightbox(${idx-1})" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer" ${idx===0?'disabled':''}>‹</button>
     <button onclick="event.stopPropagation();wkPhotoLightbox(${idx+1})" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer" ${idx===_wkPhotos.length-1?'disabled':''}>›</button>`;
   document.body.appendChild(ov);
+}
+
+// ── 일반 파일 첨부 ──
+function wkNormalizeFile(file) {
+  if (!file || !file.dataUrl || !file.name) return null;
+  return {
+    name: String(file.name || '').slice(0, 160),
+    type: String(file.type || 'application/octet-stream').slice(0, 120),
+    size: parseInt(file.size, 10) || 0,
+    dataUrl: file.dataUrl,
+    addedAt: file.addedAt || new Date().toISOString(),
+  };
+}
+
+function wkFileTotalBytes(extra = 0) {
+  return _wkFiles.reduce((sum, f) => sum + (parseInt(f.size, 10) || 0), 0) + extra;
+}
+
+function wkFormatFileSize(bytes) {
+  const n = parseInt(bytes, 10) || 0;
+  if (n >= 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + 'MB';
+  if (n >= 1024) return Math.round(n / 1024) + 'KB';
+  return n + 'B';
+}
+
+function wkAddFiles(input) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  let loaded = 0;
+  let accepted = 0;
+  const finishOne = () => {
+    loaded++;
+    if (loaded === files.length) {
+      wkRenderFileList();
+      if (accepted) showToast(`첨부파일 ${accepted}개가 추가되었습니다.`, 'success');
+    }
+  };
+  files.forEach(file => {
+    if (file.size > WK_FILE_MAX_BYTES) {
+      showToast(`${file.name} 파일이 1MB를 초과해 제외되었습니다.`, 'error');
+      finishOne();
+      return;
+    }
+    if (wkFileTotalBytes(file.size) > WK_FILE_TOTAL_MAX_BYTES) {
+      showToast('첨부파일 총 용량은 3MB를 넘을 수 없습니다.', 'error');
+      finishOne();
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      _wkFiles.push(wkNormalizeFile({
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        dataUrl: e.target.result,
+        addedAt: new Date().toISOString(),
+      }));
+      accepted++;
+      finishOne();
+    };
+    reader.onerror = () => {
+      showToast(`${file.name} 파일을 읽지 못했습니다.`, 'error');
+      finishOne();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function wkDeleteFile(idx) {
+  _wkFiles.splice(idx, 1);
+  wkRenderFileList();
+}
+
+function wkRenderFileList() {
+  const list = document.getElementById('wk-file-list');
+  if (!list) return;
+  if (!_wkFiles.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">첨부된 파일이 없습니다.</div>';
+    return;
+  }
+  list.innerHTML = _wkFiles.map((f, idx) => `
+    <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:8px 10px;min-width:0">
+      <span style="font-size:15px">📄</span>
+      <a href="${f.dataUrl}" download="${escHtml(f.name)}" style="flex:1;min-width:0;color:var(--text);font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none" title="${escHtml(f.name)}">${escHtml(f.name)}</a>
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap">${wkFormatFileSize(f.size)}</span>
+      <button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--red);font-size:12px" onclick="wkDeleteFile(${idx})">삭제</button>
+    </div>`).join('');
 }
 
 // ── 사업소별 주요사항 ──
@@ -622,6 +717,7 @@ function wkSaveReport() {
     schedule: document.getElementById('wk-schedule').value,
     market: document.getElementById('wk-market')?.value || '',
     highlights: wkHlSerialize(),
+    attachments: _wkFiles.map(wkNormalizeFile).filter(Boolean),
     notes: '',
     issues, kpi, nextWeekTarget,
     year: _wkYear, week: _wkWeekNum,

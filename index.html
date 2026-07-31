@@ -703,6 +703,18 @@
             <div id="wk-photo-grid" style="display:flex;flex-direction:column;gap:12px"></div>
           </div>
         </div>
+        <!-- 행3: 일반 첨부파일 -->
+        <div class="form-card" style="grid-column:1 / -1">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+            <div class="form-card-title" style="margin:0">📎 첨부 파일</div>
+            <label class="btn-sm btn-ghost" style="cursor:pointer;margin:0">
+              + 파일 첨부
+              <input id="wk-file-input" type="file" multiple style="display:none" onchange="wkAddFiles(this)" />
+            </label>
+          </div>
+          <div id="wk-file-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:8px">파일당 1MB 이하, 총 3MB 이하로 첨부할 수 있습니다.</div>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn-sm btn-ghost" onclick="wkCloseForm()" style="padding:10px 18px">← 목록으로</button>
@@ -1686,12 +1698,12 @@
 <div class="toast" id="toast"></div>
 
 <script src="data/client-seed.js?v=20260511-login"></script>
-<script src="js/security.js?v=20260620-security-hardening"></script>
+<script src="js/security.js?v=20260731-weekly-attachments"></script>
 <script src="js/storage.js?v=20260721-churn-risk-settings"></script>
 <script src="js/state.js?v=20260613-channel-fix"></script>
 <script src="js/products-grades-erp.js?v=20260721-code-cleanup"></script>
 <script src="js/core-auth-nav.js?v=20260622-page-tab-drag-visual"></script>
-<script src="js/journals-weekly-monthly.js?v=20260721-code-cleanup"></script>
+<script src="js/journals-weekly-monthly.js?v=20260731-weekly-attachments"></script>
 <script src="js/dashboard-records-users.js?v=20260721-code-cleanup"></script>
 <script src="js/clients.js?v=20260721-code-cleanup"></script>
 <script src="js/daily-entry.js?v=20260721-daily-person-filter"></script>

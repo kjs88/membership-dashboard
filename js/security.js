@@ -3,6 +3,7 @@
 const SECURITY_PBKDF2_ITERATIONS = 160000;
 const SECURITY_PASSWORD_VERSION = 'pbkdf2-sha256';
 const SECURITY_MAX_STRING_LENGTH = 20000;
+const SECURITY_MAX_DATA_URL_LENGTH = 1500000;
 const SECURITY_MAX_DEPTH = 8;
 const SECURITY_FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const SECURITY_LOGIN_THROTTLE_KEY = 'sj-login-throttle-v1';
@@ -167,16 +168,22 @@ function securitySanitizeText(value) {
     .slice(0, SECURITY_MAX_STRING_LENGTH);
 }
 
-function securitySanitizeData(value, depth = 0) {
+function securitySanitizeData(value, depth = 0, keyHint = '') {
   if (depth > SECURITY_MAX_DEPTH) return null;
   if (value == null || typeof value === 'number' || typeof value === 'boolean') return value;
-  if (typeof value === 'string') return securitySanitizeText(value);
-  if (Array.isArray(value)) return value.slice(0, 10000).map(v => securitySanitizeData(v, depth + 1));
+  if (typeof value === 'string') {
+    if (keyHint === 'dataUrl' && /^data:[\w.+-]+\/[\w.+-]+;base64,/i.test(value)) {
+      return value.slice(0, SECURITY_MAX_DATA_URL_LENGTH);
+    }
+    return securitySanitizeText(value);
+  }
+  if (Array.isArray(value)) return value.slice(0, 10000).map(v => securitySanitizeData(v, depth + 1, keyHint));
   if (typeof value === 'object') {
     const clean = {};
     Object.entries(value).forEach(([key, val]) => {
       if (SECURITY_FORBIDDEN_KEYS.has(key) || /^on[a-z]/i.test(key)) return;
-      clean[securitySanitizeText(key).replace(/[.$#[\]/]/g, '_')] = securitySanitizeData(val, depth + 1);
+      const cleanKey = securitySanitizeText(key).replace(/[.$#[\]/]/g, '_');
+      clean[cleanKey] = securitySanitizeData(val, depth + 1, cleanKey);
     });
     return securityNormalizeCredentialRecord(clean);
   }
