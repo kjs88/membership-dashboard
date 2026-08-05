@@ -189,9 +189,20 @@ const MENU_ACCESS_ITEMS = [
 
 const MENU_ACCESS_DEFAULTS = {
   admin:   MENU_ACCESS_ITEMS.map(m => m.key),
-  manager: ['sales','stats','products','project','dash','grade','clients'],
-  planner: ['sales','stats','products','project','dash','grade','clients','targets'],
+  manager: ['sales','stats','products','project','dash','journal','grade','clients'],
+  planner: ['sales','stats','products','project','dash','journal','grade','clients','targets'],
   user:    ['sales','stats','products','project','dash','journal'],
+};
+
+const MENU_ACCESS_ALIASES = {
+  input: 'journal',
+  weekly: 'journal',
+  'mo-plan': 'journal',
+  'mo-settle': 'journal',
+  records: 'journal',
+  board: 'journal',
+  bulletin: 'journal',
+  journals: 'journal',
 };
 
 function getDefaultMenuAccess(profile = 'user') {
@@ -201,7 +212,9 @@ function getDefaultMenuAccess(profile = 'user') {
 function normalizeMenuAccess(menuAccess, profile = 'user') {
   const valid = new Set(MENU_ACCESS_ITEMS.map(m => m.key));
   const source = Array.isArray(menuAccess) ? menuAccess : getDefaultMenuAccess(profile);
-  return [...new Set(source.filter(key => valid.has(key)))];
+  return [...new Set(source
+    .map(key => MENU_ACCESS_ALIASES[key] || key)
+    .filter(key => valid.has(key)))];
 }
 
 function getLegacyMenuProfile(user) {
