@@ -111,6 +111,11 @@ function wkReportOwnerId(report) {
   return report?.personId || currentUser?.id || 'unknown';
 }
 
+function wkCanManageReport(report) {
+  if (!report) return false;
+  return isAdminUser(currentUser) || wkReportOwnerId(report) === currentUser?.id;
+}
+
 function wkAllReportUserIds() {
   const ids = new Set();
   if (Array.isArray(allUsers)) allUsers.forEach(u => { if (u?.id) ids.add(u.id); });
@@ -126,38 +131,34 @@ function wkAllReportUserIds() {
 }
 
 function wkLoadReports() {
-  if (isAdminUser(currentUser)) {
-    const byId = new Map();
-    _wkLoadedReportUserIds = wkAllReportUserIds();
-    _wkLoadedReportUserIds.forEach(userId => {
-      const reports = getShared(wkReportStorageKey(userId), []);
-      if (!Array.isArray(reports)) return;
-      reports.forEach((report, idx) => {
-        const normalized = { ...report, personId: report.personId || userId };
-        const key = normalized.id || `${userId}:${normalized.year || ''}:${normalized.week || ''}:${idx}`;
-        byId.set(key, normalized);
-      });
+  const byId = new Map();
+  _wkLoadedReportUserIds = wkAllReportUserIds();
+  _wkLoadedReportUserIds.forEach(userId => {
+    const reports = getShared(wkReportStorageKey(userId), []);
+    if (!Array.isArray(reports)) return;
+    reports.forEach((report, idx) => {
+      const normalized = { ...report, personId: report.personId || userId };
+      const key = normalized.id || `${userId}:${normalized.year || ''}:${normalized.week || ''}:${idx}`;
+      byId.set(key, normalized);
     });
-    allWeeklyReports = [...byId.values()];
-    return;
-  }
-  _wkLoadedReportUserIds = [currentUser.id];
-  allWeeklyReports = getShared(wkReportStorageKey(currentUser.id), []);
+  });
+  allWeeklyReports = [...byId.values()];
 }
 
 function wkSaveReports() {
-  if (isAdminUser(currentUser)) {
-    const byOwner = new Map(_wkLoadedReportUserIds.map(userId => [userId, []]));
-    allWeeklyReports.forEach(report => {
-      const ownerId = wkReportOwnerId(report);
-      if (!byOwner.has(ownerId)) byOwner.set(ownerId, []);
-      byOwner.get(ownerId).push(report);
-    });
-    byOwner.forEach((reports, userId) => setShared(wkReportStorageKey(userId), reports));
-    _wkLoadedReportUserIds = [...byOwner.keys()];
+  if (!isAdminUser(currentUser)) {
+    const ownReports = allWeeklyReports.filter(report => wkReportOwnerId(report) === currentUser?.id);
+    setShared(wkReportStorageKey(currentUser.id), ownReports);
     return;
   }
-  setShared(wkReportStorageKey(currentUser.id), allWeeklyReports);
+  const byOwner = new Map(_wkLoadedReportUserIds.map(userId => [userId, []]));
+  allWeeklyReports.forEach(report => {
+    const ownerId = wkReportOwnerId(report);
+    if (!byOwner.has(ownerId)) byOwner.set(ownerId, []);
+    byOwner.get(ownerId).push(report);
+  });
+  byOwner.forEach((reports, userId) => setShared(wkReportStorageKey(userId), reports));
+  _wkLoadedReportUserIds = [...byOwner.keys()];
 }
 
 function wkInit() {
@@ -201,6 +202,7 @@ function wkRenderList() {
       ? (r.kpi.visit.actual / r.kpi.visit.target * 100).toFixed(0) + '%' : '-';
     const savedDate = r.savedAt ? r.savedAt.slice(0,10).slice(5).replace('-','/') : '-';
     const reportId = escInlineJs(r.id);
+    const canManage = wkCanManageReport(r);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="bbs-num">${filtered.length - idx}</td>
@@ -212,14 +214,15 @@ function wkRenderList() {
       <td>${escHtml(r.person||'-')}</td>
       <td>${escHtml(savedDate)}</td>
     `;
-    tr.onclick = () => wkOpenForm(r.id);
+    tr.style.cursor = canManage ? 'pointer' : 'default';
+    if (canManage) tr.onclick = () => wkOpenForm(r.id);
     // 수정/삭제 버튼은 더블클릭 방지를 위해 마지막 셀에
     const actTd = document.createElement('td');
     actTd.style.cssText = 'white-space:nowrap';
-    actTd.innerHTML = `
-      <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();wkOpenForm('${reportId}')">수정</button>
-      <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" onclick="event.stopPropagation();wkDeleteReport('${reportId}')">삭제</button>
-    `;
+    actTd.innerHTML = canManage
+      ? `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();wkOpenForm('${reportId}')">수정</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" onclick="event.stopPropagation();wkDeleteReport('${reportId}')">삭제</button>`
+      : `<span style="font-size:11px;color:var(--text3);font-weight:600">읽기 전용</span>`;
     tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
@@ -265,6 +268,11 @@ function wkOpenForm(id) {
   if (id) {
     const r = allWeeklyReports.find(x => x.id === id);
     if (!r) return;
+    if (!wkCanManageReport(r)) {
+      _wkEditingId = null;
+      showToast('다른 작성자의 주간일지는 목록에서만 조회할 수 있습니다.', 'error');
+      return;
+    }
     _wkYear = r.year;
     _wkWeekNum = r.week;
     wkUpdateFormPeriod(false);
@@ -693,6 +701,10 @@ function wkCalcKpi() {
 
 function wkSaveReport() {
   const existingReport = _wkEditingId ? allWeeklyReports.find(r => r.id === _wkEditingId) : null;
+  if (existingReport && !wkCanManageReport(existingReport)) {
+    showToast('다른 작성자의 주간일지는 저장할 수 없습니다.', 'error');
+    return;
+  }
   const issues = [];
   document.querySelectorAll('#wk-issues-list > div').forEach(div => {
     const issue = div.querySelector('[data-wki="issue"]')?.value || '';
@@ -737,6 +749,11 @@ function wkSaveReport() {
 }
 
 function wkDeleteReport(id) {
+  const report = allWeeklyReports.find(r => r.id === id);
+  if (!wkCanManageReport(report)) {
+    showToast('다른 작성자의 주간일지는 삭제할 수 없습니다.', 'error');
+    return;
+  }
   if (!confirm('이 주간일지를 삭제하시겠습니까?')) return;
   allWeeklyReports = allWeeklyReports.filter(r => r.id !== id);
   wkSaveReports();

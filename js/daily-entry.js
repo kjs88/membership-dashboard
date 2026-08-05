@@ -137,7 +137,6 @@ function dlyRenderCal() {
   const entryMap = {};
   (allEntries||[]).forEach(e => {
     if (!e.date) return;
-    if (!isAdminUser(currentUser) && e.personId && e.personId !== currentUser.id) return;
     if (!entryMap[e.date]) entryMap[e.date] = [];
     entryMap[e.date].push(e);
   });
@@ -175,12 +174,9 @@ function dlyRenderCal() {
       if (!personMap[key]) personMap[key] = { id: pId, name: e.person || '미입력', count: 0 };
       personMap[key].count++;
     });
-    const isAdmin = isAdminUser(currentUser);
     const personGroups = Object.values(personMap);
     const summaryLines = personGroups.slice(0,5).map(p =>
-      isAdmin
-        ? `<div class="dly-entry-dot" onclick="event.stopPropagation();dlyOpenDate('${ds}','${escInlineJs(p.id)}')">● ${escHtml(p.name)} / ${p.count}처</div>`
-        : `<div class="dly-entry-dot">● ${p.count}처</div>`
+      `<div class="dly-entry-dot" onclick="event.stopPropagation();dlyOpenDate('${ds}','${escInlineJs(p.id)}')">● ${escHtml(p.name)} / ${p.count}처</div>`
     ).join('');
     const dotsHtml = summaryLines;
     const moreHtml = personGroups.length > 5 ? `<div class="dly-more">+${personGroups.length-5}명 더</div>` : '';
@@ -248,8 +244,7 @@ function cwRenderSavedList() {
   if (!list) return;
   const dayEntries = (allEntries||[]).filter(e => {
     if (e.date !== ds) return false;
-    if (!isAdminUser(currentUser) && e.personId && e.personId !== currentUser.id) return false;
-    if (isAdminUser(currentUser) && _dlySelectedPersonId && e.personId !== _dlySelectedPersonId) return false;
+    if (_dlySelectedPersonId && e.personId !== _dlySelectedPersonId) return false;
     return true;
   });
   document.getElementById('cw-count-label').textContent = `등록된 거래처 ${dayEntries.length}건`;
@@ -263,20 +258,26 @@ function cwRenderSavedList() {
                   : 'background:var(--amber-l);color:var(--amber)';
     const meeting = (e.meeting||'').length > 60 ? (e.meeting.slice(0,60)+'...') : (e.meeting||'');
     const entryId = escInlineJs(e.id);
+    const canManage = dlyCanManageEntry(e);
+    const ownerHtml = e.person ? `<span style="font-size:11px;color:var(--text3);margin-left:6px">작성자 ${escHtml(e.person)}</span>` : '';
+    const actionsHtml = canManage
+      ? `<button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:11px" onclick="cwEditEntry('${entryId}')">수정</button>
+        <button class="btn-sm btn-danger" style="padding:4px 10px;font-size:11px" onclick="cwDeleteEntry('${entryId}')">삭제</button>`
+      : `<span style="font-size:11px;color:var(--text3);font-weight:600">읽기 전용</span>`;
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px">
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">
           ${escHtml(e.institution||'')}
           ${e.clientType ? `<span style="${typeCls};font-size:11px;padding:2px 7px;border-radius:4px;margin-left:6px;font-weight:700">${escHtml(e.clientType)}</span>` : ''}
           ${e.dealPossibility ? `<span style="${dealCls};font-size:11px;padding:2px 7px;border-radius:4px;margin-left:3px;font-weight:700">${escHtml(e.dealPossibility)}</span>` : ''}
+          ${ownerHtml}
         </div>
         <div style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           ${e.attendee ? escHtml(e.attendee)+' · ' : ''}${escHtml(meeting)}
         </div>
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0">
-        <button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:11px" onclick="cwEditEntry('${entryId}')">수정</button>
-        <button class="btn-sm btn-danger" style="padding:4px 10px;font-size:11px" onclick="cwDeleteEntry('${entryId}')">삭제</button>
+        ${actionsHtml}
       </div>
     </div>`;
   }).join('');
@@ -288,6 +289,11 @@ function escInlineJs(s) {
 }
 function safeColor(c, fallback = '#999999') {
   return /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(String(c || '')) ? c : fallback;
+}
+
+function dlyCanManageEntry(entry) {
+  if (!entry) return false;
+  return isAdminUser(currentUser) || !entry.personId || entry.personId === currentUser?.id;
 }
 
 function cwResetEditCard() {
@@ -384,6 +390,10 @@ function cwSaveCard() {
 function cwEditEntry(id) {
   const e = allEntries.find(x => String(x.id) === String(id));
   if (!e) return;
+  if (!dlyCanManageEntry(e)) {
+    showToast('다른 작성자의 일지는 조회만 가능합니다.', 'error');
+    return;
+  }
   document.getElementById('cw-editing-id').value = e.id;
   document.getElementById('cw-edit-title').textContent = '✎ 거래처 수정: ' + (e.institution||'');
   document.getElementById('cw-save-btn').textContent = '수정 저장';
@@ -409,6 +419,10 @@ function cwEditEntry(id) {
 function cwDeleteEntry(id) {
   const e = allEntries.find(x => String(x.id) === String(id));
   if (!e) return;
+  if (!dlyCanManageEntry(e)) {
+    showToast('다른 작성자의 일지는 삭제할 수 없습니다.', 'error');
+    return;
+  }
   if (!confirm(`"${e.institution||''}" 항목을 삭제할까요?`)) return;
   allEntries = allEntries.filter(x => String(x.id) !== String(id));
   setShared('sj-entries-v4', allEntries);
