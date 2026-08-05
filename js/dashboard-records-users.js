@@ -1295,11 +1295,14 @@ function renderUsers() {
         <button class="btn-sm btn-ghost" onclick="setUserMenuPreset('${escInlineJs(u.id)}','all')">전체 메뉴</button>
       </div>
       <div class="user-menu-grid">
-        ${MENU_ACCESS_ITEMS.map(item => `
+        ${MENU_ACCESS_ITEMS.map(item => {
+          const fixed = typeof isAlwaysVisibleMenuKey === 'function' && isAlwaysVisibleMenuKey(item.key);
+          return `
           <label class="user-menu-check" title="${escHtml(item.label)}">
-            <input type="checkbox" ${access.has(item.key)?'checked':''} onchange="toggleUserMenuAccess('${escInlineJs(u.id)}','${escInlineJs(item.key)}',this.checked)" />
+            <input type="checkbox" ${fixed || access.has(item.key)?'checked':''} ${fixed?'disabled':''} onchange="toggleUserMenuAccess('${escInlineJs(u.id)}','${escInlineJs(item.key)}',this.checked)" />
             <span>${escHtml(item.label)}</span>
-          </label>`).join('')}
+          </label>`;
+        }).join('')}
       </div>`;
   };
 
@@ -1461,11 +1464,14 @@ function renderPendingSignups() {
               <div style="font-size:11px;color:var(--text2);margin-top:2px">신청일시: ${escHtml((p.requestedAt||'').replace('T',' ').substring(0,16))}</div>
             </div>
             <div class="user-menu-grid" style="flex:2 1 420px;margin:0">
-              ${MENU_ACCESS_ITEMS.map(item => `
+              ${MENU_ACCESS_ITEMS.map(item => {
+                const fixed = typeof isAlwaysVisibleMenuKey === 'function' && isAlwaysVisibleMenuKey(item.key);
+                return `
                 <label class="user-menu-check" title="${escHtml(item.label)}">
-                  <input class="pending-menu-cb" data-pending-id="${escHtml(p.id)}" type="checkbox" value="${escHtml(item.key)}" ${access.has(item.key)?'checked':''} />
+                  <input class="pending-menu-cb" data-pending-id="${escHtml(p.id)}" type="checkbox" value="${escHtml(item.key)}" ${fixed || access.has(item.key)?'checked':''} ${fixed?'disabled':''} />
                   <span>${escHtml(item.label)}</span>
-                </label>`).join('')}
+                </label>`;
+              }).join('')}
             </div>
             <div style="display:flex;gap:6px;margin-left:auto">
               <button class="btn-sm btn-primary" onclick="approveSignup('${pid}')">승인</button>

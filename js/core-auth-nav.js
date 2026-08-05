@@ -193,6 +193,7 @@ const MENU_ACCESS_DEFAULTS = {
   planner: ['sales','stats','products','project','dash','journal','grade','clients','targets'],
   user:    ['sales','stats','products','project','dash','journal'],
 };
+const ALWAYS_VISIBLE_MENU_KEYS = ['journal'];
 
 const MENU_ACCESS_ALIASES = {
   input: 'journal',
@@ -234,6 +235,10 @@ function getUserMenuAccess(user = currentUser) {
   return normalizeMenuAccess(user.menuAccess, getLegacyMenuProfile(user));
 }
 
+function isAlwaysVisibleMenuKey(key) {
+  return ALWAYS_VISIBLE_MENU_KEYS.includes(key);
+}
+
 function isAdminUser(user = currentUser) {
   if (!user) return false;
   return user.id === 'admin' || getUserMenuAccess(user).includes('users');
@@ -245,6 +250,8 @@ function isSalesUserAccount(user) {
 }
 
 function userCanAccessMenu(key, user = currentUser) {
+  if (!user) return false;
+  if (isAlwaysVisibleMenuKey(key)) return true;
   return getUserMenuAccess(user).includes(key);
 }
 
