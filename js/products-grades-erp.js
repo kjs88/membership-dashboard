@@ -198,6 +198,30 @@ function setProductPerson(id) {
   renderProducts();
 }
 
+// 전기간 구간 = 전월 같은 일자 (예: 8/1~8/8 → 7/1~7/8). 전월에 없는 날짜는 그 달 말일로 보정.
+// 조회기간이 한 달을 넘어 전월 구간이 현재 구간과 겹치면 직전 동일 길이 구간으로 대체한다.
+function prodPrevRange(dateFrom, dateTo) {
+  const shiftMonth = ds => {
+    const [y, m, d] = ds.split('-').map(Number);
+    const py = m === 1 ? y - 1 : y;
+    const pm = m === 1 ? 12 : m - 1;
+    const lastDay = new Date(py, pm, 0).getDate();
+    const dd = Math.min(d, lastDay);
+    return `${py}-${String(pm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+  };
+  let prevFrom = shiftMonth(dateFrom), prevTo = shiftMonth(dateTo);
+  if (prevTo >= dateFrom) {
+    const d1 = new Date(dateFrom + 'T00:00:00'), d2 = new Date(dateTo + 'T00:00:00');
+    const lenDays = Math.round((d2 - d1) / 86400000) + 1;
+    const pTo = new Date(d1.getTime() - 86400000);
+    const pFrom = new Date(pTo.getTime() - (lenDays - 1) * 86400000);
+    const f = dt => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    prevFrom = f(pFrom);
+    prevTo = f(pTo);
+  }
+  return { prevFrom, prevTo };
+}
+
 function renderProductCategoryFilter(categories) {
   const filterEl = document.getElementById('prod-category-filter');
   if (!filterEl) return;
@@ -283,21 +307,15 @@ function renderProducts() {
     if (o.client) map[key].clients.add(o.client);
   });
 
-  // ── 전기간(직전 동일 길이) 매출 집계 — 증감 컬럼용 ──
+  // ── 전기간(전월 동일 일자) 매출 집계 — 증감 컬럼용 ──
   const prevMap = {};
   _prodHasPrev = false;
   if (dateFrom && dateTo) {
-    const d1 = new Date(dateFrom), d2 = new Date(dateTo);
-    const lenDays = Math.round((d2 - d1) / 86400000) + 1;
-    const pTo = new Date(d1.getTime() - 86400000);
-    const pFrom = new Date(pTo.getTime() - (lenDays - 1) * 86400000);
-    const f = d => d.toISOString().slice(0, 10);
-    const prevFrom = f(pFrom), prevTo = f(pTo);
+    const { prevFrom, prevTo } = prodPrevRange(dateFrom, dateTo);
     _prodHasPrev = true;
-    const pName = personF !== 'all' ? (allUsers.find(u => u.id === personF)?.name || personF) : null;
     allOrders.forEach(o => {
       if (!o.date || o.date < prevFrom || o.date > prevTo) return;
-      if (pName && o.person !== pName) return;
+      if (personF !== 'all' && o.person !== personF) return;
       if (catF !== 'all' && (o.category || '') !== catF) return;
       const productName = o.product || '(품명 없음)';
       if (searchV && !productName.toLowerCase().includes(searchV)) return;
@@ -886,7 +904,7 @@ function renderProdAbc() {
   }).join('');
 }
 
-// 전기간 대비 증감 셀 (직전 동일 길이 기간 매출 대비)
+// 전기간 대비 증감 셀 (전월 동일 일자 구간 매출 대비)
 function prodDeltaCell(r) {
   if (!_prodHasPrev) return '<span style="color:var(--text3)">-</span>';
   const prev = r.prevSales || 0;
