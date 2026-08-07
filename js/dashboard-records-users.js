@@ -1373,13 +1373,14 @@ function openLoginLogs(userId) {
       };
       body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr>
-          ${['일시','계정','기기'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)">${h}</th>`).join('')}
+          ${['일시','계정','기기','IP'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)">${h}</th>`).join('')}
         </tr></thead>
         <tbody>${list.slice(0,300).map(l=>`
           <tr>
             <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono)">${escHtml(fmt(l.at))}</td>
             <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-weight:600">${escHtml(l.name||l.id||'-')}</td>
             <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(l.device||'-')}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">${escHtml(l.ip||'-')}</td>
           </tr>`).join('')}
         </tbody></table>
         ${list.length>300?`<div style="padding:10px;text-align:center;color:var(--text3);font-size:11px">최근 300건만 표시 (전체 ${list.length}건)</div>`:''}`;

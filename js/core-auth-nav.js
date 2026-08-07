@@ -338,8 +338,28 @@ function loginDeviceLabel() {
     : /Firefox\//.test(ua) ? 'Firefox' : '기타';
   return (isMobile ? '📱 모바일' : '💻 PC') + ' · ' + browser;
 }
-function recordLoginEvent(user) {
+// 접속 IP 조회. 정적 호스팅이라 서버가 없어 외부 echo 서비스를 사용한다.
+// 실패/지연 시 IP 없이 기록하도록 3초 타임아웃 후 빈 문자열 반환.
+async function fetchClientIp() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 3000);
+  try {
+    const res = await fetch('https://api.ipify.org?format=json', { signal: ctrl.signal, cache: 'no-store' });
+    if (!res.ok) return '';
+    const data = await res.json();
+    const ip = typeof data?.ip === 'string' ? data.ip.trim() : '';
+    return /^[0-9a-fA-F.:]{3,45}$/.test(ip) ? ip : '';
+  } catch (_) {
+    return '';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// IP 조회를 기다렸다가 기록하므로 호출부에서 await하지 않는다(로그인 지연 방지).
+async function recordLoginEvent(user) {
   if (!user) return;
+  const ip = await fetchClientIp();
   try {
     const logs = getShared(LOGIN_LOG_KEY, []);
     const list = Array.isArray(logs) ? logs : [];
@@ -348,6 +368,7 @@ function recordLoginEvent(user) {
       name: user.name || user.id,
       at: new Date().toISOString(),
       device: loginDeviceLabel(),
+      ip,
     });
     setShared(LOGIN_LOG_KEY, list.slice(0, LOGIN_LOG_MAX));
   } catch (e) { console.warn('[recordLoginEvent]', e); }
