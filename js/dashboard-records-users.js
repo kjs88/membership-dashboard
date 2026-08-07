@@ -1282,8 +1282,6 @@ async function deleteEntry(id) {
 // ════════════════════════════════════
 function renderUsers() {
   const colors = ['#009E6A','#2B72C8','#7856C8','#E8900A','#D94040','#26c6da'];
-  const userEntryCount = {};
-  allEntries.forEach(e=>{ userEntryCount[e.personId] = (userEntryCount[e.personId]||0)+1; });
   // 접속기록 집계 (횟수 + 최근 접속)
   const loginLogs = getShared('sj-login-logs-v1', []) || [];
   const loginStats = {};
@@ -1332,10 +1330,6 @@ function renderUsers() {
       <div class="user-card-info">
         <div class="user-card-name">${uname}</div>
         <div class="user-card-meta">ID: ${escHtml(u.id)} · 가입일: ${escHtml(u.createdAt||'-')}</div>
-      </div>
-      <div class="user-card-stats">
-        <div class="user-card-count">${userEntryCount[u.id]||0}</div>
-        <div class="user-card-label">방문 기록</div>
       </div>
       <div class="user-card-stats">
         <div class="user-card-count" style="color:var(--blue)">${loginStats[u.id]?.count||0}</div>
