@@ -313,6 +313,7 @@ async function doLogin() {
   await syncFromFirebase();
   ensureUsers();
   currentUser = allUsers.find(u => u.id === uid) || user;
+  recordLoginEvent(currentUser);
   saveCurrentUser(currentUser, document.getElementById('li-remember')?.checked);
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
@@ -322,6 +323,34 @@ async function doLogin() {
   loadAndRender();
   applyInitialDashboardRoute();
   if (typeof erpRefreshFromRemote === 'function') erpRefreshFromRemote({ silent: true }).then(() => loadAndRender());
+}
+
+// 접속기록: 로그인 성공 시 1건 기록 (공유 저장 → 계정관리에서 조회)
+const LOGIN_LOG_KEY = 'sj-login-logs-v1';
+const LOGIN_LOG_MAX = 1000;
+function loginDeviceLabel() {
+  const ua = navigator.userAgent || '';
+  const isMobile = /Android|iPhone|iPad|Mobile/i.test(ua);
+  const browser = /Edg\//.test(ua) ? 'Edge'
+    : /SamsungBrowser/i.test(ua) ? '삼성브라우저'
+    : /Chrome\//.test(ua) ? 'Chrome'
+    : /Safari\//.test(ua) ? 'Safari'
+    : /Firefox\//.test(ua) ? 'Firefox' : '기타';
+  return (isMobile ? '📱 모바일' : '💻 PC') + ' · ' + browser;
+}
+function recordLoginEvent(user) {
+  if (!user) return;
+  try {
+    const logs = getShared(LOGIN_LOG_KEY, []);
+    const list = Array.isArray(logs) ? logs : [];
+    list.unshift({
+      id: user.id,
+      name: user.name || user.id,
+      at: new Date().toISOString(),
+      device: loginDeviceLabel(),
+    });
+    setShared(LOGIN_LOG_KEY, list.slice(0, LOGIN_LOG_MAX));
+  } catch (e) { console.warn('[recordLoginEvent]', e); }
 }
 
 function doLogout() {

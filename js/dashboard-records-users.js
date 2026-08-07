@@ -1284,6 +1284,21 @@ function renderUsers() {
   const colors = ['#009E6A','#2B72C8','#7856C8','#E8900A','#D94040','#26c6da'];
   const userEntryCount = {};
   allEntries.forEach(e=>{ userEntryCount[e.personId] = (userEntryCount[e.personId]||0)+1; });
+  // 접속기록 집계 (횟수 + 최근 접속)
+  const loginLogs = getShared('sj-login-logs-v1', []) || [];
+  const loginStats = {};
+  (Array.isArray(loginLogs) ? loginLogs : []).forEach(l => {
+    if (!l || !l.id) return;
+    if (!loginStats[l.id]) loginStats[l.id] = { count: 0, last: '' };
+    loginStats[l.id].count++;
+    if (!loginStats[l.id].last || (l.at||'') > loginStats[l.id].last) loginStats[l.id].last = l.at || '';
+  });
+  const fmtLoginAt = iso => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (isNaN(d)) return '-';
+    return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  };
   const menuSettingsHtml = u => {
     if (u.id === 'admin') {
       return `<div class="user-menu-fixed">관리자 계정은 전체 메뉴를 항상 사용할 수 있습니다.</div>`;
@@ -1322,7 +1337,16 @@ function renderUsers() {
         <div class="user-card-count">${userEntryCount[u.id]||0}</div>
         <div class="user-card-label">방문 기록</div>
       </div>
+      <div class="user-card-stats">
+        <div class="user-card-count" style="color:var(--blue)">${loginStats[u.id]?.count||0}</div>
+        <div class="user-card-label">접속 횟수</div>
+      </div>
+      <div class="user-card-stats">
+        <div class="user-card-count" style="font-size:13px;line-height:1.6">${fmtLoginAt(loginStats[u.id]?.last)}</div>
+        <div class="user-card-label">최근 접속</div>
+      </div>
       <div class="user-card-actions">
+        <button class="btn-sm btn-ghost" onclick="openLoginLogs('${uid}')">접속기록</button>
         <button class="btn-sm btn-amber" onclick="openResetPwModal('${uid}','${unameJs}')">비번 초기화</button>
         ${u.id!=='admin'?`<button class="btn-sm btn-danger" onclick="deleteUser('${uid}')">삭제</button>`:''}
       </div>
@@ -1331,6 +1355,43 @@ function renderUsers() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── 접속기록 모달 ──
+function openLoginLogs(userId) {
+  const logs = getShared('sj-login-logs-v1', []) || [];
+  const list = (Array.isArray(logs) ? logs : []).filter(l => !userId || l.id === userId);
+  const titleEl = document.getElementById('login-logs-title');
+  if (titleEl) {
+    const uname = userId ? (allUsers.find(u=>u.id===userId)?.name || userId) : null;
+    titleEl.textContent = uname ? `접속기록 — ${uname}` : '전체 접속기록';
+  }
+  const body = document.getElementById('login-logs-body');
+  if (body) {
+    if (!list.length) {
+      body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">접속기록이 없습니다.<br>이 기능 적용 이후의 로그인부터 기록됩니다.</div>';
+    } else {
+      const fmt = iso => {
+        const d = new Date(iso);
+        if (isNaN(d)) return '-';
+        const dow = ['일','월','화','수','목','금','토'][d.getDay()];
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} (${dow}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      };
+      body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr>
+          ${['일시','계정','기기'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)">${h}</th>`).join('')}
+        </tr></thead>
+        <tbody>${list.slice(0,300).map(l=>`
+          <tr>
+            <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono)">${escHtml(fmt(l.at))}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-weight:600">${escHtml(l.name||l.id||'-')}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(l.device||'-')}</td>
+          </tr>`).join('')}
+        </tbody></table>
+        ${list.length>300?`<div style="padding:10px;text-align:center;color:var(--text3);font-size:11px">최근 300건만 표시 (전체 ${list.length}건)</div>`:''}`;
+    }
+  }
+  openModal('modal-login-logs');
 }
 
 function openAddUserModal() { openModal('modal-add-user'); }

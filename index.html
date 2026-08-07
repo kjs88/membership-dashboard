@@ -915,7 +915,10 @@
   <div id="page-users" class="page">
     <div class="section-header">
       <div class="section-title-lg">계정 관리</div>
-      <button class="btn-sm btn-primary" onclick="openAddUserModal()">+ 계정 추가</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm btn-ghost" onclick="openLoginLogs()">🕐 전체 접속기록</button>
+        <button class="btn-sm btn-primary" onclick="openAddUserModal()">+ 계정 추가</button>
+      </div>
     </div>
     <div id="pending-signups-wrap" style="margin-bottom:20px"></div>
     <div id="users-list"></div>
@@ -1429,6 +1432,16 @@
 </div><!-- #app-screen -->
 
 <!-- ══════ MODALS ══════ -->
+<div class="modal-overlay" id="modal-login-logs" onclick="if(event.target===this)closeModal('modal-login-logs')">
+  <div class="modal" style="max-width:560px;width:92vw">
+    <div class="modal-title" id="login-logs-title">전체 접속기록</div>
+    <div id="login-logs-body" style="max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" onclick="closeModal('modal-login-logs')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-add-user" onclick="if(event.target===this)closeModal('modal-add-user')">
   <div class="modal">
     <div class="modal-title">계정 추가</div>
@@ -1699,12 +1712,12 @@
 
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/security.js?v=20260731-weekly-attachments"></script>
-<script src="js/storage.js?v=20260721-churn-risk-settings"></script>
+<script src="js/storage.js?v=20260808-login-logs"></script>
 <script src="js/state.js?v=20260613-channel-fix"></script>
 <script src="js/products-grades-erp.js?v=20260721-code-cleanup"></script>
-<script src="js/core-auth-nav.js?v=20260805-journal-visible"></script>
+<script src="js/core-auth-nav.js?v=20260808-login-logs"></script>
 <script src="js/journals-weekly-monthly.js?v=20260806-journal-shared-view"></script>
-<script src="js/dashboard-records-users.js?v=20260805-journal-visible"></script>
+<script src="js/dashboard-records-users.js?v=20260808-login-logs"></script>
 <script src="js/clients.js?v=20260721-code-cleanup"></script>
 <script src="js/daily-entry.js?v=20260806-journal-shared-view"></script>
 <script src="js/stats-notices.js?v=20260613-channel-fix"></script>
