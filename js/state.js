@@ -27,6 +27,18 @@ function orderChannel(o) {
 }
 let fbListeners = [];
 
+// 달력 날짜(YYYY-MM-DD)는 반드시 이 함수로 만든다.
+// toISOString()은 UTC로 변환하므로 KST 새벽 0~9시에 하루 전 날짜가 나온다.
+function ymdLocal(d) {
+  const dt = d instanceof Date ? d : (d == null ? new Date() : new Date(d));
+  if (isNaN(dt)) return '';
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+// 오늘 날짜 (로컬 기준)
+function todayYmd() { return ymdLocal(new Date()); }
+// 로컬 기준 YYYY-MM
+function ymLocal(d) { return ymdLocal(d).slice(0, 7); }
+
 // ════════════════════════════════════
 // FIREBASE CONFIG
 // ════════════════════════════════════

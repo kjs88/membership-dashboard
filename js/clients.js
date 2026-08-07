@@ -767,7 +767,7 @@ function exportSelectedClients() {
   const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `거래처_선택_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `거래처_선택_${todayYmd()}.csv`;
   a.click();
   showToast(selected.length + '개 거래처가 다운로드됩니다.', 'success');
 }
@@ -799,7 +799,7 @@ function exportClients() {
   const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `거래처목록_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `거래처목록_${todayYmd()}.csv`;
   a.click();
   showToast('거래처 목록이 다운로드됩니다.', 'success');
 }

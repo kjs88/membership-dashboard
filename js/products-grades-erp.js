@@ -378,7 +378,7 @@ function prodFlowMonthKey(dateText) {
 
 function prodFlowMonthRange(rows, dateFrom, dateTo) {
   const dates = rows.map(r => r.date).filter(Boolean).sort();
-  const baseText = dateFrom || dateTo || dates[0] || new Date().toISOString().slice(0, 10);
+  const baseText = dateFrom || dateTo || dates[0] || todayYmd();
   const year = String(baseText).slice(0, 4);
   return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 }

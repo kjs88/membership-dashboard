@@ -150,7 +150,7 @@ function genReport(mode, el) {
   let filtered, filteredO, periodLabel;
   if (mode==='week') {
     const sw = new Date(now); sw.setDate(now.getDate()-now.getDay()); sw.setHours(0,0,0,0);
-    const swStr = sw.toISOString().split('T')[0];
+    const swStr = ymdLocal(sw);
     filtered = E.filter(e=>new Date(e.date)>=sw);
     filteredO = O.filter(o=>(o.date||'')>=swStr);
     periodLabel = `${sw.getMonth()+1}/${sw.getDate()} ~ ${now.getMonth()+1}/${now.getDate()}`;
@@ -216,16 +216,16 @@ function genReport(mode, el) {
 // REVISIT
 // ════════════════════════════════════
 function updateRevisitBadge() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayYmd();
   const upcoming = allRevisits.filter(r=>!r.done&&r.date>=today);
   const el = document.getElementById('revisit-badge');
   if (el) el.textContent = upcoming.length||'';
 }
 
 function renderRevisit() {
-  const today = new Date().toISOString().split('T')[0];
-  const d3 = new Date(); d3.setDate(d3.getDate()+3); const d3s = d3.toISOString().split('T')[0];
-  const eom = new Date(new Date().getFullYear(),new Date().getMonth()+1,0).toISOString().split('T')[0];
+  const today = todayYmd();
+  const d3 = new Date(); d3.setDate(d3.getDate()+3); const d3s = ymdLocal(d3);
+  const eom = ymdLocal(new Date(new Date().getFullYear(),new Date().getMonth()+1,0));
 
   const fv = document.getElementById('rv-filter')?.value||'upcoming';
   let pool = isAdminUser(currentUser) ? [...allRevisits] : allRevisits.filter(r=>r.personId===currentUser?.id);
@@ -326,7 +326,7 @@ function renderNoticeManage() {
   const pinned = allNotices.filter(n=>n.pin).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const normal = allNotices.filter(n=>!n.pin).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const sorted = [...pinned, ...normal];
-  const isNew = d => d && d.substring(0,10) >= new Date(Date.now()-3*86400000).toISOString().split('T')[0];
+  const isNew = d => d && d.substring(0,10) >= ymdLocal(new Date(Date.now()-3*86400000));
   if (sorted.length === 0) {
     listEl.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text3)">등록된 공지사항이 없습니다.</div>';
     if (detEl) detEl.classList.remove('active');

@@ -356,8 +356,8 @@ function wkUpdateFormPeriod(autoTitle) {
 
 function wkAutoCount() {
   const range = getWeekRange(_wkYear, _wkWeekNum);
-  const startStr = range.start.toISOString().slice(0,10);
-  const endStr = range.end.toISOString().slice(0,10);
+  const startStr = ymdLocal(range.start);
+  const endStr = ymdLocal(range.end);
   const weekEntries = (allEntries||[]).filter(e =>
     e.personId === currentUser.id && e.date >= startStr && e.date <= endStr
   );

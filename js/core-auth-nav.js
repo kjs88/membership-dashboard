@@ -463,7 +463,7 @@ function initUI() {
   applyCurrentUserMenuAccess();
   initDashboardHistory();
   const dateEl = document.getElementById('f-date');
-  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl) dateEl.value = todayYmd();
   setTimeout(()=>{ if(getShared('sj-draft-'+currentUser?.id, null)) loadDraft(); }, 500);
   initDatePickers();
   if (typeof erpStartAutoSync === 'function') erpStartAutoSync();

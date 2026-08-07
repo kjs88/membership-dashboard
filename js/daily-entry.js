@@ -112,7 +112,7 @@ function setSidebizValue(val) {
 // ════════════════════════════════════
 var _dlyCY = new Date().getFullYear();
 var _dlyCM = new Date().getMonth();
-var _dlySelectedDate = new Date().toISOString().split('T')[0];
+var _dlySelectedDate = todayYmd();
 var _dlySelectedPersonId = '';
 
 function dlyInit() {
@@ -131,7 +131,7 @@ function dlyRenderCal() {
 
   const firstDay = new Date(y, m, 1).getDay();
   const daysInMonth = new Date(y, m+1, 0).getDate();
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayYmd();
 
   // 해당 월 일지 맵 { 'YYYY-MM-DD': [entry,...] }
   const entryMap = {};

@@ -262,7 +262,7 @@ function renderSalesPage(options = {}) {
 function renderDashPage() {
   try {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = ymdLocal(now);
     const ym = today.slice(0,7);
     const isAdmin = isAdminUser(currentUser);
     const pool = isAdmin ? allEntries : allEntries.filter(e => e.personId === currentUser?.id);
@@ -329,7 +329,7 @@ function renderDashPage() {
     const dLabels=[], dData=[], dColors=[], dDows=[];
     for(let i=13;i>=0;i--){
       const d=new Date(now); d.setDate(d.getDate()-i);
-      const ds=d.toISOString().split('T')[0];
+      const ds=ymdLocal(d);
       const dow=d.getDay(); const mmdd=ds.slice(5);
       const hol=krHolidayName(ds), isRed=hol||dow===0||dow===6;
       dLabels.push([ds.slice(8)+'일', DOW[dow]]);
@@ -798,7 +798,7 @@ function downloadShRankExcel(kind = 'office') {
     String(now.getMinutes()).padStart(2, '0'),
     String(now.getSeconds()).padStart(2, '0'),
   ].join('');
-  XLSX.writeFile(workbook, `${label}_매출순위_${meta.ym || now.toISOString().slice(0, 7)}_${stamp}.xlsx`);
+  XLSX.writeFile(workbook, `${label}_매출순위_${meta.ym || ymLocal(now)}_${stamp}.xlsx`);
   showToast(`${label} 매출 순위 엑셀 파일이 다운로드됩니다.`, 'success');
 }
 
@@ -1403,7 +1403,7 @@ async function addUser() {
   if (pwPolicyErr) { showToast(pwPolicyErr, 'error'); return; }
   if (allUsers.find(u=>u.id===id)) { showToast('이미 존재하는 아이디입니다.','error'); return; }
   const colors = ['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
-  allUsers.push({ id, name, passwordHash: await authBuildPasswordRecord(pw), menuAccess: getDefaultMenuAccess('user'), color: colors[allUsers.length % colors.length], createdAt: new Date().toISOString().split('T')[0] });
+  allUsers.push({ id, name, passwordHash: await authBuildPasswordRecord(pw), menuAccess: getDefaultMenuAccess('user'), color: colors[allUsers.length % colors.length], createdAt: todayYmd() });
   setShared('sj-users-v6', allUsers);
   ['nu-name','nu-id','nu-pw'].forEach(x=>document.getElementById(x).value='');
   closeModal('modal-add-user');
@@ -1550,7 +1550,7 @@ async function approveSignup(id) {
     id: p.id, name: p.name, passwordHash,
     menuAccess: getPendingMenuAccess(id),
     color: colors[allUsers.length % colors.length],
-    createdAt: new Date().toISOString().split('T')[0]
+    createdAt: todayYmd()
   });
   setShared('sj-users-v6', allUsers);
   setShared('sj-signup-pending-v1', pending.filter(x=>x.id!==id));
@@ -1839,7 +1839,7 @@ function exportExcel() {
   const blob = new Blob([bom+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `영업일지_${new Date().toISOString().split('T')[0]}.csv`;
+  a.href = url; a.download = `영업일지_${todayYmd()}.csv`;
   a.click(); URL.revokeObjectURL(url);
   showToast('엑셀 파일이 다운로드됩니다.', 'success');
 }
