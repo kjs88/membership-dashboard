@@ -320,12 +320,21 @@ function wkClearForm() {
   ['wk-title','wk-next-new','wk-next-dormant','wk-next-existing','wk-schedule','wk-market','wk-highlights'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; wkAutoResizeTextarea(el); }
   });
+  const hlRows = document.getElementById('wk-hl-rows');
+  if (hlRows) hlRows.innerHTML = '';
+  const issueList = document.getElementById('wk-issues-list');
+  if (issueList) issueList.innerHTML = '';
   const totN = document.getElementById('wk-next-target-total'); if (totN) totN.textContent = '0';
   ['visit','new','dormant','existing'].forEach(k => {
     const r = document.getElementById('wk-kpi-'+k+'-rate'); if (r) r.textContent = '-';
   });
+  _wkPhotos = [];
+  _wkPhotoPage = 0;
+  wkRenderPhotoGallery();
   _wkFiles = [];
   wkRenderFileList();
+  const fileInput = document.getElementById('wk-file-input');
+  if (fileInput) fileInput.value = '';
   _wkReadOnly = false;
   wkApplyReadOnly();
 }
