@@ -629,9 +629,9 @@
           <div style="font-size:12px;color:var(--text3);margin-top:4px" id="wk-form-subtitle"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-sm btn-ghost" onclick="wkFormPrev()">← 이전 주</button>
+          <button class="btn-sm btn-ghost" id="wk-prev-btn" onclick="wkFormPrev()">← 이전 주</button>
           <span id="wk-form-period" style="font-size:13px;font-weight:600;color:var(--text);padding:7px 12px;background:var(--bg2);border-radius:8px"></span>
-          <button class="btn-sm btn-ghost" onclick="wkFormNext()">다음 주 →</button>
+          <button class="btn-sm btn-ghost" id="wk-next-btn" onclick="wkFormNext()">다음 주 →</button>
           <button class="btn-sm btn-ghost" onclick="wkCloseForm()" style="margin-left:4px">✕ 목록</button>
         </div>
       </div>
@@ -718,7 +718,7 @@
       </div>
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn-sm btn-ghost" onclick="wkCloseForm()" style="padding:10px 18px">← 목록으로</button>
-        <button class="submit-btn" onclick="wkSaveReport()" style="flex:1">✓ 주간일지 저장</button>
+        <button class="submit-btn" id="wk-save-btn" onclick="wkSaveReport()" style="flex:1">✓ 주간일지 저장</button>
       </div>
     </div>
 
@@ -1716,7 +1716,7 @@
 <script src="js/state.js?v=20260808-local-date"></script>
 <script src="js/products-grades-erp.js?v=20260808-local-date"></script>
 <script src="js/core-auth-nav.js?v=20260808-local-date"></script>
-<script src="js/journals-weekly-monthly.js?v=20260808-local-date"></script>
+<script src="js/journals-weekly-monthly.js?v=20260812-weekly-readonly-open"></script>
 <script src="js/dashboard-records-users.js?v=20260808-local-date"></script>
 <script src="js/clients.js?v=20260808-local-date"></script>
 <script src="js/daily-entry.js?v=20260808-local-date"></script>

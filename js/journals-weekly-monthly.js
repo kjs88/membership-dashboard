@@ -7,6 +7,7 @@ var _wkIssueId = 0;
 var _wkEditingId = null;
 var _wkLoadedReportUserIds = [];
 var _wkFiles = [];
+var _wkReadOnly = false;
 const WK_FILE_MAX_BYTES = 1024 * 1024;
 const WK_FILE_TOTAL_MAX_BYTES = 3 * 1024 * 1024;
 
@@ -214,15 +215,15 @@ function wkRenderList() {
       <td>${escHtml(r.person||'-')}</td>
       <td>${escHtml(savedDate)}</td>
     `;
-    tr.style.cursor = canManage ? 'pointer' : 'default';
-    if (canManage) tr.onclick = () => wkOpenForm(r.id);
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => wkOpenForm(r.id);
     // 수정/삭제 버튼은 더블클릭 방지를 위해 마지막 셀에
     const actTd = document.createElement('td');
     actTd.style.cssText = 'white-space:nowrap';
     actTd.innerHTML = canManage
       ? `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();wkOpenForm('${reportId}')">수정</button>
         <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" onclick="event.stopPropagation();wkDeleteReport('${reportId}')">삭제</button>`
-      : `<span style="font-size:11px;color:var(--text3);font-weight:600">읽기 전용</span>`;
+      : `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();wkOpenForm('${reportId}')">열람</button>`;
     tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
@@ -231,6 +232,7 @@ function wkRenderList() {
 function wkOpenForm(id) {
   _wkEditingId = id || null;
   _wkIssueId = 0;
+  _wkReadOnly = false;
   wkHlClearSearch();
 
   const setDisp = (spanId, val) => {
@@ -268,11 +270,7 @@ function wkOpenForm(id) {
   if (id) {
     const r = allWeeklyReports.find(x => x.id === id);
     if (!r) return;
-    if (!wkCanManageReport(r)) {
-      _wkEditingId = null;
-      showToast('다른 작성자의 주간일지는 목록에서만 조회할 수 있습니다.', 'error');
-      return;
-    }
+    const readOnlyReport = !wkCanManageReport(r);
     _wkYear = r.year;
     _wkWeekNum = r.week;
     wkUpdateFormPeriod(false);
@@ -294,6 +292,7 @@ function wkOpenForm(id) {
     if (list) list.innerHTML = '';
     loadPrevTarget(r.year, r.week, r.personId || currentUser.id);
     wkAutoCount();
+    _wkReadOnly = readOnlyReport;
   } else {
     _wkYear = new Date().getFullYear();
     _wkWeekNum = getWeekNum(new Date());
@@ -306,6 +305,7 @@ function wkOpenForm(id) {
 
   document.getElementById('wk-list-view').style.display = 'none';
   document.getElementById('wk-form-view').style.display = '';
+  wkApplyReadOnly();
   requestAnimationFrame(() => wkAutoResizeTextareas(document.getElementById('wk-form-view')));
 }
 
@@ -327,6 +327,33 @@ function wkClearForm() {
   });
   _wkFiles = [];
   wkRenderFileList();
+  _wkReadOnly = false;
+  wkApplyReadOnly();
+}
+
+function wkApplyReadOnly() {
+  const form = document.getElementById('wk-form-view');
+  if (!form) return;
+  form.querySelectorAll('input, textarea, select').forEach(el => {
+    if (el.id === 'wk-filter-year') return;
+    el.disabled = _wkReadOnly;
+  });
+  form.querySelectorAll('button, label').forEach(el => {
+    if (el.id === 'wk-save-btn') {
+      el.style.display = _wkReadOnly ? 'none' : '';
+      return;
+    }
+    if (el.id === 'wk-prev-btn' || el.id === 'wk-next-btn') {
+      el.disabled = _wkReadOnly;
+      el.style.opacity = _wkReadOnly ? '.45' : '';
+      return;
+    }
+    if (el.closest('.section-header') || el.textContent.includes('목록')) return;
+    if (el.classList.contains('wk-readonly-keep')) return;
+    el.style.display = _wkReadOnly ? 'none' : '';
+  });
+  const title = document.querySelector('#wk-form-view .section-title-lg');
+  if (title) title.textContent = _wkReadOnly ? '📝 주간일지 열람' : '📝 주간일지 작성';
 }
 
 function wkFormPrev() {
@@ -399,6 +426,7 @@ let _wkPhotoPage = 0;
 const WK_PHOTOS_PER_PAGE = 9;
 
 function wkHlAddPhotos(input) {
+  if (_wkReadOnly) return;
   const row = input.closest('[data-inst]');
   const inst = row ? row.dataset.inst : '';
   const files = Array.from(input.files);
@@ -439,14 +467,15 @@ function wkRenderPhotoGallery() {
           <div style="position:relative;width:80px;height:80px;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid var(--border);flex-shrink:0"
             onclick="wkPhotoLightbox(${p.idx})">
             <img src="${p.dataUrl}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>
-            <button onclick="event.stopPropagation();wkDeletePhoto(${p.idx})"
-              style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;padding:0">✕</button>
+            ${_wkReadOnly ? '' : `<button onclick="event.stopPropagation();wkDeletePhoto(${p.idx})"
+              style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;padding:0">✕</button>`}
           </div>`).join('')}
       </div>
     </div>`).join('');
 }
 
 function wkDeletePhoto(idx) {
+  if (_wkReadOnly) return;
   _wkPhotos.splice(idx, 1);
   if (_wkPhotoPage >= Math.ceil(_wkPhotos.length / WK_PHOTOS_PER_PAGE)) _wkPhotoPage = Math.max(0, _wkPhotoPage - 1);
   wkRenderPhotoGallery();
@@ -492,6 +521,7 @@ function wkFormatFileSize(bytes) {
 }
 
 function wkAddFiles(input) {
+  if (_wkReadOnly) return;
   const files = Array.from(input.files || []);
   if (!files.length) return;
   let loaded = 0;
@@ -536,6 +566,7 @@ function wkAddFiles(input) {
 }
 
 function wkDeleteFile(idx) {
+  if (_wkReadOnly) return;
   _wkFiles.splice(idx, 1);
   wkRenderFileList();
 }
@@ -552,7 +583,7 @@ function wkRenderFileList() {
       <span style="font-size:15px">📄</span>
       <a href="${f.dataUrl}" download="${escHtml(f.name)}" style="flex:1;min-width:0;color:var(--text);font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none" title="${escHtml(f.name)}">${escHtml(f.name)}</a>
       <span style="font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap">${wkFormatFileSize(f.size)}</span>
-      <button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--red);font-size:12px" onclick="wkDeleteFile(${idx})">삭제</button>
+      ${_wkReadOnly ? '' : `<button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--red);font-size:12px" onclick="wkDeleteFile(${idx})">삭제</button>`}
     </div>`).join('');
 }
 
@@ -579,6 +610,7 @@ function wkHlCloseDrop() {
   if (drop) drop.style.display = 'none';
 }
 function wkHlAddRow(name) {
+  if (_wkReadOnly) return;
   if (!name) return;
   const container = document.getElementById('wk-hl-rows');
   const id = 'hl-' + Date.now();
@@ -700,6 +732,10 @@ function wkCalcKpi() {
 }
 
 function wkSaveReport() {
+  if (_wkReadOnly) {
+    showToast('읽기 전용 주간일지는 저장할 수 없습니다.', 'error');
+    return;
+  }
   const existingReport = _wkEditingId ? allWeeklyReports.find(r => r.id === _wkEditingId) : null;
   if (existingReport && !wkCanManageReport(existingReport)) {
     showToast('다른 작성자의 주간일지는 저장할 수 없습니다.', 'error');
