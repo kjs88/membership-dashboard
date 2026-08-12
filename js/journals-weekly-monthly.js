@@ -35,7 +35,8 @@ document.addEventListener('input', e => {
   }
 });
 
-// 주차 기준: 목요일 시작 ~ 수요일 종료
+// 주차 기간은 목요일 시작 ~ 수요일 종료.
+// 월 주차 표기는 해당 월 1일이 포함된 목~수 기간을 1주차로 본다.
 function getWeekStart(d) {
   // 주어진 날짜가 속한 주의 목요일(시작)을 반환
   const day = d.getDay(); // 0=일,1=월,...,4=목,...,6=토
@@ -83,18 +84,8 @@ function getWeekRange(year, week) {
   }
   const [labelYear, labelMonthIdx] = labelKey.split('-').map(Number);
 
-  // 해당 월에서 start(목)이 몇 번째 목요일인지
-  let thuCount = 0;
-  const cur = new Date(labelYear, labelMonthIdx, 1);
-  while (true) {
-    if (cur.getDay() === 4) {
-      thuCount++;
-      if (cur.getTime() === start.getTime()) break;
-    }
-    cur.setDate(cur.getDate() + 1);
-    if (cur > start) break;
-  }
-  const weekOfMonth = thuCount;
+  const firstWeekStart = getWeekStart(new Date(labelYear, labelMonthIdx, 1));
+  const weekOfMonth = Math.floor((start - firstWeekStart) / (7 * 86400000)) + 1;
   const m = labelMonthIdx + 1;
   return {
     start, end,
@@ -102,6 +93,14 @@ function getWeekRange(year, week) {
     rangeLabel: `${fmt(start)}~${fmt(end)}`,
     fullLabel: `${labelYear}년 ${m}월 ${weekOfMonth}주차 (${fmt(start)}~${fmt(end)})`
   };
+}
+
+function wkReportTitle(report, range) {
+  const autoTitle = `${range.fullLabel} 주간업무보고`;
+  const savedTitle = String(report?.title || '').trim();
+  return !savedTitle || /^\d{4}년 \d{1,2}월 \d+주차 \([^)]+\) 주간업무보고$/.test(savedTitle)
+    ? autoTitle
+    : savedTitle;
 }
 
 function wkReportStorageKey(userId) {
@@ -207,7 +206,7 @@ function wkRenderList() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="bbs-num">${filtered.length - idx}</td>
-      <td class="bbs-td-title">${escHtml(r.title || range.fullLabel)}${Array.isArray(r.attachments) && r.attachments.length ? ` <span style="color:var(--green-dark);font-size:11px;font-weight:700">📎 ${r.attachments.length}</span>` : ''}</td>
+      <td class="bbs-td-title">${escHtml(wkReportTitle(r, range))}${Array.isArray(r.attachments) && r.attachments.length ? ` <span style="color:var(--green-dark);font-size:11px;font-weight:700">📎 ${r.attachments.length}</span>` : ''}</td>
       <td>${escHtml(range.label)}</td>
       <td>${r.kpi?.visit?.actual ?? '-'}</td>
       <td>${r.kpi?.new?.actual ?? '-'}</td>
@@ -274,7 +273,7 @@ function wkOpenForm(id) {
     _wkYear = r.year;
     _wkWeekNum = r.week;
     wkUpdateFormPeriod(false);
-    setVal('wk-title', r.title);
+    setVal('wk-title', wkReportTitle(r, getWeekRange(r.year, r.week)));
     if (document.getElementById('wk-visit-total')) document.getElementById('wk-visit-total').textContent = 0;
     setVal('wk-schedule',   r.schedule);
     setVal('wk-market', r.market);
