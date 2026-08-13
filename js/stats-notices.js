@@ -35,9 +35,9 @@ function renderStats() {
 
     // ── KPI: 매출 중심 (방문 데이터 제외) ──
     const totalSales = useErp
-      ? Math.round(O.reduce((s,o)=>s+(parseFloat(o.supply)||0),0))
+      ? sumSupplyRounded(O)
       : (statsPersonId==='all' ? allEntries : allEntries.filter(e=>e.personId===statsPersonId)).reduce((s,e)=>s+(e.ourPurchase||0),0);
-    const totalQty = useErp ? O.reduce((s,o)=>s+(o.qty||0),0) : 0;
+    const totalQty = useErp ? sumQty(O) : 0;
     const clientSet = new Set();
     O.forEach(o => { if (o.client) clientSet.add(o.client); });
     const avgOrder = O.length ? Math.round(totalSales/O.length) : 0;
@@ -56,10 +56,10 @@ function renderStats() {
     if (useErp) {
       const monthSales = months.map(m => {
         const ym = m.y+'-'+String(m.m+1).padStart(2,'0');
-        return Math.round(baseOrders.filter(o => {
+        return sumSupplyRounded(baseOrders.filter(o => {
           if (statsPersonId !== 'all' && o.person !== personName) return false;
           return (o.date||'').startsWith(ym);
-        }).reduce((s,o)=>s+(parseFloat(o.supply)||0),0));
+        }));
       });
       if (typeof rc === 'function') rc('chart-stats-monthly','bar',months.map(m=>m.label),monthSales,'#E8900A');
       const subEl = document.getElementById('stats-chart-sub');
@@ -104,8 +104,8 @@ function renderStats() {
       dDows.push(hol?'holiday':dow===0?'sun':dow===6?'sat':'weekday');
       dColors.push(isRed?'#D94040CC':'#2B72C8CC');
       const dayOrders = O.filter(o=>o.date===ds);
-      dSales.push(Math.round(dayOrders.reduce((s,o)=>s+(parseFloat(o.supply)||0),0)));
-      dQty.push(dayOrders.reduce((s,o)=>s+(o.qty||0),0));
+      dSales.push(sumSupplyRounded(dayOrders));
+      dQty.push(sumQty(dayOrders));
     }
     const fmt = d => d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0');
     const periodLabel = (dateFrom||dateTo) ? `${fmt(startDate)} ~ ${fmt(endDate)}` : `${startDate.getFullYear()}년 ${startDate.getMonth()+1}월`;
@@ -165,9 +165,9 @@ function genReport(mode, el) {
   const dD = filtered.filter(e=>e.dealPossibility==='△').length;
   const dX = filtered.filter(e=>e.dealPossibility==='×').length;
   const sales = useErp
-    ? Math.round(filteredO.reduce((s,o)=>s+(parseFloat(o.supply)||0),0)/10000)
+    ? Math.round(sumSupply(filteredO)/10000)
     : filtered.reduce((s,e)=>s+(e.ourPurchase||0),0);
-  const qty = useErp ? filteredO.reduce((s,o)=>s+(o.qty||0),0) : 0;
+  const qty = useErp ? sumQty(filteredO) : 0;
   const personLabel = statsPersonId==='all' ? '팀 전체' : statsPersonId;
   const regions = [...new Set(filtered.map(e=>e.region).filter(Boolean))];
   const modeLabel = mode==='week' ? '주간' : '월간';

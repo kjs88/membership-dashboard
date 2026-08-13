@@ -38,6 +38,16 @@ function todayYmd() { return ymdLocal(new Date()); }
 // 로컬 기준 YYYY-MM
 function ymLocal(d) { return ymdLocal(d).slice(0, 7); }
 
+// 주문/출고 레코드 공급가 합계. 원 단위 정수가 필요하면 sumSupplyRounded 사용.
+function sumSupply(rows) {
+  return (rows || []).reduce((s, o) => s + (parseFloat(o && o.supply) || 0), 0);
+}
+function sumSupplyRounded(rows) { return Math.round(sumSupply(rows)); }
+// 수량 합계
+function sumQty(rows) {
+  return (rows || []).reduce((s, o) => s + (parseFloat(o && o.qty) || 0), 0);
+}
+
 // ════════════════════════════════════
 // FIREBASE CONFIG
 // ════════════════════════════════════

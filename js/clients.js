@@ -377,14 +377,14 @@ function renderClientErpPanel(c) {
     el.innerHTML = `<div style="padding:28px;text-align:center;color:var(--text3)">이 거래처의 ERP 매출 데이터가 없습니다.<br><span style="font-size:11px">(${escHtml(meta.label)} · ERP 거래처명이 정확히 일치할 때 표시됩니다)</span></div>`;
     return;
   }
-  const totSales = rows.reduce((s,o)=>s+(parseFloat(o.supply)||0),0);
-  const totQty = rows.reduce((s,o)=>s+(o.qty||0),0);
+  const totSales = sumSupply(rows);
+  const totQty = sumQty(rows);
   const dates = rows.map(o=>o.date).filter(Boolean).sort();
   const lastDate = dates[dates.length-1] || '-';
   const now = new Date();
   const months = [];
   for (let i=11;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); months.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:(d.getMonth()+1)+'월'}); }
-  const monthSales = months.map(m => rows.filter(o=>(o.date||'').startsWith(m.ym)).reduce((s,o)=>s+(parseFloat(o.supply)||0),0));
+  const monthSales = months.map(m => sumSupply(rows.filter(o=>(o.date||'').startsWith(m.ym))));
   const maxM = Math.max(1, ...monthSales);
   const barChart = months.map((m,i) => {
     const v = monthSales[i];

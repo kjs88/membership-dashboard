@@ -131,12 +131,11 @@ function renderSalesPage(options = {}) {
   //  · 유통사: 고객분류 == "도도매/유통사" (수집 시 channel='dist'로 표시)
   const isOffice = o => orderChannel(o) === 'office';
   const isDist   = o => orderChannel(o) === 'dist';
-  const sumSupply = arr => Math.round(arr.reduce((s,e)=>s+(parseFloat(e.supply)||0),0));
 
   const erpMonthOffice = erpMonth.filter(isOffice);
   const erpMonthDist   = erpMonth.filter(isDist);
-  const monthOfficeSales = sumSupply(erpMonthOffice);
-  const monthDistSales   = sumSupply(erpMonthDist);
+  const monthOfficeSales = sumSupplyRounded(erpMonthOffice);
+  const monthDistSales   = sumSupplyRounded(erpMonthDist);
   // 합계 매출 = 사업소 + 유통사 (상품 기준)
   const monthSales = useErpForCharts
     ? (monthOfficeSales + monthDistSales)
@@ -146,12 +145,12 @@ function renderSalesPage(options = {}) {
   const prevYm = prevM.getFullYear()+'-'+String(prevM.getMonth()+1).padStart(2,'0');
   const prevMonthRows = allOrders.filter(e => (e.date||'').startsWith(prevYm));
   const prevMonthSales = useErpForCharts
-    ? (sumSupply(prevMonthRows.filter(isOffice)) + sumSupply(prevMonthRows.filter(isDist)))
+    ? (sumSupplyRounded(prevMonthRows.filter(isOffice)) + sumSupplyRounded(prevMonthRows.filter(isDist)))
     : allEntries.filter(e => e.date?.startsWith(prevYm)).reduce((s,e) => s + (e.ourPurchase||0), 0);
   const monthDiff = prevMonthSales > 0 ? ((monthSales - prevMonthSales) / prevMonthSales * 100) : 0;
   // 전월 동월 채널별 (사업소/유통사 카드 전월 대비용)
-  const prevMonthOfficeSales = sumSupply(prevMonthRows.filter(isOffice));
-  const prevMonthDistSales   = sumSupply(prevMonthRows.filter(isDist));
+  const prevMonthOfficeSales = sumSupplyRounded(prevMonthRows.filter(isOffice));
+  const prevMonthDistSales   = sumSupplyRounded(prevMonthRows.filter(isDist));
   const officeDiff = prevMonthOfficeSales > 0 ? ((monthOfficeSales - prevMonthOfficeSales) / prevMonthOfficeSales * 100) : 0;
   const distDiff   = prevMonthDistSales   > 0 ? ((monthDistSales   - prevMonthDistSales)   / prevMonthDistSales   * 100) : 0;
   const officeShare = monthSales > 0 ? Math.round(monthOfficeSales / monthSales * 100) : 0;
@@ -1679,9 +1678,8 @@ function renderTargets() {
   const isOfficeRow = o => o.channel ? o.channel === 'office' : officePersons.includes((o.person||'').trim());
   const isDistRow = o => o.channel ? o.channel === 'dist' : ((o.person||'').trim() === '도도매/유통사' || (o.custClass||'').trim() === '도매(도도매/유통사)');
   const monthOrders = (allOrders || []).filter(o => (o.date || '').startsWith(ym));
-  const sumOrderSupply = rows => rows.reduce((s,o)=>s+(parseFloat(o.supply)||0),0);
-  const officeActualSales = sumOrderSupply(monthOrders.filter(isOfficeRow));
-  const distActualSales = sumOrderSupply(monthOrders.filter(isDistRow));
+  const officeActualSales = sumSupply(monthOrders.filter(isOfficeRow));
+  const distActualSales = sumSupply(monthOrders.filter(isDistRow));
   const officeTarget = parseFloat(targets.officeSalesTarget) || 0;
   const distTarget = parseFloat(targets.distSalesTarget) || 0;
   const vPct=targets.visitTarget?Math.min(Math.round(teamVisit/targets.visitTarget*100),999):0;

@@ -1529,7 +1529,7 @@ function erpSummarize(list) {
   return {
     dates,
     clients: [...new Set(list.map(r=>r.client))].length,
-    totalAmt: list.reduce((s,r)=>s+(parseFloat(r.supply)||0),0),
+    totalAmt: sumSupply(list),
     qty: list.reduce((s,r)=>s+(parseFloat(r.qty)||0),0),
   };
 }
