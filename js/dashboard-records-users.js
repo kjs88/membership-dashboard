@@ -1829,21 +1829,6 @@ async function resetUserPassword() {
 // ════════════════════════════════════
 // EXPORT EXCEL
 // ════════════════════════════════════
-function exportExcel() {
-  const cols = ['날짜','영업사원','기관명','거래처유형','거래가능성','당사구매액(원)','타사구매액(원)','병행업종','지역','미팅내용','이슈사항','연락처'];
-  const rows = allEntries.sort((a,b)=>new Date(a.ts)-new Date(b.ts)).map(e=>
-    [e.date,e.person,e.institution,e.clientType,e.dealPossibility,e.ourPurchase,e.otherPurchase,e.sideBusiness,e.region,e.meeting?.replace(/\n/g,' '),e.issues?.replace(/\n/g,' '),e.contact]
-  );
-  const csv = [cols, ...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const bom = '\uFEFF';
-  const blob = new Blob([bom+csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `영업일지_${todayYmd()}.csv`;
-  a.click(); URL.revokeObjectURL(url);
-  showToast('엑셀 파일이 다운로드됩니다.', 'success');
-}
-
 // ════════════════════════════════════
 // MODAL
 // ════════════════════════════════════

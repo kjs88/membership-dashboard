@@ -1,112 +1,6 @@
-// AUTOCOMPLETE
 // ════════════════════════════════════
-var _acIndex = -1;
-var _acMatches = [];
-
-function acSearch(val) {
-  const list = document.getElementById('ac-list');
-  _acIndex = -1;
-  if (!val || val.length < 1) { list.classList.remove('open'); _acMatches = []; return; }
-  const q = val.toLowerCase();
-  const clientMatches = allClients.filter(c => c.name && (c.name.toLowerCase().includes(q) || (c.code||'').toLowerCase().includes(q)));
-  const entryNames = [...new Set(allEntries.map(e=>e.institution).filter(Boolean))];
-  const entryOnly = entryNames.filter(n => n.toLowerCase().includes(q) && !clientMatches.find(c=>c.name===n));
-  _acMatches = [
-    ...clientMatches.slice(0, 8).map(c => ({ name: c.name, code: c.code, region: c.region, type: c.clientType, isClient: true })),
-    ...entryOnly.slice(0, 4).map(n => ({ name: n, code: '', region: '', type: '', isClient: false }))
-  ];
-  if (!_acMatches.length) { list.classList.remove('open'); return; }
-  list.innerHTML = _acMatches.map((m, i) => {
-    const codeHtml = m.code ? `<span class="ac-code">${escHtml(m.code)}</span>` : '';
-    const regionHtml = m.region ? `<span class="ac-region">${escHtml(m.region)}</span>` : '';
-    const typeHtml = m.type ? `<span class="ac-type">${escHtml(m.type)}</span>` : '';
-    return `<div class="autocomplete-item" data-idx="${i}" onmousedown="acPick(${i})" onmouseenter="_acIndex=${i};acHL()">
-      <span>${escHtml(m.name)}</span>${regionHtml}${typeHtml}${codeHtml}
-    </div>`;
-  }).join('');
-  list.classList.add('open');
-}
-
-function acHL() {
-  document.querySelectorAll('.autocomplete-item').forEach((el, i) => {
-    el.classList.toggle('ac-active', i === _acIndex);
-  });
-}
-
-function acPick(idx) {
-  const m = _acMatches[idx];
-  if (!m) return;
-  document.getElementById('f-institution').value = m.name;
-  document.getElementById('ac-list').classList.remove('open');
-  _acMatches = []; _acIndex = -1;
-  const client = allClients.find(c => c.name === m.name);
-  const prevEntry = allEntries.filter(e => e.institution === m.name).sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
-  const src = client || prevEntry || {};
-  const setVal = (id, v) => { if (!v) return; const el = document.getElementById(id); if (el) el.value = v; };
-  const setSelByText = (id, v) => { if (!v) return; const sel = document.getElementById(id); if (!sel) return; for(let o of sel.options){ if((o.value||o.text)===v){sel.value=o.value||o.text;break;} } };
-  setVal('f-clientcode', src.code || src.clientCode);
-  setSelByText('f-clienttype', src.clientType);
-  setVal('f-contact', src.contact);
-  setSelByText('f-region', src.region);
-  setSelByText('f-gender', src.gender);
-  setSelByText('f-age', src.age);
-  setSelByText('f-floor', src.floor);
-  setSelByText('f-exp', src.experience);
-  if (src.sideBusiness) setSidebizValue(src.sideBusiness);
-}
-
-function acKeydown(e) {
-  const list = document.getElementById('ac-list');
-  if (!list.classList.contains('open') || !_acMatches.length) return;
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    _acIndex = Math.min(_acIndex + 1, _acMatches.length - 1);
-    acHL();
-    const active = list.querySelector('.ac-active');
-    if (active) active.scrollIntoView({ block: 'nearest' });
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    _acIndex = Math.max(_acIndex - 1, 0);
-    acHL();
-    const active = list.querySelector('.ac-active');
-    if (active) active.scrollIntoView({ block: 'nearest' });
-  } else if (e.key === 'Enter' && _acIndex >= 0) {
-    e.preventDefault();
-    acPick(_acIndex);
-  } else if (e.key === 'Escape') {
-    list.classList.remove('open');
-    _acIndex = -1;
-  }
-}
-
-function acClose() {
-  document.getElementById('ac-list')?.classList.remove('open');
-  _acIndex = -1;
-}
-
+// DAILY ENTRY (일간일지)
 // ════════════════════════════════════
-// 병행업종 드롭다운 헬퍼
-// ════════════════════════════════════
-function toggleSidebizOther() {
-  const sel = document.getElementById('f-sidebiz-sel');
-  const inp = document.getElementById('f-sidebiz');
-  if (sel.value === '__other__') { inp.style.display = ''; inp.focus(); inp.value = ''; }
-  else { inp.style.display = 'none'; inp.value = sel.value; }
-}
-function getSidebizValue() {
-  const sel = document.getElementById('f-sidebiz-sel');
-  if (sel.value === '__other__') return document.getElementById('f-sidebiz').value.trim();
-  return sel.value;
-}
-function setSidebizValue(val) {
-  const sel = document.getElementById('f-sidebiz-sel');
-  const inp = document.getElementById('f-sidebiz');
-  const opts = [...sel.options].map(o => o.value || o.text);
-  if (!val) { sel.value = ''; inp.style.display = 'none'; inp.value = ''; return; }
-  if (opts.includes(val)) { sel.value = val; inp.style.display = 'none'; inp.value = val; }
-  else { sel.value = '__other__'; inp.style.display = ''; inp.value = val; }
-}
-
 // ════════════════════════════════════
 // DAILY CALENDAR (일간일지 캘린더)
 // ════════════════════════════════════
@@ -492,25 +386,6 @@ function cwAcKeydown(e) {
   else if (e.key === 'Enter' && _cwAcIdx >= 0) { e.preventDefault(); cwAcPick(_cwAcIdx); }
   else if (e.key === 'Escape') { cwAcClose(); }
 }
-function cwCheckClient() {
-  return false;
-}
-
-function cwNewClientPopup(name) {
-  return false;
-}
-
-function cwOpenNewClientProfile(name) {
-  document.getElementById('cw-new-client-popup')?.remove();
-  openAddClientModal();
-  const modal = document.getElementById('modal-client-form');
-  if (modal) modal.style.zIndex = '10001';
-  setTimeout(() => {
-    const nameEl = document.getElementById('cf-name');
-    if (nameEl && name) { nameEl.value = name; nameEl.dispatchEvent(new Event('input')); }
-  }, 50);
-}
-
 function dlyBackToCal() {
   // 입력중인 카드 내용 확인
   const institution = (document.getElementById('cw-institution')?.value||'').trim();
@@ -546,69 +421,6 @@ function dlyBackToCalExec() {
 // ════════════════════════════════════
 // DRAFT (임시저장)
 // ════════════════════════════════════
-function saveDraft() {
-  const draft = {
-    person: currentUser?.name, personId: currentUser?.id,
-    date: document.getElementById('f-date').value,
-    institution: document.getElementById('f-institution').value,
-    clientCode: document.getElementById('f-clientcode').value,
-    clientType: document.getElementById('f-clienttype').value,
-    meeting: document.getElementById('f-meeting').value,
-    issues: document.getElementById('f-issues').value,
-    dealPossibility: selectedDeal,
-    sideBusiness: getSidebizValue(),
-    ourPurchase: document.getElementById('f-our-purchase').value,
-    otherPurchase: document.getElementById('f-other-purchase').value,
-    contact: document.getElementById('f-contact').value,
-    region: document.getElementById('f-region').value,
-    gender: document.getElementById('f-gender').value,
-    age: document.getElementById('f-age').value,
-    floor: document.getElementById('f-floor').value,
-    experience: document.getElementById('f-exp').value,
-    revisitDate: document.getElementById('f-revisit-date').value,
-  };
-  setShared('sj-draft-'+currentUser?.id, draft);
-  document.getElementById('draft-indicator').innerHTML = '<span class="draft-badge">저장됨</span>';
-  showToast('임시저장되었습니다.', 'success');
-}
-function clearDraft() {
-  try { localStorage.removeItem('sj-draft-'+currentUser?.id); }
-  catch (err) { console.error('[storage:remove] draft', err); }
-  document.getElementById('draft-indicator').innerHTML = '';
-}
-function loadDraft() {
-  const d = getShared('sj-draft-'+currentUser?.id, null);
-  if (!d) return;
-  if (!confirm('임시저장된 내용이 있습니다. 불러올까요?')) return;
-  const setField = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
-  ['date','institution','meeting','issues','sidebiz','our-purchase','other-purchase','contact','revisit-date'].forEach(k => {
-    const el = document.getElementById('f-'+k); if(el && d[k.replace(/-/g,'')]) el.value = d[k.replace(/-/g,'')] || d[k] || '';
-  });
-  if(d.date) setField('f-date', d.date);
-  if(d.institution) setField('f-institution', d.institution);
-  if(d.clientCode) setField('f-clientcode', d.clientCode);
-  if(d.meeting) setField('f-meeting', d.meeting);
-  if(d.issues) setField('f-issues', d.issues);
-  if(d.sideBusiness) setSidebizValue(d.sideBusiness);
-  if(d.ourPurchase) setField('f-our-purchase', d.ourPurchase);
-  if(d.otherPurchase) setField('f-other-purchase', d.otherPurchase);
-  if(d.contact) setField('f-contact', d.contact);
-  if(d.revisitDate) setField('f-revisit-date', d.revisitDate);
-  if(d.clientType) setField('f-clienttype', d.clientType);
-  if(d.region) setField('f-region', d.region);
-  if(d.gender) setField('f-gender', d.gender);
-  if(d.age) setField('f-age', d.age);
-  if(d.floor) setField('f-floor', d.floor);
-  if(d.experience) setField('f-exp', d.experience);
-  if(d.dealPossibility) {
-    selectedDeal = d.dealPossibility;
-    document.querySelectorAll('.radio-btn').forEach(b=>b.className='radio-btn');
-    const cls = d.dealPossibility==='○'?'so':d.dealPossibility==='△'?'sd':'sx';
-    document.querySelectorAll('.radio-btn').forEach(b=>{ if(b.querySelector('input')?.value===d.dealPossibility||b.textContent.includes(d.dealPossibility)) b.classList.add(cls); });
-  }
-  document.getElementById('draft-indicator').innerHTML = '<span class="draft-badge">불러옴</span>';
-}
-
 // ════════════════════════════════════
 // DETAIL MODAL
 // ════════════════════════════════════

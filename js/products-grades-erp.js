@@ -88,16 +88,9 @@ function _calcPeriodRange(mode) {
   return map[mode] || ['',''];
 }
 
-function prodSetPeriod(mode) {
-  drpShortcut('prod', mode);
-}
 function gradeSetPeriod(mode) {
   drpShortcut('grade', mode);
 }
-function recordsSetPeriod(mode) {
-  drpShortcut('records', mode);
-}
-
 // ════════════════════════════════════
 // GRADE PAGE
 // ════════════════════════════════════
@@ -170,11 +163,6 @@ function toggleGradeSettings() {
   const open = body.style.display === 'none';
   body.style.display = open ? 'block' : 'none';
   arrow.style.transform = open ? 'rotate(180deg)' : '';
-}
-
-function updateGradeMemo(name, val) {
-  const idx = allClients.findIndex(c=>c.name===name);
-  if (idx>=0) { allClients[idx].gradeMemo = val; setShared('sj-clients', allClients); }
 }
 
 // ════════════════════════════════════

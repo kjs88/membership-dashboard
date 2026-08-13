@@ -403,21 +403,6 @@ function wkAutoCount() {
   wkCalcKpi();
 }
 
-function wkAddIssue() {
-  _wkIssueId++;
-  const div = document.createElement('div');
-  div.className = 'form-grid';
-  div.style.cssText = 'margin-bottom:8px;align-items:start';
-  div.id = 'wk-issue-' + _wkIssueId;
-  div.innerHTML = `
-    <div class="form-group" style="flex:3"><input class="form-input" placeholder="이슈 내용" data-wki="issue" /></div>
-    <div class="form-group" style="flex:1"><select class="form-select" data-wki="status"><option value="">상태</option><option>진행</option><option>보류</option><option>완료</option></select></div>
-    <div class="form-group" style="flex:2"><input class="form-input" placeholder="차주 추진 계획" data-wki="plan" /></div>
-    <button class="ss-del" onclick="this.parentElement.remove()" style="margin-top:6px">×</button>
-  `;
-  document.getElementById('wk-issues-list').appendChild(div);
-}
-
 function wkCalcVisit() {
   const n = parseInt(document.getElementById('wk-visit-new')?.value) || 0;
   const d = parseInt(document.getElementById('wk-visit-dormant')?.value) || 0;
@@ -1007,14 +992,6 @@ function moChange(dir) {
   moCalcSettle();
 }
 
-function moTab(tab) {
-  document.getElementById('mo-plan').style.display = tab==='plan' ? '' : 'none';
-  document.getElementById('mo-settle').style.display = tab==='settle' ? '' : 'none';
-  document.getElementById('mo-tab-plan').className = 'btn-sm '+(tab==='plan'?'btn-primary':'btn-ghost');
-  document.getElementById('mo-tab-settle').className = 'btn-sm '+(tab==='settle'?'btn-primary':'btn-ghost');
-  if (tab==='settle') moCalcSettle();
-}
-
 function moAddPlanRow() {
   _moPlanRowId++;
   const rid = 'mpr'+_moPlanRowId;
@@ -1115,55 +1092,4 @@ function moDeleteReport(id) {
 // ════════════════════════════════════
 // ENTRY INPUT
 // ════════════════════════════════════
-function selDeal(v, el) {
-  selectedDeal = v;
-  document.querySelectorAll('.radio-btn').forEach(b => b.className = 'radio-btn');
-  el.classList.add(v==='○'?'so':v==='△'?'sd':'sx');
-}
-
-async function submitEntry() {
-  const date  = document.getElementById('f-date').value;
-  const inst  = document.getElementById('f-institution').value.trim();
-  const ct    = document.getElementById('f-clienttype').value;
-  const meet  = document.getElementById('f-meeting').value.trim();
-  if (!date || !inst || !ct || !meet) { showToast('필수 항목을 모두 입력해주세요.', 'error'); return; }
-  const entry = {
-    id: Date.now() + Math.random(), ts: new Date().toISOString(),
-    person: currentUser.name, personId: currentUser.id,
-    date, institution: inst, clientType: ct, meeting: meet,
-    clientCode: document.getElementById('f-clientcode').value.trim(),
-    issues: document.getElementById('f-issues').value.trim(),
-    dealPossibility: selectedDeal || '△',
-    sideBusiness: getSidebizValue(),
-    ourPurchase: parseFloat(document.getElementById('f-our-purchase').value) || 0,
-    otherPurchase: parseFloat(document.getElementById('f-other-purchase').value) || 0,
-    contact: document.getElementById('f-contact').value.trim(),
-    region: document.getElementById('f-region').value,
-    gender: document.getElementById('f-gender').value,
-    age: document.getElementById('f-age').value,
-    floor: document.getElementById('f-floor').value,
-    experience: document.getElementById('f-exp').value,
-    revisitDate: document.getElementById('f-revisit-date').value || '',
-  };
-  allEntries.push(entry);
-  setShared('sj-entries-v4', allEntries);
-  // 재방문 예정일 자동 등록
-  const rvDate = entry.revisitDate;
-  if (rvDate) {
-    const rv = { id: Date.now()+'rv', entryId: entry.id, institution: entry.institution, person: entry.person, personId: entry.personId, date: rvDate, done: false, createdAt: new Date().toISOString() };
-    allRevisits.push(rv);
-    setShared('sj-revisits', allRevisits);
-  }
-  // 거래처 자동 등록/업데이트
-  await syncClientFromEntry(entry);
-  clearDraft();
-  ['f-institution','f-meeting','f-issues','f-sidebiz','f-our-purchase','f-other-purchase','f-contact','f-revisit-date','f-clientcode'].forEach(id => document.getElementById(id).value = '');
-  ['f-clienttype','f-region','f-gender','f-age','f-floor','f-exp','f-sidebiz-sel'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-sidebiz').style.display = 'none';
-  selectedDeal = '';
-  document.querySelectorAll('.radio-btn').forEach(b => b.className = 'radio-btn');
-  showToast('영업일지가 저장되었습니다.', 'success');
-  updateBadge();
-}
-
 // ════════════════════════════════════
