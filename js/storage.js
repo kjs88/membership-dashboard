@@ -300,5 +300,4 @@ async function pushAllToFirebase() {
   }
 }
 
-function setupRealtimeListeners() {}
 function updateFbStatus() {}

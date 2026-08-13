@@ -91,7 +91,6 @@ async function checkFbConfig() {
     document.getElementById('app-screen').style.display = 'block';
     initUI();
     mergeClientsWithSeed(); updateClientBadge();
-    setupRealtimeListeners();
     loadAndRender();
     applyInitialDashboardRoute();
     if (typeof erpRefreshFromRemote === 'function') erpRefreshFromRemote({ silent: true }).then(() => loadAndRender());
@@ -102,7 +101,7 @@ async function checkFbConfig() {
   }
 }
 
-// setShared / getShared / setPlainStorage / setupRealtimeListeners / updateFbStatus
+// setShared / getShared / setPlainStorage / updateFbStatus
 // → storage.js에 정의됨 (Firebase 동기화 포함)
 
 // ════════════════════════════════════
@@ -172,7 +171,6 @@ const DEFAULT_USERS = [
   { id:'lee2',  name:'이민우', passwordHash:'pbkdf2-sha256$160000$Dfbp/PRmz5XdQlYunDYd3g==$Hjdxo4yTIwPyr3ZQjQzZJAOHdAtm4gfHGpdOYaQHvYQ=',  color:'#2B72C8', createdAt:'2026-01-04' },
   { id:'ahn1',  name:'안성종', passwordHash:'pbkdf2-sha256$160000$P/VPede99zuWprWtDH8D/g==$tVTeXJXQ081omqseRbVYDflxqKgBMNs1/jqBi1cg+mI=',  color:'#43A047', createdAt:'2026-01-05' },
 ];
-const SEED_ENTRIES = [];
 
 const MENU_ACCESS_ITEMS = [
   { key:'sales',   label:'대시보드',     page:'sales',   nav:'nav-sales' },
@@ -319,7 +317,6 @@ async function doLogin() {
   document.getElementById('app-screen').style.display = 'block';
   initUI();
   mergeClientsWithSeed(); updateClientBadge();
-  setupRealtimeListeners();
   loadAndRender();
   applyInitialDashboardRoute();
   if (typeof erpRefreshFromRemote === 'function') erpRefreshFromRemote({ silent: true }).then(() => loadAndRender());

@@ -25,7 +25,6 @@ function orderChannel(o) {
   if (o.channel === 'dist' || o.channel === 'office') return o.channel;
   return 'other';
 }
-let fbListeners = [];
 
 // 달력 날짜(YYYY-MM-DD)는 반드시 이 함수로 만든다.
 // toISOString()은 UTC로 변환하므로 KST 새벽 0~9시에 하루 전 날짜가 나온다.
