@@ -19,10 +19,6 @@ function moneyShort(v) {
   if (a >= 10000) return Math.round(n / 10000).toLocaleString() + '만';
   return n.toLocaleString();
 }
-function moneyCell(v) {
-  const n = Math.round(parseFloat(v) || 0);
-  return `<span title="${n.toLocaleString()}원">${moneyShort(n)}</span>`;
-}
 
 // ════════════════════════════════════
 // 전역 검색 (Ctrl+K)
@@ -192,6 +188,43 @@ function clientPurchaseCycle(name, rows) {
   };
 }
 
+// 매출에 등장하는 거래처 목록
+function erpClientNames() {
+  return [...new Set((allOrders || []).map(o => o.client).filter(Boolean))];
+}
+
+// 재구매 주기를 넘긴 거래처. 거래가 3회 이상이고 평균 주기의 절반(최소 7일)을 초과한 경우만.
+function overdueClients(limit) {
+  const out = [];
+  erpClientNames().forEach(c => {
+    const cyc = clientPurchaseCycle(c, allOrders);
+    if (cyc.avgGap && cyc.count >= 3 && cyc.overdueDays > Math.max(7, cyc.avgGap * 0.5)) {
+      out.push({ client: c, over: cyc.overdueDays, avg: cyc.avgGap, last: cyc.lastDate });
+    }
+  });
+  out.sort((a, b) => b.over - a.over);
+  return limit ? out.slice(0, limit) : out;
+}
+
+// 미출고 잔량 = 주문수량 - 출고수량. 할인·조정 라인은 품목이 아니므로 제외한다.
+// client를 주면 그 거래처의 품목별 잔량, 안 주면 거래처×품목 조합 전체.
+function backorderGaps(client) {
+  const ord = {}, shp = {};
+  const key = o => (client ? o.product : o.client + '|' + o.product);
+  const add = (map, rows) => (rows || []).forEach(o => {
+    if (!o.client || !o.product || /할인/.test(o.product)) return;
+    if (client && o.client !== client) return;
+    const k = key(o);
+    map[k] = (map[k] || 0) + (parseFloat(o.qty) || 0);
+  });
+  add(ord, allOrderOrders);
+  add(shp, allShipOrders);
+  return Object.keys(ord)
+    .map(k => ({ key: k, product: client ? k : k.split('|')[1], gap: Math.round(ord[k] - (shp[k] || 0)) }))
+    .filter(x => x.gap > 0)
+    .sort((a, b) => b.gap - a.gap);
+}
+
 function openClient360(name) {
   _c360Name = name;
   const rows = (allOrders || []).filter(o => o.client === name);
@@ -213,14 +246,7 @@ function openClient360(name) {
   rows.forEach(o => { if (o.product) prod[o.product] = (prod[o.product] || 0) + (parseFloat(o.supply) || 0); });
   const topProd = Object.entries(prod).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  // 미출고 잔량 (주문 - 출고)
-  const ordQ = {}, shpQ = {};
-  (allOrderOrders || []).forEach(o => { if (o.client === name && o.product) ordQ[o.product] = (ordQ[o.product] || 0) + (parseFloat(o.qty) || 0); });
-  (allShipOrders || []).forEach(o => { if (o.client === name && o.product) shpQ[o.product] = (shpQ[o.product] || 0) + (parseFloat(o.qty) || 0); });
-  const backorder = Object.keys(ordQ)
-    .map(p => ({ p, gap: Math.round(ordQ[p] - (shpQ[p] || 0)) }))
-    .filter(x => x.gap > 0 && !/할인/.test(x.p))
-    .sort((a, b) => b.gap - a.gap).slice(0, 5);
+  const backorder = backorderGaps(name).slice(0, 5);
 
   const person = rows.length ? (rows[rows.length - 1].person || '-') : '-';
   const cycText = cyc.avgGap
@@ -261,7 +287,7 @@ function openClient360(name) {
       <div>
         <h4>미출고 잔량</h4>
         ${backorder.length ? `<ul class="c360-list">${backorder.map(b =>
-          `<li><span>${escHtml(b.p)}</span><b class="neg">${b.gap.toLocaleString()}개</b></li>`).join('')}</ul>`
+          `<li><span>${escHtml(b.product)}</span><b class="neg">${b.gap.toLocaleString()}개</b></li>`).join('')}</ul>`
           : `<div class="c360-ok">미출고 없음</div>`}
       </div>
       <div>
@@ -289,17 +315,9 @@ function buildAlerts() {
   });
 
   // 2) 재구매 주기 초과 거래처 (상위 5)
-  const clients = [...new Set((allOrders || []).map(o => o.client).filter(Boolean))];
-  const overdue = [];
-  clients.forEach(c => {
-    const cyc = clientPurchaseCycle(c, allOrders);
-    if (cyc.avgGap && cyc.count >= 3 && cyc.overdueDays > Math.max(7, cyc.avgGap * 0.5)) {
-      overdue.push({ c, over: cyc.overdueDays, avg: cyc.avgGap });
-    }
-  });
-  overdue.sort((a, b) => b.over - a.over).slice(0, 5).forEach(o => {
+  overdueClients(5).forEach(o => {
     alerts.push({ sev: 'crit', icon: '⚠️', title: '재구매 주기 초과',
-      desc: `${o.c} · 평소 ${o.avg}일인데 ${o.over}일 지연`, action: () => openClient360(o.c) });
+      desc: `${o.client} · 평소 ${o.avg}일인데 ${o.over}일 지연`, action: () => openClient360(o.client) });
   });
 
   // 3) 이번달 목표 진척
@@ -318,10 +336,7 @@ function buildAlerts() {
   }
 
   // 4) 장기 미출고
-  const ordQ = {}, shpQ = {};
-  (allOrderOrders || []).forEach(o => { const k = o.client + '|' + o.product; if (o.client && o.product && !/할인/.test(o.product)) ordQ[k] = (ordQ[k] || 0) + (parseFloat(o.qty) || 0); });
-  (allShipOrders || []).forEach(o => { const k = o.client + '|' + o.product; if (o.client && o.product) shpQ[k] = (shpQ[k] || 0) + (parseFloat(o.qty) || 0); });
-  const backCount = Object.keys(ordQ).filter(k => ordQ[k] - (shpQ[k] || 0) > 0).length;
+  const backCount = backorderGaps().length;
   if (backCount > 0) {
     alerts.push({ sev: 'info', icon: '📦', title: '미출고 잔량 있음',
       desc: `${backCount.toLocaleString()}개 거래처×품목 조합`, action: () => showPage('sales') });

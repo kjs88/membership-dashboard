@@ -113,19 +113,6 @@ function renderCompare() {
 // ════════════════════════════════════
 // 모바일 현장 모드
 // ════════════════════════════════════
-function fieldOverdueClients(limit) {
-  const seen = [...new Set((allOrders || []).map(o => o.client).filter(Boolean))];
-  const out = [];
-  seen.forEach(c => {
-    const cyc = clientPurchaseCycle(c, allOrders);
-    if (cyc.avgGap && cyc.count >= 3 && cyc.overdueDays > Math.max(7, cyc.avgGap * 0.5)) {
-      out.push({ c, over: cyc.overdueDays, avg: cyc.avgGap, last: cyc.lastDate });
-    }
-  });
-  out.sort((a, b) => b.over - a.over);
-  return limit ? out.slice(0, limit) : out;
-}
-
 function fieldItem(title, sub, onclickName, tag, tagClass) {
   return '<div class="fld-item" onclick="openClient360(\'' + escInlineJs(onclickName) + '\')">' +
     '<div><b>' + escHtml(title) + '</b><span>' + escHtml(sub) + '</span></div>' +
@@ -145,14 +132,14 @@ function renderField() {
   const doneToday = (allEntries || []).filter(e => e.date === today &&
     (!me || e.person === me || (currentUser && e.personId === currentUser.id)));
 
-  const overdue = fieldOverdueClients(8);
+  const overdue = overdueClients(8);
 
   const plannedHtml = planned.length
     ? planned.slice(0, 10).map(r => fieldItem(r.institution || '거래처', '재방문 예정 ' + (r.date || ''), r.institution || '', '›', '')).join('')
     : emptyState('예정된 재방문이 없습니다', '일지 작성 시 재방문일을 지정하면 여기에 모입니다', '📅');
 
   const overdueHtml = overdue.length
-    ? overdue.map(o => fieldItem(o.c, '평소 ' + o.avg + '일 주기 · 마지막 거래 ' + o.last, o.c, o.over + '일', 'warn')).join('')
+    ? overdue.map(o => fieldItem(o.client, '평소 ' + o.avg + '일 주기 · 마지막 거래 ' + o.last, o.client, o.over + '일', 'warn')).join('')
     : emptyState('지연된 거래처가 없습니다', '재구매 주기를 넘긴 거래처가 생기면 여기에 표시됩니다', '✅');
 
   const doneHtml = doneToday.length

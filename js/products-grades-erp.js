@@ -632,6 +632,55 @@ function downloadProdMonthlyFlowExcel() {
   showToast('월별 상품별 판매 흐름 엑셀 파일이 다운로드됩니다.', 'success');
 }
 
+// 화면의 필터 입력값을 한 번에 읽는다.
+function prodAbcFilters() {
+  return {
+    dateFrom: document.getElementById('prod-date-from')?.value || '',
+    dateTo:   document.getElementById('prod-date-to')?.value || '',
+    personF:  (typeof productPersonId !== 'undefined') ? (productPersonId || 'all') : 'all',
+    catF:     (typeof productCategoryId !== 'undefined') ? (productCategoryId || 'all') : 'all',
+    searchV:  (document.getElementById('prod-search')?.value || '').toLowerCase(),
+    limit:    parseInt(document.getElementById('prod-abc-limit')?.value || '50', 10),
+  };
+}
+
+// ABC 집계 — DOM을 건드리지 않는 순수 계산.
+// 매출 내림차순 품목 목록에 점유율/누적점유율/등급(A≤80%, B≤95%, C)을 붙여 반환한다.
+function prodAbcCompute(f, rows) {
+  const src = rows || allOrders || [];
+  const filtered = src.filter(o => {
+    if (!o.product || !o.date) return false;
+    if (f.dateFrom && o.date < f.dateFrom) return false;
+    if (f.dateTo && o.date > f.dateTo) return false;
+    if (f.personF !== 'all' && o.person !== f.personF) return false;
+    if (f.catF !== 'all' && (o.category || '') !== f.catF) return false;
+    if (f.searchV && !o.product.toLowerCase().includes(f.searchV)) return false;
+    return true;
+  });
+
+  const byProduct = {};
+  filtered.forEach(o => {
+    const k = o.product;
+    if (!byProduct[k]) byProduct[k] = { name: k, category: (o.category || '').trim(), supply: 0, qty: 0, count: 0 };
+    byProduct[k].supply += parseFloat(o.supply) || 0;
+    byProduct[k].qty += parseFloat(o.qty) || 0;
+    byProduct[k].count += 1;
+  });
+
+  const items = Object.values(byProduct).filter(i => i.supply > 0).sort((a, b) => b.supply - a.supply);
+  const total = items.reduce((s, i) => s + i.supply, 0);
+  if (total > 0) {
+    let cum = 0;
+    items.forEach(it => {
+      it.share = it.supply / total * 100;
+      cum += it.share;
+      it.cumShare = cum;
+      it.grade = it.cumShare <= 80 ? 'A' : it.cumShare <= 95 ? 'B' : 'C';
+    });
+  }
+  return { filtered, items, total };
+}
+
 function renderProdAbc() {
   const summaryEl = document.getElementById('prod-abc-summary');
   const tableEl = document.getElementById('prod-abc-table');
@@ -650,34 +699,9 @@ function renderProdAbc() {
   }
 
   const basisMeta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고' };
-  const dateFrom = document.getElementById('prod-date-from')?.value || '';
-  const dateTo = document.getElementById('prod-date-to')?.value || '';
-  const personF = (typeof productPersonId !== 'undefined') ? (productPersonId || 'all') : 'all';
-  const catF = (typeof productCategoryId !== 'undefined') ? (productCategoryId || 'all') : 'all';
-  const searchV = (document.getElementById('prod-search')?.value || '').toLowerCase();
-  const limit = parseInt(document.getElementById('prod-abc-limit')?.value || '50', 10);
-  const personName = personF !== 'all' ? personF : null;
-
-  const filtered = allOrders.filter(o => {
-    if (!o.product || !o.date) return false;
-    if (dateFrom && o.date < dateFrom) return false;
-    if (dateTo && o.date > dateTo) return false;
-    if (personF !== 'all' && o.person !== personName) return false;
-    if (catF !== 'all' && (o.category||'') !== catF) return false;
-    if (searchV && !o.product.toLowerCase().includes(searchV)) return false;
-    return true;
-  });
-
-  const byProduct = {};
-  filtered.forEach(o => {
-    const k = o.product;
-    if (!byProduct[k]) byProduct[k] = { name: k, category: (o.category||'').trim(), supply: 0, qty: 0, count: 0 };
-    byProduct[k].supply += parseFloat(o.supply) || 0;
-    byProduct[k].qty += parseFloat(o.qty) || 0;
-    byProduct[k].count += 1;
-  });
-  const items = Object.values(byProduct).filter(i => i.supply > 0).sort((a,b) => b.supply - a.supply);
-  const total = items.reduce((s,i) => s + i.supply, 0);
+  const f = prodAbcFilters();
+  const { dateFrom, dateTo, catF, limit } = f;
+  const { filtered, items, total } = prodAbcCompute(f);
 
   const fmt = d => d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0');
   const _now = new Date();
@@ -694,14 +718,6 @@ function renderProdAbc() {
     if (insightEl) insightEl.innerHTML = '';
     return;
   }
-
-  let cum = 0;
-  items.forEach(it => {
-    it.share = it.supply / total * 100;
-    cum += it.share;
-    it.cumShare = cum;
-    it.grade = it.cumShare <= 80 ? 'A' : it.cumShare <= 95 ? 'B' : 'C';
-  });
 
   const grades = [
     {g:'A', label:'A등급 (~80%)', color:'#D94040'},
