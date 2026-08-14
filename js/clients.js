@@ -374,7 +374,7 @@ function renderClientErpPanel(c) {
   const meta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고기준' };
   const rows = (typeof allOrders !== 'undefined' ? allOrders : []).filter(o => o.client === c.name);
   if (!rows.length) {
-    el.innerHTML = `<div style="padding:28px;text-align:center;color:var(--text3)">이 거래처의 ERP 매출 데이터가 없습니다.<br><span style="font-size:11px">(${escHtml(meta.label)} · ERP 거래처명이 정확히 일치할 때 표시됩니다)</span></div>`;
+    el.innerHTML = emptyState('이 거래처의 ERP 매출이 없습니다', `${meta.label} 기준 · ERP 거래처명이 정확히 일치할 때 표시됩니다`, '🏢');
     return;
   }
   const totSales = sumSupply(rows);

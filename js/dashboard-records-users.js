@@ -353,7 +353,7 @@ function renderDashPage() {
     const getPC=(name,i)=>{const u=allUsers.find(u=>u.name===name);return u?u.color:PCOL[i%PCOL.length];};
     const lbEl = document.getElementById('leaderboard');
     if (lbEl) lbEl.innerHTML = personList.length===0
-      ? '<div style="color:var(--text3);font-size:13px;padding:16px 0">이번달 데이터가 없습니다</div>'
+      ? emptyState('이번달 방문 기록이 없습니다', '일간일지에서 방문을 등록해 보세요', '📝')
       : personList.map(([name,c],i)=>{
           const pc=getPC(name,i);
           const medal=i<3?`<span style="font-size:15px;width:24px;text-align:center;flex-shrink:0">${medals[i]}</span>`:`<div class="leader-rank">${i+1}</div>`;
@@ -391,8 +391,8 @@ function renderDashPage() {
     const maxT=top10[0]?.[1]||1;
     const top10El = document.getElementById('top10-list');
     if (top10El) top10El.innerHTML = top10.length===0
-      ? '<div style="color:var(--text3);font-size:13px;padding:16px 0">데이터가 없습니다</div>'
-      : top10.map(([name,c],i)=>`<div class="leader-item"><div class="leader-rank">${i+1}</div><div class="leader-name" style="font-size:12px">${escHtml(name)}</div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${c/maxT*100}%;background:var(--blue)"></div></div><div class="leader-num" style="color:var(--blue)">${c}회</div></div>`).join('');
+      ? emptyState('표시할 데이터가 없습니다', '기간·필터를 바꾸거나 ERP 동기화를 확인해 보세요', '📊')
+      : top10.map(([name,c],i)=>`<div class="leader-item"><div class="leader-rank">${i+1}</div><div class="leader-name c360-link" style="font-size:12px" onclick="event.stopPropagation();openClient360('${escInlineJs(name)}')" title="거래처 상세 보기">${escHtml(name)}</div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${c/maxT*100}%;background:var(--blue)"></div></div><div class="leader-num" style="color:var(--blue)">${c}회</div></div>`).join('');
 
     // 최근 방문 기록
     const recent=[...pool].sort((a,b)=>new Date(b.ts||b.date)-new Date(a.ts||a.date)).slice(0,10);
@@ -511,7 +511,7 @@ function renderSalesPersonMonth() {
   const listEl = document.getElementById('sh-person-list');
   if (listEl) {
     listEl.innerHTML = personList.length === 0
-      ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${monthLabel} 데이터가 없습니다</div>`
+      ? emptyState(`${monthLabel} 매출이 없습니다`, '다른 월을 선택하거나 ERP 동기화를 확인해 보세요', '📊')
       : personList.map(([name, amount], index) => {
           const target = personSalesTargets[name] || 0;
           const achievement = target ? Math.min(Math.round(amount / target * 100), 999) : null;
@@ -694,14 +694,14 @@ function shRenderRankPage(kind = 'office') {
   if (!listEl || !pagerEl) return;
   const rankMeta = (window._shRankExportMeta && window._shRankExportMeta[kind]) || {};
   listEl.innerHTML = pageItems.length === 0
-    ? `<div style="color:var(--text3);font-size:13px;padding:24px 0">${salesDashboardMonthLabel(rankMeta.ym || salesDashboardCurrentYm())} 매출 데이터가 없습니다</div>`
+    ? emptyState(`${salesDashboardMonthLabel(rankMeta.ym || salesDashboardCurrentYm())} 매출이 없습니다`, '다른 월을 선택해 보세요', '📊')
     : pageItems.map(([name, amt], idx) => {
         const globalIdx = start + idx;
         const pct = totalRankAmt ? (amt / totalRankAmt * 100).toFixed(2) : '0.00';
         const medal = globalIdx < 3 ? `<span style="font-size:15px;line-height:1;width:24px;text-align:center;flex-shrink:0">${medalIcons[globalIdx]}</span>` : `<div class="leader-rank">${globalIdx+1}</div>`;
         return `<div class="leader-item">
           ${medal}
-          <div class="leader-name" style="font-size:12px">${escHtml(name)}</div>
+          <div class="leader-name c360-link" style="font-size:12px" onclick="event.stopPropagation();openClient360('${escInlineJs(name)}')" title="거래처 상세 보기">${escHtml(name)}</div>
           <div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${amt/maxRank*100}%;background:${color}"></div></div>
           <div class="leader-num sales-rank-num" style="color:${color}">
             <span class="sales-rank-amount">${Math.round(amt).toLocaleString()}</span>

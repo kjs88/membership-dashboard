@@ -46,6 +46,7 @@ function loadAndRender() {
   // 거래처: 시드 DB + Firebase 오버레이(추가/수정) 병합
   mergeClientsWithSeed();
   updateBadge(); updateRevisitBadge(); updateClientBadge(); updateTopbarNotice();
+  if (typeof renderAlertBadge === 'function') renderAlertBadge();
   if (document.getElementById('page-dash').classList.contains('active')||document.getElementById('page-sales').classList.contains('active')) renderDashboard();
   if (document.getElementById('page-records').classList.contains('active')) renderRecords();
   if (document.getElementById('page-users').classList.contains('active')) renderUsers();
