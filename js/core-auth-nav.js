@@ -84,10 +84,12 @@ async function checkFbConfig() {
   ensureUsers({ persist: false });
   currentUser = loadStoredCurrentUser();
   if (currentUser) {
+    document.getElementById('login-screen').style.display = 'none';
+    bootShow();
     await syncFromFirebase();
+    bootHide();
     ensureUsers();
     currentUser = allUsers.find(u => u.id === currentUser.id) || currentUser;
-    document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
     initUI();
     mergeClientsWithSeed(); updateClientBadge();
@@ -308,18 +310,63 @@ async function doLogin() {
     await authSetPassword(user, pw);
     setShared('sj-users-v6', allUsers);
   }
+  document.getElementById('login-screen').style.display = 'none';
+  bootShow();
   await syncFromFirebase();
+  bootHide();
   ensureUsers();
   currentUser = allUsers.find(u => u.id === uid) || user;
   recordLoginEvent(currentUser);
   saveCurrentUser(currentUser, document.getElementById('li-remember')?.checked);
-  document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
   initUI();
   mergeClientsWithSeed(); updateClientBadge();
   loadAndRender();
   applyInitialDashboardRoute();
   if (typeof erpRefreshFromRemote === 'function') erpRefreshFromRemote({ silent: true }).then(() => loadAndRender());
+}
+
+// ════════════════════════════════════
+// 데이터 로딩 화면
+// ════════════════════════════════════
+const BOOT_STAGES = {
+  check:    { pct: 12, msg: '서버 확인 중…' },
+  cache:    { pct: 70, msg: '저장된 데이터 사용' },
+  download: { pct: 35, msg: '매출 데이터 받는 중…' },
+  decode:   { pct: 78, msg: '데이터 정리 중…' },
+  fallback: { pct: 40, msg: '전체 데이터 받는 중…' },
+  done:     { pct: 100, msg: '완료' },
+};
+function bootShow() {
+  const el = document.getElementById('boot-screen');
+  if (!el) return;
+  el.classList.add('on');
+  bootSet('check');
+  if (typeof setErpLoadProgress === 'function') {
+    setErpLoadProgress((stage, detail) => bootSet(stage, detail));
+  }
+}
+function bootSet(stage, detail) {
+  const s = BOOT_STAGES[stage];
+  if (!s) return;
+  const fill = document.getElementById('boot-fill');
+  const step = document.getElementById('boot-step');
+  const hint = document.getElementById('boot-hint');
+  if (fill) fill.style.width = s.pct + '%';
+  if (step) step.textContent = s.msg;
+  if (hint) {
+    if (stage === 'cache') hint.textContent = '저장된 데이터가 최신이라 새로 받지 않았습니다';
+    else if (stage === 'done' && detail && (detail.order || detail.ship)) {
+      hint.textContent = `주문 ${(detail.order||0).toLocaleString()}건 · 출고 ${(detail.ship||0).toLocaleString()}건`;
+    }
+  }
+}
+function bootHide() {
+  const el = document.getElementById('boot-screen');
+  if (!el) return;
+  bootSet('done');
+  if (typeof setErpLoadProgress === 'function') setErpLoadProgress(null);
+  setTimeout(() => el.classList.remove('on'), 180);
 }
 
 // 접속기록: 로그인 성공 시 1건 기록 (공유 저장 → 계정관리에서 조회)

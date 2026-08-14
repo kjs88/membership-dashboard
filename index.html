@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260812-css-prune">
+<link rel="stylesheet" href="css/style.css?v=20260814-fastload">
 </head>
 <body>
 
@@ -110,6 +110,17 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ══════ 데이터 로딩 ══════ -->
+<div id="boot-screen" role="status" aria-live="polite">
+  <div class="boot-card">
+    <div class="boot-mark">📊</div>
+    <div class="boot-title">데이터를 불러오는 중</div>
+    <div class="boot-step" id="boot-step">서버 확인 중…</div>
+    <div class="boot-track"><div class="boot-fill" id="boot-fill"></div></div>
+    <div class="boot-hint" id="boot-hint">처음 접속은 시간이 조금 걸립니다</div>
   </div>
 </div>
 
@@ -1702,10 +1713,10 @@
 
 <script src="data/client-seed.js?v=20260511-login"></script>
 <script src="js/security.js?v=20260731-weekly-attachments"></script>
-<script src="js/storage.js?v=20260812-deadcode"></script>
+<script src="js/storage.js?v=20260814-fastload"></script>
 <script src="js/state.js?v=20260812-sumhelper"></script>
 <script src="js/products-grades-erp.js?v=20260812-sumhelper"></script>
-<script src="js/core-auth-nav.js?v=20260812-deadcode"></script>
+<script src="js/core-auth-nav.js?v=20260814-fastload"></script>
 <script src="js/journals-weekly-monthly.js?v=20260812-deadcode"></script>
 <script src="js/dashboard-records-users.js?v=20260812-sumhelper"></script>
 <script src="js/clients.js?v=20260812-sumhelper"></script>
