@@ -119,8 +119,31 @@ function renderStats() {
       rcDaily('chart-stats-daily-qty', dLabels, dQty, dColors.map(c=>c.replace('#2B72C8','#43A047').replace('#D94040','#E8900A')), dDows);
     }
 
+    // ── 채널 심화 분석 ──
+    // O: 기간+영업사원 필터 적용분 / 교차표는 영업사원 비교가 목적이므로 기간만 적용한 채널 전체를 쓴다.
+    if (typeof renderChannelAnalysis === 'function') {
+      const channelInRange = baseOrders.filter(o => inRange(o.date || ''));
+      const prevRange = statsPrevRange(dateFrom, dateTo, startDate, endDate);
+      const prevRows = baseOrders.filter(o => {
+        const d = o.date || '';
+        if (statsPersonId !== 'all' && o.person !== personName) return false;
+        return d >= prevRange.from && d <= prevRange.to;
+      });
+      renderChannelAnalysis(O, channelInRange, prevRows, channel);
+    }
+
     if (typeof genReport === 'function') genReport(reportMode, null);
   } catch(e) { console.error('[renderStats]', e); }
+}
+
+// 전기간 = 선택 구간 바로 앞의 동일 길이 구간
+function statsPrevRange(dateFrom, dateTo, startDate, endDate) {
+  const from = dateFrom || ymdLocal(startDate);
+  const to = dateTo || ymdLocal(endDate);
+  const days = Math.round((new Date(to + 'T00:00:00') - new Date(from + 'T00:00:00')) / 86400000) + 1;
+  const pTo = new Date(new Date(from + 'T00:00:00').getTime() - 86400000);
+  const pFrom = new Date(pTo.getTime() - (Math.max(days, 1) - 1) * 86400000);
+  return { from: ymdLocal(pFrom), to: ymdLocal(pTo) };
 }
 
 function setStatsPerson(id, el) {
