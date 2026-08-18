@@ -1383,8 +1383,6 @@ function renderUsers() {
     const stat = accountStats[u.id] || {};
     const displayCount = stat.loginCount || stat.activityCount || 0;
     const displayLast = stat.loginLast || stat.activityLast || '';
-    const countLabel = stat.loginCount ? '접속 횟수' : (stat.activityCount ? '활동 기록' : '접속 횟수');
-    const lastLabel = stat.loginLast ? '최근 접속' : (stat.activityLast ? '최근 활동' : '최근 접속');
     return `
     <div class="user-card">
       <div class="user-card-avatar" style="background:${color}22;color:${color}">${escHtml((u.name||'').slice(0,1))}</div>
@@ -1394,11 +1392,11 @@ function renderUsers() {
       </div>
       <div class="user-card-stats">
         <div class="user-card-count" style="color:var(--blue)">${displayCount}</div>
-        <div class="user-card-label">${countLabel}</div>
+        <div class="user-card-label">접속 횟수</div>
       </div>
       <div class="user-card-stats">
         <div class="user-card-count" style="font-size:13px;line-height:1.6">${fmtLoginAt(displayLast)}</div>
-        <div class="user-card-label">${lastLabel}</div>
+        <div class="user-card-label">최근 접속</div>
       </div>
       <div class="user-card-actions">
         <button class="btn-sm btn-ghost" onclick="openLoginLogs('${uid}')">접속기록</button>
