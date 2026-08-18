@@ -405,19 +405,32 @@ async function fetchClientIp() {
 // IP 조회를 기다렸다가 기록하므로 호출부에서 await하지 않는다(로그인 지연 방지).
 async function recordLoginEvent(user) {
   if (!user) return;
-  const ip = await fetchClientIp();
+  const logId = 'login-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
   try {
     const logs = getShared(LOGIN_LOG_KEY, []);
-    const list = Array.isArray(logs) ? logs : [];
+    const list = Array.isArray(logs) ? logs : Object.values(logs || {});
     list.unshift({
+      logId,
       id: user.id,
       name: user.name || user.id,
       at: new Date().toISOString(),
       device: loginDeviceLabel(),
-      ip,
+      ip: '',
     });
     setShared(LOGIN_LOG_KEY, list.slice(0, LOGIN_LOG_MAX));
   } catch (e) { console.warn('[recordLoginEvent]', e); }
+
+  fetchClientIp().then(ip => {
+    if (!ip) return;
+    try {
+      const logs = getShared(LOGIN_LOG_KEY, []);
+      const list = Array.isArray(logs) ? logs : Object.values(logs || {});
+      const idx = list.findIndex(item => item && item.logId === logId);
+      if (idx < 0) return;
+      list[idx] = { ...list[idx], ip };
+      setShared(LOGIN_LOG_KEY, list.slice(0, LOGIN_LOG_MAX));
+    } catch (e) { console.warn('[recordLoginEvent:ip]', e); }
+  }).catch(e => console.warn('[recordLoginEvent:ip]', e));
 }
 
 function doLogout() {

@@ -399,6 +399,7 @@ async function pushAllToFirebase() {
     'grade-overrides':'sj-grade-overrides',
     'manual-grades':  'sj-manual-grades',
     'grade-churn-settings': 'sj-grade-churn-settings',
+    'login-logs':     'sj-login-logs-v1',
   };
   Object.entries(fixed).forEach(([fbKey, lsKey]) => {
     try {
