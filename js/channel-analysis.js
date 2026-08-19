@@ -5,6 +5,8 @@
 // ════════════════════════════════════
 
 const CA_DISCOUNT_RE = /할인/;
+// 품목 편중(강점/공백) 판정에 필요한 최소 거래 건수. 이보다 적으면 표본이 작아 판단하지 않는다.
+const CA_MIN_SAMPLE = 20;
 function caIsProductRow(o) { return o && o.product && !CA_DISCOUNT_RE.test(o.product); }
 
 // key별 매출/수량/건수/거래처수 집계 후 매출 내림차순
@@ -142,7 +144,9 @@ function caInsights(a, mtx, delta, channel) {
   // 3) 영업사원 품목 갭 (사업소 전용 — 유통사는 거래처별 성격 차이라 갭으로 보지 않는다)
   if (!isDist && mtx && mtx.matrix.length >= 2) {
     const gaps = [];
-    mtx.matrix.forEach(m => {
+    // 표본이 적으면 우연한 편차를 '공백'으로 오해할 수 있어 제외한다.
+    const enough = m => m.count >= CA_MIN_SAMPLE;
+    mtx.matrix.filter(enough).forEach(m => {
       m.cells.forEach(c => {
         if (mtx.teamShare[c.category] >= 5 && c.gap <= -4) {
           gaps.push({ person: m.person, cat: c.category, mine: c.share, team: mtx.teamShare[c.category] });
@@ -157,7 +161,7 @@ function caInsights(a, mtx, delta, channel) {
     });
     // 강점도 하나
     const strong = [];
-    mtx.matrix.forEach(m => m.cells.forEach(c => {
+    mtx.matrix.filter(m => m.count >= CA_MIN_SAMPLE).forEach(m => m.cells.forEach(c => {
       if (mtx.teamShare[c.category] >= 5 && c.gap >= 5) strong.push({ person: m.person, cat: c.category, mine: c.share, team: mtx.teamShare[c.category] });
     }));
     strong.sort((x, y) => (y.mine - y.team) - (x.mine - x.team));
@@ -199,48 +203,67 @@ function caBar(share, color) {
   return `<div class="ca-bar"><i style="width:${Math.min(100, share).toFixed(1)}%;background:${color}"></i></div>`;
 }
 
-function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel) {
-  const host = document.getElementById('stats-deep');
-  if (!host) return;
+function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel, dateFrom, dateTo) {
+  const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html || ''; };
+  const PANES = ['stats-brief','stats-conc','stats-calendar','stats-treemap-mini','stats-treemap',
+    'stats-catmix','stats-prodtable','stats-cards','stats-matrix','stats-clients','stats-region','stats-insights'];
   const a = caAnalyze(scopedRows);
+
   if (!a.rows.length) {
-    host.innerHTML = emptyState('선택한 기간에 매출이 없습니다', '기간이나 영업사원 필터를 바꿔 보세요', '📊');
+    PANES.forEach(id => put(id, ''));
+    put('stats-brief', emptyState('선택한 기간에 매출이 없습니다', '기간이나 영업사원 필터를 바꿔 보세요', '📊'));
     if (charts['chart-ca-cat']) { charts['chart-ca-cat'].destroy(); delete charts['chart-ca-cat']; }
     return;
   }
+
   const isDist = channel === 'dist';
-  // 유통사는 영업사원이 사실상 한 명이라 거래처별로 품목 구성을 본다.
-  const mtx = isDist
-    ? caCategoryMatrix(allChannelRows, o => o.client, 6, 12)
-    : caCategoryMatrix(allChannelRows, o => o.person, 6, 12);
+  const mtx = caCategoryMatrix(allChannelRows, isDist ? (o => o.client) : (o => o.person), 6, 12);
   const delta = caProductDelta(a.rows, prevRows, a.total * 0.005);
   const insights = caInsights(a, mtx, delta, channel);
-
   const concCls = a.top3ClientShare >= 60 ? 'crit' : a.top3ClientShare >= 35 ? 'warn' : 'ok';
   const prodCls = a.topProductShare >= 30 ? 'crit' : a.topProductShare >= 15 ? 'warn' : 'ok';
 
-  // ── 집중도 지표 ──
-  const conc = `
-    <div class="ca-conc">
-      <div class="ca-cbox"><span>거래처 수</span><b>${a.clientCount.toLocaleString()}</b><em>곳</em></div>
-      <div class="ca-cbox ${concCls}"><span>상위 3곳 비중</span><b>${a.top3ClientShare.toFixed(0)}</b><em>%</em></div>
-      <div class="ca-cbox"><span>상위 10곳 비중</span><b>${a.top10ClientShare.toFixed(0)}</b><em>%</em></div>
-      <div class="ca-cbox"><span>취급 품목 수</span><b>${a.productCount.toLocaleString()}</b><em>개</em></div>
-      <div class="ca-cbox ${prodCls}"><span>1위 품목 비중</span><b>${a.topProductShare.toFixed(0)}</b><em>%</em></div>
-      <div class="ca-cbox"><span>건당 평균</span><b>${moneyShort(a.avgOrder)}</b><em>원</em></div>
-    </div>`;
+  // ── 요약 탭 ──
+  put('stats-brief', suBriefCard(a, insights, channel, dateFrom, dateTo));
+  put('stats-conc',
+    '<div class="ca-conc">'
+    + '<div class="ca-cbox"><span>거래처 수</span><b>' + a.clientCount.toLocaleString() + '</b><em>곳</em></div>'
+    + '<div class="ca-cbox ' + concCls + '"><span>상위 3곳 비중</span><b>' + a.top3ClientShare.toFixed(0) + '</b><em>%</em></div>'
+    + '<div class="ca-cbox"><span>상위 10곳 비중</span><b>' + a.top10ClientShare.toFixed(0) + '</b><em>%</em></div>'
+    + '<div class="ca-cbox"><span>취급 품목 수</span><b>' + a.productCount.toLocaleString() + '</b><em>개</em></div>'
+    + '<div class="ca-cbox ' + prodCls + '"><span>1위 품목 비중</span><b>' + a.topProductShare.toFixed(0) + '</b><em>%</em></div>'
+    + '<div class="ca-cbox"><span>건당 평균</span><b>' + moneyShort(a.avgOrder) + '</b><em>원</em></div>'
+    + '</div>');
+  // 브리핑에는 심각도별 대표 3개만 넣고, 전체 목록은 접어서 함께 둔다.
+  put('stats-insights', insights.length
+    ? '<details class="su-more"><summary>자동 인사이트 전체 ' + insights.length + '건</summary>'
+      + '<div class="chart-card" style="margin:12px 0 16px"><div class="ca-insights">'
+      + insights.map(i => '<div class="ca-ins ' + i.sev + '"><b>' + escHtml(i.title) + '</b><span>'
+          + escHtml(i.desc) + '</span></div>').join('')
+      + '</div></div></details>'
+    : '');
+  put('stats-calendar', suCalendarCard(a.rows, dateTo));
+  put('stats-treemap-mini', suTreemapCard(a, delta, { compact: true }));
+  put('stats-treemap', suTreemapCard(a, delta, { compact: false }));
 
-  // ── 품목군 구성 ──
-  const catRows = a.byCategory.slice(0, 8).map(c => `
-    <tr>
-      <td data-label="품목군">${escHtml(c.key)}</td>
-      <td data-label="비중" class="r">${c.share.toFixed(1)}%</td>
-      <td class="barcell">${caBar(c.share, 'var(--blue)')}</td>
-      <td data-label="매출" class="r" title="${Math.round(c.sales).toLocaleString()}원">${moneyShort(c.sales)}</td>
-      <td data-label="수량" class="r">${c.qty.toLocaleString()}</td>
-    </tr>`).join('');
+  // ── 품목 탭 ──
+  const catRows = a.byCategory.slice(0, 8).map(c =>
+    '<tr><td data-label="품목군">' + escHtml(c.key) + '</td>'
+    + '<td data-label="비중" class="r">' + c.share.toFixed(1) + '%</td>'
+    + '<td class="barcell">' + caBar(c.share, 'var(--blue)') + '</td>'
+    + '<td data-label="매출" class="r" title="' + Math.round(c.sales).toLocaleString() + '원">' + moneyShort(c.sales) + '</td>'
+    + '<td data-label="수량" class="r">' + c.qty.toLocaleString() + '</td></tr>').join('');
+  put('stats-catmix',
+    '<div class="chart-grid" style="margin-bottom:16px">'
+    + '<div class="chart-card"><div class="chart-card-title">품목군 구성</div>'
+    + '<div class="chart-card-sub">할인·조정 라인 제외</div>'
+    + '<div style="position:relative;height:240px"><canvas id="chart-ca-cat"></canvas></div></div>'
+    + '<div class="chart-card"><div class="chart-card-title">품목군별 매출</div>'
+    + '<div class="chart-card-sub">상위 8개</div>'
+    + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr><th>품목군</th>'
+    + '<th class="r">비중</th><th></th><th class="r">매출</th><th class="r">수량</th></tr></thead>'
+    + '<tbody>' + catRows + '</tbody></table></div></div></div>');
 
-  // ── 품목 TOP15 (+전기 대비) ──
   const dmap = {};
   delta.forEach(d => { dmap[d.product] = d; });
   const prodRows = a.byProduct.slice(0, 15).map((p, i) => {
@@ -250,141 +273,104 @@ function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel) {
       if (d.pct === null) deltaHtml = '<span class="ca-new">신규</span>';
       else if (Math.abs(d.pct) >= 1) {
         const up = d.pct > 0;
-        deltaHtml = `<span class="${up ? 'ca-up' : 'ca-down'}">${up ? '▲' : '▼'}${Math.abs(d.pct).toFixed(0)}%</span>`;
-      } else deltaHtml = '<span class="ca-mut">0%</span>';
+        deltaHtml = '<span class="' + (up ? 'ca-up' : 'ca-down') + '">' + (up ? '▲' : '▼') + Math.abs(d.pct).toFixed(0) + '%</span>';
+      } else { deltaHtml = '<span class="ca-mut">0%</span>'; }
     }
-    return `<tr>
-      <td class="ca-rank">${i + 1}</td>
-      <td data-label="품목">${escHtml(p.key)}</td>
-      <td data-label="비중" class="r">${p.share.toFixed(1)}%</td>
-      <td class="barcell">${caBar(p.share, 'var(--green)')}</td>
-      <td data-label="매출" class="r" title="${Math.round(p.sales).toLocaleString()}원">${moneyShort(p.sales)}</td>
-      <td data-label="수량" class="r">${p.qty.toLocaleString()}</td>
-      <td data-label="거래처" class="r">${p.clientCount}</td>
-      <td data-label="전기대비" class="r">${deltaHtml}</td>
-    </tr>`;
+    return '<tr><td class="ca-rank">' + (i + 1) + '</td>'
+      + '<td data-label="품목">' + escHtml(p.key) + '</td>'
+      + '<td data-label="비중" class="r">' + p.share.toFixed(1) + '%</td>'
+      + '<td class="barcell">' + caBar(p.share, 'var(--green)') + '</td>'
+      + '<td data-label="매출" class="r" title="' + Math.round(p.sales).toLocaleString() + '원">' + moneyShort(p.sales) + '</td>'
+      + '<td data-label="수량" class="r">' + p.qty.toLocaleString() + '</td>'
+      + '<td data-label="거래처" class="r">' + p.clientCount + '</td>'
+      + '<td data-label="전기대비" class="r">' + deltaHtml + '</td></tr>';
   }).join('');
+  put('stats-prodtable',
+    '<div class="chart-card" style="margin-bottom:16px">'
+    + '<div class="chart-card-title">품목 TOP 15</div>'
+    + '<div class="chart-card-sub">정확한 값 확인용 · 전기간(직전 동일 길이) 대비 증감 포함</div>'
+    + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr><th></th><th>품목</th>'
+    + '<th class="r">비중</th><th></th><th class="r">매출</th><th class="r">수량</th>'
+    + '<th class="r">거래처</th><th class="r">전기대비</th></tr></thead><tbody>' + prodRows + '</tbody></table></div></div>');
 
-  // ── 영업사원 × 품목군 히트맵 ──
+  // ── 사람 탭 ──
+  const historyRows = (allOrders || []).filter(o => orderChannel(o) === channel && caIsProductRow(o));
+  put('stats-cards', suPersonCards(mtx, allChannelRows.filter(caIsProductRow), prevRows, isDist, historyRows));
   let matrixHtml = '';
   if (mtx && mtx.matrix.length) {
-    const head = mtx.catKeys.map(c =>
-      `<th class="r" title="팀 평균 ${mtx.teamShare[c].toFixed(1)}%">${escHtml(c)}<br><span class="ca-team">팀 ${mtx.teamShare[c].toFixed(0)}%</span></th>`).join('');
+    const head2 = mtx.catKeys.map(c =>
+      '<th class="r" title="평균 ' + mtx.teamShare[c].toFixed(1) + '%">' + escHtml(c)
+      + '<br><span class="ca-team">평균 ' + mtx.teamShare[c].toFixed(0) + '%</span></th>').join('');
     const body = mtx.matrix.map(m => {
       const cells = m.cells.map(c => {
-        const strong = c.gap >= 5, weak = c.gap <= -4 && mtx.teamShare[c.category] >= 5;
+        const strong = c.gap >= 5, weak = (c.gap <= -4 && mtx.teamShare[c.category] >= 5);
         const cls = strong ? 'ca-strong' : weak ? 'ca-weak' : '';
         const sign = c.gap >= 0 ? '+' : '';
-        return `<td class="r ${cls}" title="${escHtml(m.person)} · ${escHtml(c.category)} ${moneyShort(c.sales)}원 (팀평균 대비 ${sign}${c.gap.toFixed(1)}p)">
-          ${c.share.toFixed(0)}%<span class="ca-gap">${sign}${c.gap.toFixed(0)}p</span></td>`;
+        return '<td class="r ' + cls + '" title="' + escHtml(m.person) + ' · ' + escHtml(c.category) + ' '
+          + moneyShort(c.sales) + '원 (평균 대비 ' + sign + c.gap.toFixed(1) + 'p)">'
+          + c.share.toFixed(0) + '%<span class="ca-gap">' + sign + c.gap.toFixed(0) + 'p</span></td>';
       }).join('');
-      const sub = isDist ? `${m.count.toLocaleString()}건 · 건당 ${moneyShort(m.avgOrder)}원`
-                         : `거래처 ${m.clientCount}곳 · 건당 ${moneyShort(m.avgOrder)}원`;
+      const sub = isDist ? (m.count.toLocaleString() + '건 · 건당 ' + moneyShort(m.avgOrder) + '원')
+                         : ('거래처 ' + m.clientCount + '곳 · 건당 ' + moneyShort(m.avgOrder) + '원');
       const nameCell = isDist
-        ? `<b class="ca-linkname" onclick="openClient360('${escInlineJs(m.person)}')">${escHtml(m.person)}</b><span class="ca-sub2">${sub}</span>`
-        : `<b>${escHtml(m.person)}</b><span class="ca-sub2">${sub}</span>`;
-      return `<tr>
-        <td data-label="${isDist ? '거래처' : '영업사원'}">${nameCell}</td>
-        <td data-label="매출" class="r" title="${Math.round(m.total).toLocaleString()}원">${moneyShort(m.total)}</td>
-        ${cells}
-      </tr>`;
+        ? '<b class="ca-linkname" onclick="openClient360(&#39;' + escInlineJs(m.person) + '&#39;)">' + escHtml(m.person) + '</b><span class="ca-sub2">' + sub + '</span>'
+        : '<b>' + escHtml(m.person) + '</b><span class="ca-sub2">' + sub + '</span>';
+      return '<tr><td data-label="' + (isDist ? '거래처' : '영업사원') + '">' + nameCell + '</td>'
+        + '<td data-label="매출" class="r" title="' + Math.round(m.total).toLocaleString() + '원">' + moneyShort(m.total) + '</td>'
+        + cells + '</tr>';
     }).join('');
-    const mTitle = isDist ? '거래처 × 품목군' : '영업사원 × 품목군';
-    const mSub = isDist
-      ? '유통사별로 어떤 품목군을 가져가는지. 채널 평균 대비 편차(p) — 초록=많이 가져감, 빨강=적게 가져감'
-      : '각 영업사원의 품목군 구성비와 팀 평균 대비 편차(p). 초록=강점, 빨강=공백';
-    matrixHtml = `
-      <div class="chart-card" style="margin-bottom:16px">
-        <div class="chart-card-title">${mTitle}</div>
-        <div class="chart-card-sub">${mSub}</div>
-        <div class="ca-tablewrap">
-          <table class="ca-table mob-cards">
-            <thead><tr><th>${isDist ? '거래처' : '영업사원'}</th><th class="r">매출</th>${head}</tr></thead>
-            <tbody>${body}</tbody>
-          </table>
-        </div>
-      </div>`;
+    matrixHtml = '<details class="su-more"><summary>' + (isDist ? '거래처 × 품목군 상세표' : '영업사원 × 품목군 상세표') + '</summary>'
+      + '<div class="chart-card" style="margin:12px 0 16px"><div class="ca-tablewrap">'
+      + '<table class="ca-table mob-cards"><thead><tr><th>' + (isDist ? '거래처' : '영업사원') + '</th>'
+      + '<th class="r">매출</th>' + head2 + '</tr></thead><tbody>' + body + '</tbody></table></div></div></details>';
   }
+  put('stats-matrix', matrixHtml);
 
-  // ── 거래처 TOP10 ──
-  const clientRows = a.byClient.slice(0, 10).map((c, i) => `
-    <tr onclick="openClient360('${escInlineJs(c.key)}')" class="ca-clickable">
-      <td class="ca-rank">${i + 1}</td>
-      <td data-label="거래처">${escHtml(c.key)}</td>
-      <td data-label="비중" class="r">${c.share.toFixed(1)}%</td>
-      <td class="barcell">${caBar(c.share, 'var(--purple)')}</td>
-      <td data-label="매출" class="r" title="${Math.round(c.sales).toLocaleString()}원">${moneyShort(c.sales)}</td>
-      <td data-label="건수" class="r">${c.count.toLocaleString()}</td>
-    </tr>`).join('');
+  // ── 거래처 탭 ──
+  const clientRows = a.byClient.slice(0, 10).map((c, i) =>
+    '<tr onclick="openClient360(&#39;' + escInlineJs(c.key) + '&#39;)" class="ca-clickable">'
+    + '<td class="ca-rank">' + (i + 1) + '</td>'
+    + '<td data-label="거래처">' + escHtml(c.key) + '</td>'
+    + '<td data-label="비중" class="r">' + c.share.toFixed(1) + '%</td>'
+    + '<td class="barcell">' + caBar(c.share, 'var(--purple)') + '</td>'
+    + '<td data-label="매출" class="r" title="' + Math.round(c.sales).toLocaleString() + '원">' + moneyShort(c.sales) + '</td>'
+    + '<td data-label="건수" class="r">' + c.count.toLocaleString() + '</td></tr>').join('');
+  put('stats-clients',
+    '<div class="chart-card" style="margin-bottom:16px">'
+    + '<div class="chart-card-title">거래처 TOP 10</div>'
+    + '<div class="chart-card-sub">이름을 누르면 거래처 상세가 열립니다</div>'
+    + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr><th></th><th>거래처</th>'
+    + '<th class="r">비중</th><th></th><th class="r">매출</th><th class="r">건수</th></tr></thead>'
+    + '<tbody>' + clientRows + '</tbody></table></div></div>');
 
-  // ── 지역 분포 (지역값이 실제로 있을 때만) ──
   const regions = a.byRegion.filter(r => r.key && r.key !== '(미분류)');
   const regionCover = regions.reduce((s, r) => s + r.share, 0);
-  const regionHtml = (regions.length >= 3 && regionCover >= 30) ? `
-    <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title">지역 분포</div>
-      <div class="chart-card-sub">상위 10개 지역 · 지역 미입력 건 제외</div>
-      <div class="ca-tablewrap"><table class="ca-table mob-cards">
-        <thead><tr><th>지역</th><th class="r">비중</th><th></th><th class="r">매출</th><th class="r">거래처</th></tr></thead>
-        <tbody>${regions.slice(0, 10).map(r => `<tr>
-          <td data-label="지역">${escHtml(r.key)}</td>
-          <td data-label="비중" class="r">${r.share.toFixed(1)}%</td>
-          <td class="barcell">${caBar(r.share, 'var(--amber)')}</td>
-          <td data-label="매출" class="r" title="${Math.round(r.sales).toLocaleString()}원">${moneyShort(r.sales)}</td>
-          <td data-label="거래처" class="r">${r.clientCount}</td>
-        </tr>`).join('')}</tbody></table></div>
-    </div>` : '';
+  put('stats-region', (regions.length >= 3 && regionCover >= 30)
+    ? '<div class="chart-card" style="margin-bottom:16px"><div class="chart-card-title">지역 분포</div>'
+      + '<div class="chart-card-sub">상위 10개 지역 · 지역 미입력 건 제외</div>'
+      + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr><th>지역</th>'
+      + '<th class="r">비중</th><th></th><th class="r">매출</th><th class="r">거래처</th></tr></thead><tbody>'
+      + regions.slice(0, 10).map(r => '<tr><td data-label="지역">' + escHtml(r.key) + '</td>'
+        + '<td data-label="비중" class="r">' + r.share.toFixed(1) + '%</td>'
+        + '<td class="barcell">' + caBar(r.share, 'var(--amber)') + '</td>'
+        + '<td data-label="매출" class="r" title="' + Math.round(r.sales).toLocaleString() + '원">' + moneyShort(r.sales) + '</td>'
+        + '<td data-label="거래처" class="r">' + r.clientCount + '</td></tr>').join('')
+      + '</tbody></table></div></div>'
+    : '');
 
-  // ── 인사이트 ──
-  const insightHtml = insights.length ? `
-    <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title">자동 인사이트</div>
-      <div class="ca-insights">
-        ${insights.map(i => `<div class="ca-ins ${i.sev}"><b>${escHtml(i.title)}</b><span>${escHtml(i.desc)}</span></div>`).join('')}
-      </div>
-    </div>` : '';
+  // 도넛은 해당 탭이 보일 때 그린다 (숨은 캔버스는 크기가 0)
+  const etcSum = a.byCategory.slice(7).reduce((s, c) => s + c.sales, 0);
+  window.__caDonut = {
+    labels: a.byCategory.slice(0, 7).map(c => c.key).concat(etcSum > 0 ? ['기타'] : []),
+    data: a.byCategory.slice(0, 7).map(c => Math.round(c.sales)).concat(etcSum > 0 ? [Math.round(etcSum)] : []),
+  };
+  if (typeof suRedrawTabCharts === 'function') suRedrawTabCharts(typeof statsTab !== 'undefined' ? statsTab : 'summary');
+}
 
-  host.innerHTML = `
-    ${conc}
-    ${insightHtml}
-    <div class="chart-grid" style="margin-bottom:16px">
-      <div class="chart-card">
-        <div class="chart-card-title">품목군 구성</div>
-        <div class="chart-card-sub">할인·조정 라인 제외</div>
-        <div style="position:relative;height:240px"><canvas id="chart-ca-cat"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-card-title">품목군별 매출</div>
-        <div class="chart-card-sub">상위 8개</div>
-        <div class="ca-tablewrap"><table class="ca-table mob-cards">
-          <thead><tr><th>품목군</th><th class="r">비중</th><th></th><th class="r">매출</th><th class="r">수량</th></tr></thead>
-          <tbody>${catRows}</tbody></table></div>
-      </div>
-    </div>
-    ${matrixHtml}
-    <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title">품목 TOP 15</div>
-      <div class="chart-card-sub">전기간(직전 동일 길이) 대비 증감 포함</div>
-      <div class="ca-tablewrap"><table class="ca-table mob-cards">
-        <thead><tr><th></th><th>품목</th><th class="r">비중</th><th></th><th class="r">매출</th><th class="r">수량</th><th class="r">거래처</th><th class="r">전기대비</th></tr></thead>
-        <tbody>${prodRows}</tbody></table></div>
-    </div>
-    ${regionHtml}
-    <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title">거래처 TOP 10</div>
-      <div class="chart-card-sub">이름을 누르면 거래처 상세가 열립니다</div>
-      <div class="ca-tablewrap"><table class="ca-table mob-cards">
-        <thead><tr><th></th><th>거래처</th><th class="r">비중</th><th></th><th class="r">매출</th><th class="r">건수</th></tr></thead>
-        <tbody>${clientRows}</tbody></table></div>
-    </div>`;
-
-  // 도넛은 DOM 삽입 후 그린다
-  const cats = a.byCategory.slice(0, 7);
-  const etc = a.byCategory.slice(7).reduce((s, c) => s + c.sales, 0);
-  const labels = cats.map(c => c.key).concat(etc > 0 ? ['기타'] : []);
-  const data = cats.map(c => Math.round(c.sales)).concat(etc > 0 ? [Math.round(etc)] : []);
-  if (typeof rc === 'function') {
-    rc('chart-ca-cat', 'doughnut', labels, data,
+// 탭이 보이는 시점에 캔버스를 그린다
+function suRedrawTabCharts(tab) {
+  if (tab === 'product' && window.__caDonut && typeof rc === 'function' && window.__caDonut.labels.length) {
+    rc('chart-ca-cat', 'doughnut', window.__caDonut.labels, window.__caDonut.data,
       ['#2B72C8', '#009E6A', '#7856C8', '#E8900A', '#D94040', '#3DB8A0', '#C75BAB', '#9E9E9E']);
   }
 }

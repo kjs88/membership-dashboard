@@ -129,7 +129,7 @@ function renderStats() {
         if (statsPersonId !== 'all' && o.person !== personName) return false;
         return d >= prevRange.from && d <= prevRange.to;
       });
-      renderChannelAnalysis(O, channelInRange, prevRows, channel);
+      renderChannelAnalysis(O, channelInRange, prevRows, channel, dateFrom, dateTo);
     }
 
     if (typeof genReport === 'function') genReport(reportMode, null);

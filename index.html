@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260817-channel2">
+<link rel="stylesheet" href="css/style.css?v=20260817-viz2">
 </head>
 <body>
 
@@ -1059,22 +1059,54 @@
         <div id="stats-person-filter" class="stats-person-btns"></div>
       </div>
     </div>
-    <div class="stats-kpi-row" id="stats-kpi-row"></div>
-    <div id="stats-deep"></div>
-    <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title">월별 매출 추이</div>
-      <div class="chart-card-sub" id="stats-chart-sub">당해년도 1년치</div>
-      <div style="position:relative;height:260px"><canvas id="chart-stats-monthly"></canvas></div>
+    <div class="stab-bar" role="tablist">
+      <button class="stab active" data-t="summary" onclick="showStatsTab('summary')">요약</button>
+      <button class="stab" data-t="product" onclick="showStatsTab('product')">품목</button>
+      <button class="stab" data-t="person" onclick="showStatsTab('person')">사람</button>
+      <button class="stab" data-t="client" onclick="showStatsTab('client')">거래처</button>
     </div>
-    <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title">일별 매출 추이</div>
-      <div class="chart-card-sub" id="stats-daily-sales-sub">이번달</div>
-      <div style="position:relative;height:240px"><canvas id="chart-stats-daily-sales"></canvas></div>
+
+    <div class="stab-pane" id="stab-summary">
+      <div id="stats-brief"></div>
+      <div class="stats-kpi-row" id="stats-kpi-row"></div>
+      <div id="stats-conc"></div>
+      <div id="stats-insights"></div>
+      <div id="stats-calendar"></div>
+      <div id="stats-treemap-mini"></div>
+      <div class="chart-card" style="margin-bottom:16px">
+        <div class="chart-card-title">월별 매출 추이</div>
+        <div class="chart-card-sub" id="stats-chart-sub">당해년도 1년치</div>
+        <div style="position:relative;height:260px"><canvas id="chart-stats-monthly"></canvas></div>
+      </div>
+      <details class="su-more">
+        <summary>일별 상세 차트</summary>
+        <div class="chart-card" style="margin:12px 0 16px">
+          <div class="chart-card-title">일별 매출 추이</div>
+          <div class="chart-card-sub" id="stats-daily-sales-sub">이번달</div>
+          <div style="position:relative;height:240px"><canvas id="chart-stats-daily-sales"></canvas></div>
+        </div>
+        <div class="chart-card" style="margin-bottom:16px">
+          <div class="chart-card-title" id="stats-daily-qty-title">일별 출고 수량</div>
+          <div class="chart-card-sub" id="stats-daily-qty-sub">이번달</div>
+          <div style="position:relative;height:240px"><canvas id="chart-stats-daily-qty"></canvas></div>
+        </div>
+      </details>
     </div>
-    <div class="chart-card" style="margin-bottom:16px">
-      <div class="chart-card-title" id="stats-daily-qty-title">일별 출고 수량</div>
-      <div class="chart-card-sub" id="stats-daily-qty-sub">이번달</div>
-      <div style="position:relative;height:240px"><canvas id="chart-stats-daily-qty"></canvas></div>
+
+    <div class="stab-pane" id="stab-product" style="display:none">
+      <div id="stats-treemap"></div>
+      <div id="stats-catmix"></div>
+      <div id="stats-prodtable"></div>
+    </div>
+
+    <div class="stab-pane" id="stab-person" style="display:none">
+      <div id="stats-cards"></div>
+      <div id="stats-matrix"></div>
+    </div>
+
+    <div class="stab-pane" id="stab-client" style="display:none">
+      <div id="stats-clients"></div>
+      <div id="stats-region"></div>
     </div>
   </div>
 
@@ -1793,9 +1825,10 @@
 <script src="js/dashboard-records-users.js?v=20260818-login-count-label"></script>
 <script src="js/clients.js?v=20260814-features"></script>
 <script src="js/daily-entry.js?v=20260812-deadcode"></script>
-<script src="js/stats-notices.js?v=20260817-channel2"></script>
+<script src="js/stats-notices.js?v=20260817-viz2"></script>
 <script src="js/bootstrap-datepicker.js?v=20260814-features"></script>
-<script src="js/channel-analysis.js?v=20260817-channel2"></script>
+<script src="js/stats-ui.js?v=20260817-viz2"></script>
+<script src="js/channel-analysis.js?v=20260817-viz2"></script>
 <script src="js/compare-field.js?v=20260817-channel"></script>
 <script src="js/features.js?v=20260817-channel"></script>
 <script src="js/main.js?v=20260721-code-cleanup"></script>
