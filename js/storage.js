@@ -138,6 +138,32 @@ function setPlainStorage(key, val) {
   }
 }
 
+function normalizeLoginLogsForUpload(value) {
+  const rows = Array.isArray(value) ? value : Object.values(value || {});
+  const out = {};
+  rows.forEach((row, index) => {
+    if (!row || typeof row !== 'object' || !row.id || !row.at) return;
+    const key = row.logId || `legacy-${String(row.id).replace(/[.$#[\]/]/g, '_')}-${String(row.at).replace(/[^0-9A-Za-z]/g, '')}-${index}`;
+    out[key] = { ...row, logId: row.logId || key };
+  });
+  return out;
+}
+
+async function mergeLoginLogsForUpload(localValue) {
+  const merged = normalizeLoginLogsForUpload(localValue);
+  try {
+    const url = _fbUrl('data/login-logs');
+    if (!url) return merged;
+    const res = await fetch(`${url}?_=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) return merged;
+    const remote = await res.json().catch(() => null);
+    Object.assign(merged, normalizeLoginLogsForUpload(remote));
+  } catch (e) {
+    console.warn('[storage:mergeLoginLogsForUpload]', e);
+  }
+  return merged;
+}
+
 function setErpRuntimeData(parsedOrder, parsedShip, payload = {}) {
   const order = Array.isArray(parsedOrder) ? parsedOrder : [];
   const ship = Array.isArray(parsedShip) ? parsedShip : [];
@@ -399,7 +425,6 @@ async function pushAllToFirebase() {
     'grade-overrides':'sj-grade-overrides',
     'manual-grades':  'sj-manual-grades',
     'grade-churn-settings': 'sj-grade-churn-settings',
-    'login-logs':     'sj-login-logs-v1',
   };
   Object.entries(fixed).forEach(([fbKey, lsKey]) => {
     try {
@@ -421,6 +446,12 @@ async function pushAllToFirebase() {
   }
   if (Object.keys(weekly).length)  payload['weekly-reports']  = weekly;
   if (Object.keys(monthly).length) payload['monthly-reports'] = monthly;
+  try {
+    const localLoginLogs = JSON.parse(localStorage.getItem('sj-login-logs-v1') || '[]');
+    payload['login-logs'] = await mergeLoginLogsForUpload(localLoginLogs);
+  } catch (_) {
+    payload['login-logs'] = await mergeLoginLogsForUpload([]);
+  }
 
   try {
     const cleanPayload = typeof securitySanitizeData === 'function' ? securitySanitizeData(payload) : payload;

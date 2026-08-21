@@ -1,6 +1,8 @@
 const CURRENT_USER_STORAGE_KEY = 'sj-current-user';
+const CURRENT_USER_ACCESS_LOG_KEY = 'sj-current-user-access-log';
 const AUTH_SESSION_MAX_MS = 14 * 60 * 60 * 1000;
 const AUTH_REMEMBER_MAX_MS = 7 * 24 * 60 * 60 * 1000;
+const AUTH_AUTO_ACCESS_LOG_MIN_MS = 30 * 60 * 1000;
 
 function clearCurrentUserStorage() {
   try { sessionStorage.removeItem(CURRENT_USER_STORAGE_KEY); } catch (err) { console.error('[auth:clearSession]', err); }
@@ -79,6 +81,21 @@ function saveCurrentUser(user, rememberLogin) {
   }
 }
 
+function shouldRecordAutoAccess(user) {
+  if (!user?.id) return false;
+  try {
+    const raw = sessionStorage.getItem(CURRENT_USER_ACCESS_LOG_KEY) || '{}';
+    const map = JSON.parse(raw);
+    const last = Number(map[user.id] || 0);
+    if (last && Date.now() - last < AUTH_AUTO_ACCESS_LOG_MIN_MS) return false;
+    map[user.id] = Date.now();
+    sessionStorage.setItem(CURRENT_USER_ACCESS_LOG_KEY, JSON.stringify(map));
+    return true;
+  } catch (_) {
+    return true;
+  }
+}
+
 async function checkFbConfig() {
   await syncAuthFromFirebase();
   ensureUsers({ persist: false });
@@ -90,6 +107,7 @@ async function checkFbConfig() {
     bootHide();
     ensureUsers();
     currentUser = allUsers.find(u => u.id === currentUser.id) || currentUser;
+    if (shouldRecordAutoAccess(currentUser)) recordLoginEvent(currentUser, 'auto');
     document.getElementById('app-screen').style.display = 'block';
     initUI();
     mergeClientsWithSeed(); updateClientBadge();
@@ -403,21 +421,50 @@ async function fetchClientIp() {
 }
 
 // IP 조회를 기다렸다가 기록하므로 호출부에서 await하지 않는다(로그인 지연 방지).
-async function recordLoginEvent(user) {
+function writeLoginLogRemote(logId, event) {
+  try {
+    if (typeof _fbUrl !== 'function') return;
+    const url = _fbUrl('data/login-logs/' + logId);
+    if (!url) return;
+    fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    }).catch(e => console.warn('[recordLoginEvent:remote]', e));
+  } catch (e) { console.warn('[recordLoginEvent:remote]', e); }
+}
+
+function updateLoginLogRemote(logId, patch) {
+  try {
+    if (typeof _fbUrl !== 'function') return;
+    const url = _fbUrl('data/login-logs/' + logId);
+    if (!url) return;
+    fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    }).catch(e => console.warn('[recordLoginEvent:remotePatch]', e));
+  } catch (e) { console.warn('[recordLoginEvent:remotePatch]', e); }
+}
+
+async function recordLoginEvent(user, source = 'login') {
   if (!user) return;
   const logId = 'login-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+  const event = {
+    logId,
+    id: user.id,
+    name: user.name || user.id,
+    at: new Date().toISOString(),
+    device: loginDeviceLabel(),
+    ip: '',
+    source,
+  };
   try {
     const logs = getShared(LOGIN_LOG_KEY, []);
     const list = Array.isArray(logs) ? logs : Object.values(logs || {});
-    list.unshift({
-      logId,
-      id: user.id,
-      name: user.name || user.id,
-      at: new Date().toISOString(),
-      device: loginDeviceLabel(),
-      ip: '',
-    });
-    setShared(LOGIN_LOG_KEY, list.slice(0, LOGIN_LOG_MAX));
+    list.unshift(event);
+    localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(list.slice(0, LOGIN_LOG_MAX)));
+    writeLoginLogRemote(logId, event);
   } catch (e) { console.warn('[recordLoginEvent]', e); }
 
   fetchClientIp().then(ip => {
@@ -428,7 +475,8 @@ async function recordLoginEvent(user) {
       const idx = list.findIndex(item => item && item.logId === logId);
       if (idx < 0) return;
       list[idx] = { ...list[idx], ip };
-      setShared(LOGIN_LOG_KEY, list.slice(0, LOGIN_LOG_MAX));
+      localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(list.slice(0, LOGIN_LOG_MAX)));
+      updateLoginLogRemote(logId, { ip });
     } catch (e) { console.warn('[recordLoginEvent:ip]', e); }
   }).catch(e => console.warn('[recordLoginEvent:ip]', e));
 }
