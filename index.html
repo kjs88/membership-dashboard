@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260817-viz2">
+<link rel="stylesheet" href="css/style.css?v=20260822-deep">
 </head>
 <body>
 
@@ -155,6 +155,7 @@
     </div>
     <div class="nav-item" onclick="showPage('products',this)" id="nav-products"><span class="nav-icon">📦</span>품목별 분석</div>
     <div class="nav-item" onclick="showPage('compare',this)" id="nav-compare"><span class="nav-icon">⚖️</span>비교 분석</div>
+    <div class="nav-item" onclick="showPage('deep',this)" id="nav-deep"><span class="nav-icon">🔬</span>심화 분석</div>
     <div class="nav-item" onclick="showPage('dash',this)" id="nav-dash"><span class="nav-icon">📋</span>영업현황</div>
     <div class="nav-item" onclick="showPage('field',this)" id="nav-field"><span class="nav-icon">🚗</span>현장 모드</div>
     <div class="nav-label" id="nav-journal-label">영업 일지</div>
@@ -1331,6 +1332,39 @@
   </div>
 
   <!-- ── GRADE PAGE ── -->
+  <!-- ── 심화 분석 ── -->
+  <div id="page-deep" class="page">
+    <div class="section-header" style="margin-bottom:14px">
+      <div class="section-title-lg">심화 분석</div>
+      <div class="da-chs">
+        <button class="da-ch active" data-ch="office" onclick="setDeepChannel('office')">사업소</button>
+        <button class="da-ch" data-ch="dist" onclick="setDeepChannel('dist')">유통사</button>
+      </div>
+    </div>
+    <div class="stab-bar" role="tablist">
+      <button class="da-tab stab active" data-t="bridge" onclick="showDeepTab('bridge')">매출 변동 분해</button>
+      <button class="da-tab stab" data-t="cohort" onclick="showDeepTab('cohort')">코호트 유지율</button>
+      <button class="da-tab stab" data-t="rfm" onclick="showDeepTab('rfm')">RFM 세그먼트</button>
+      <button class="da-tab stab" data-t="cross" onclick="showDeepTab('cross')">교차판매</button>
+      <button class="da-tab stab" data-t="price" onclick="showDeepTab('price')">단가 편차</button>
+    </div>
+    <div id="da-empty"></div>
+    <div id="da-body">
+      <div class="da-pane" id="da-bridge-pane">
+        <div class="da-ctrl">
+          <label>기준월</label>
+          <select id="da-bridge-month" onchange="renderDeep()"></select>
+          <span class="da-hint">선택한 달과 그 직전 달을 비교합니다</span>
+        </div>
+        <div id="da-bridge"></div>
+      </div>
+      <div class="da-pane" id="da-cohort-pane" style="display:none"><div id="da-cohort"></div></div>
+      <div class="da-pane" id="da-rfm-pane" style="display:none"><div id="da-rfm"></div></div>
+      <div class="da-pane" id="da-cross-pane" style="display:none"><div id="da-cross"></div></div>
+      <div class="da-pane" id="da-price-pane" style="display:none"><div id="da-price"></div></div>
+    </div>
+  </div>
+
   <!-- ── 비교 분석 ── -->
   <div id="page-compare" class="page">
     <div class="section-header">
@@ -1820,13 +1854,14 @@
 <script src="js/storage.js?v=20260821-login-log-append"></script>
 <script src="js/state.js?v=20260812-sumhelper"></script>
 <script src="js/products-grades-erp.js?v=20260814-cleanup2"></script>
-<script src="js/core-auth-nav.js?v=20260821-login-log-append"></script>
+<script src="js/core-auth-nav.js?v=20260822-deep"></script>
 <script src="js/journals-weekly-monthly.js?v=20260812-deadcode"></script>
 <script src="js/dashboard-records-users.js?v=20260818-login-count-label"></script>
 <script src="js/clients.js?v=20260814-features"></script>
 <script src="js/daily-entry.js?v=20260812-deadcode"></script>
 <script src="js/stats-notices.js?v=20260817-viz2"></script>
 <script src="js/bootstrap-datepicker.js?v=20260814-features"></script>
+<script src="js/deep-analytics.js?v=20260822-deep"></script>
 <script src="js/stats-ui.js?v=20260817-viz2"></script>
 <script src="js/channel-analysis.js?v=20260817-viz2"></script>
 <script src="js/compare-field.js?v=20260817-channel"></script>

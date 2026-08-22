@@ -197,6 +197,7 @@ const MENU_ACCESS_ITEMS = [
   { key:'stats',   label:'실적 분석',    page:'stats',   nav:'nav-stats-group' },
   { key:'products',label:'품목별 분석',  page:'products',nav:'nav-products' },
   { key:'compare', label:'비교 분석',    page:'compare', nav:'nav-compare' },
+  { key:'deep',    label:'심화 분석',    page:'deep',    nav:'nav-deep' },
   { key:'field',   label:'현장 모드',    page:'field',   nav:'nav-field' },
   { key:'project', label:'프로젝트 관리',page:'project', nav:'nav-project' },
   { key:'dash',    label:'영업현황',     page:'dash',    nav:'nav-dash' },
@@ -209,9 +210,9 @@ const MENU_ACCESS_ITEMS = [
 
 const MENU_ACCESS_DEFAULTS = {
   admin:   MENU_ACCESS_ITEMS.map(m => m.key),
-  manager: ['sales','stats','products','project','dash','journal','grade','clients'],
-  planner: ['sales','stats','products','project','dash','journal','grade','clients','targets'],
-  user:    ['sales','stats','products','compare','field','project','dash','journal'],
+  manager: ['sales','stats','products','compare','deep','field','project','dash','journal','grade','clients'],
+  planner: ['sales','stats','products','compare','deep','field','project','dash','journal','grade','clients','targets'],
+  user:    ['sales','stats','products','compare','deep','field','project','dash','journal'],
 };
 const ALWAYS_VISIBLE_MENU_KEYS = ['journal'];
 
@@ -581,7 +582,7 @@ const PAGE_TITLES = {
   'mo-plan':'영업계획', 'mo-settle':'월간결산', records:'방문 기록',
   users:'계정 관리', targets:'목표 설정', stats:'실적 분석', revisit:'재방문 관리',
   notice:'공지사항', 'notice-view':'공지사항', clients:'거래처 관리',
-  products:'품목별 분석', compare:'비교 분석', field:'현장 모드', project:'프로젝트 관리', grade:'거래처 등급'
+  products:'품목별 분석', compare:'비교 분석', deep:'심화 분석', field:'현장 모드', project:'프로젝트 관리', grade:'거래처 등급'
 };
 
 const PAGE_RENDERERS = {
@@ -596,6 +597,7 @@ const PAGE_RENDERERS = {
   clients: () => { if (allClients.length === 0) mergeClientsWithSeed(); renderClients(); },
   products: () => renderProducts(),
   compare: () => renderCompare(),
+  deep: () => renderDeep(),
   field: () => renderField(),
   grade: () => { renderGradeSettings(); gradeSetPeriod('all'); },
   input: () => dlyInit(),
