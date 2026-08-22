@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260822-deep">
+<link rel="stylesheet" href="css/style.css?v=20260822-rep">
 </head>
 <body>
 
@@ -352,6 +352,11 @@
   </div><!-- /page-sales -->
 
   <div id="page-dash" class="page">
+    <div class="stab-bar" role="tablist">
+      <button class="dtab stab active" data-t="status" onclick="showDashTab('status')">방문 현황</button>
+      <button class="dtab stab" data-t="insight" onclick="showDashTab('insight')">영업사원 인사이트</button>
+    </div>
+    <div class="dtab-pane" id="dtab-status">
     <!-- ══ 영업현황 ══ -->
     <div class="dash-section">
       <div class="dash-section-title"><span>📋</span>영업현황</div>
@@ -478,6 +483,10 @@
         <span style="font-size:11px;color:var(--text3)" id="dash-pending-count"></span>
       </div>
       <div id="dash-pending-list" style="padding:0 20px 12px"></div>
+    </div>
+    </div>
+    <div class="dtab-pane" id="dtab-insight" style="display:none">
+      <div id="ri-body"></div>
     </div>
   </div>
 
@@ -1854,13 +1863,14 @@
 <script src="js/storage.js?v=20260821-login-log-append"></script>
 <script src="js/state.js?v=20260812-sumhelper"></script>
 <script src="js/products-grades-erp.js?v=20260814-cleanup2"></script>
-<script src="js/core-auth-nav.js?v=20260822-deep"></script>
+<script src="js/core-auth-nav.js?v=20260822-rep"></script>
 <script src="js/journals-weekly-monthly.js?v=20260812-deadcode"></script>
 <script src="js/dashboard-records-users.js?v=20260818-login-count-label"></script>
 <script src="js/clients.js?v=20260814-features"></script>
 <script src="js/daily-entry.js?v=20260812-deadcode"></script>
 <script src="js/stats-notices.js?v=20260817-viz2"></script>
 <script src="js/bootstrap-datepicker.js?v=20260814-features"></script>
+<script src="js/rep-insights.js?v=20260822-rep"></script>
 <script src="js/deep-analytics.js?v=20260822-deep"></script>
 <script src="js/stats-ui.js?v=20260817-viz2"></script>
 <script src="js/channel-analysis.js?v=20260817-viz2"></script>
