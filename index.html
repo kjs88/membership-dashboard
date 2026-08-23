@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260822-rep">
+<link rel="stylesheet" href="css/style.css?v=20260822-prod">
 </head>
 <body>
 
@@ -1194,76 +1194,24 @@
         <div id="prod-category-filter" class="stats-person-btns product-category-btns"></div>
       </div>
     </div>
-    <!-- 탭 네비게이션 -->
-    <div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:16px">
-      <button class="prod-tab-btn" data-tab="overview" onclick="showProdTab('overview')" style="padding:10px 20px;border:none;background:transparent;font-size:14px;font-weight:700;cursor:pointer;border-bottom:3px solid var(--blue);color:var(--blue);margin-bottom:-2px">📋 품목 현황</button>
-      <button class="prod-tab-btn" data-tab="inventory" onclick="showProdTab('inventory')" style="padding:10px 20px;border:none;background:transparent;font-size:14px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;color:var(--text2);margin-bottom:-2px">📊 재고 분석</button>
+    <div class="stab-bar" role="tablist">
+      <button class="ptab stab active" data-t="portfolio" onclick="showProdTab2('portfolio')">포트폴리오</button>
+      <button class="ptab stab" data-t="spread" onclick="showProdTab2('spread')">확산도</button>
+      <button class="ptab stab" data-t="risk" onclick="showProdTab2('risk')">리스크</button>
+      <button class="ptab stab" data-t="inventory" onclick="showProdTab2('inventory')">재고 제안</button>
+      <button class="ptab stab" data-t="list" onclick="showProdTab2('list')">품목 목록</button>
     </div>
+    <div class="ptab-pane" id="ptab-portfolio"><div id="pa-portfolio"></div></div>
+    <div class="ptab-pane" id="ptab-spread" style="display:none"><div id="pa-spread"></div></div>
+    <div class="ptab-pane" id="ptab-risk" style="display:none"><div id="pa-risk"></div></div>
     <!-- Tab 1: 품목 현황 -->
-    <div id="prod-tab-overview">
+    <div class="ptab-pane" id="ptab-list" style="display:none">
     <!-- 요약 카드 -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
       <div class="kpi-card"><div class="kpi-label">품목 수</div><div class="kpi-value" id="prod-sum-items" style="font-size:26px">0</div><div class="kpi-sub">종</div></div>
       <div class="kpi-card"><div class="kpi-label" id="prod-sum-qty-label">총 출고수량</div><div class="kpi-value" id="prod-sum-qty" style="font-size:26px;color:var(--green-dark)">0</div><div class="kpi-sub">개</div></div>
       <div class="kpi-card"><div class="kpi-label">총 공급가</div><div class="kpi-value" id="prod-sum-sales" style="font-size:26px;color:var(--blue)">0</div><div class="kpi-sub">원</div></div>
       <div class="kpi-card"><div class="kpi-label">평균 단가</div><div class="kpi-value" id="prod-sum-avg" style="font-size:26px;color:var(--amber)">0</div><div class="kpi-sub">원</div></div>
-    </div>
-    <div class="chart-card product-flow-card">
-      <div class="chart-card-head product-flow-head">
-        <div>
-          <div class="chart-card-title">월별 상품별 판매 흐름</div>
-          <div class="chart-card-sub" id="prod-flow-sub">선택 기간 기준</div>
-        </div>
-        <button type="button" class="btn-sm btn-ghost" onclick="downloadProdMonthlyFlowExcel()">↓ 엑셀</button>
-      </div>
-      <div class="product-flow-controls">
-        <label>기간
-          <select id="prod-flow-range" class="form-select" onchange="renderProdMonthlyFlow()">
-            <option value="all" selected>전체 데이터</option>
-            <option value="filter">현재 기간 필터</option>
-          </select>
-        </label>
-        <label>지표
-          <select id="prod-flow-metric" class="form-select" onchange="renderProdMonthlyFlow()">
-            <option value="sales">공급가</option>
-            <option value="qty">수량</option>
-          </select>
-        </label>
-        <label>그래프
-          <select id="prod-flow-top" class="form-select" onchange="renderProdMonthlyFlow()">
-            <option value="5">상위 5</option>
-            <option value="10" selected>상위 10</option>
-            <option value="15">상위 15</option>
-          </select>
-        </label>
-        <label>정렬
-          <select id="prod-flow-sort" class="form-select" onchange="renderProdMonthlyFlow()">
-            <option value="total-desc">합계 높은순</option>
-            <option value="total-asc">합계 낮은순</option>
-            <option value="latest-desc">이번달 높은순</option>
-            <option value="growth-desc">증감률 높은순</option>
-            <option value="growth-asc">증감률 낮은순</option>
-            <option value="name-asc">품명 가나다순</option>
-          </select>
-        </label>
-        <label>표시
-          <select id="prod-flow-limit" class="form-select" onchange="renderProdMonthlyFlow()">
-            <option value="30">상위 30</option>
-            <option value="50" selected>상위 50</option>
-            <option value="100">상위 100</option>
-            <option value="0">전체</option>
-          </select>
-        </label>
-      </div>
-      <div class="product-flow-summary" id="prod-flow-summary"></div>
-      <div class="product-flow-chart"><canvas id="chart-prod-monthly-flow"></canvas></div>
-      <div class="product-flow-table-wrap">
-        <table class="product-flow-table">
-          <thead id="prod-flow-thead"></thead>
-          <tbody id="prod-flow-tbody"></tbody>
-        </table>
-      </div>
-      <div id="prod-flow-empty" class="product-flow-empty" style="display:none">선택한 조건에 해당하는 월별 판매 데이터가 없습니다.</div>
     </div>
     <!-- 테이블 -->
     <div class="chart-card" style="padding:0;overflow:hidden">
@@ -1292,7 +1240,7 @@
     </div>
     </div>
     <!-- Tab 2: 재고 분석 -->
-    <div id="prod-tab-inventory" style="display:none">
+    <div class="ptab-pane" id="ptab-inventory" style="display:none">
     <!-- ── 품목 ABC / 파레토 분석 ── -->
     <div class="chart-card" style="margin-top:16px;margin-bottom:16px">
       <div class="chart-card-title">📊 품목 ABC / 파레토 분석</div>
@@ -1862,7 +1810,7 @@
 <script src="js/security.js?v=20260731-weekly-attachments"></script>
 <script src="js/storage.js?v=20260821-login-log-append"></script>
 <script src="js/state.js?v=20260812-sumhelper"></script>
-<script src="js/products-grades-erp.js?v=20260814-cleanup2"></script>
+<script src="js/products-grades-erp.js?v=20260822-prod"></script>
 <script src="js/core-auth-nav.js?v=20260822-rep"></script>
 <script src="js/journals-weekly-monthly.js?v=20260812-deadcode"></script>
 <script src="js/dashboard-records-users.js?v=20260818-login-count-label"></script>
@@ -1870,6 +1818,7 @@
 <script src="js/daily-entry.js?v=20260812-deadcode"></script>
 <script src="js/stats-notices.js?v=20260817-viz2"></script>
 <script src="js/bootstrap-datepicker.js?v=20260814-features"></script>
+<script src="js/product-analytics.js?v=20260822-prod"></script>
 <script src="js/rep-insights.js?v=20260822-rep"></script>
 <script src="js/deep-analytics.js?v=20260822-deep"></script>
 <script src="js/stats-ui.js?v=20260817-viz2"></script>
