@@ -95,73 +95,15 @@ function paAnalyze(rows) {
 }
 
 const PA_QUAD = {
-  star: { label: '스타', color: '#00A582', desc: '규모도 크고 성장도 빠름 — 재고와 공급을 우선 확보' },
-  cash: { label: '캐시카우', color: '#2B72C8', desc: '규모는 크지만 성장은 둔화 — 현 수준 유지, 가격 방어' },
-  question: { label: '물음표', color: '#E8900A', desc: '작지만 빠르게 크는 중 — 밀어줄지 판단 필요' },
-  dog: { label: '정체', color: '#8A9A94', desc: '작고 성장도 없음 — 단종·재고 축소 검토' },
+  star: { label: '밀어야 할 품목', short: '밀 것', color: '#00A582',
+          desc: '매출도 크고 계속 늘고 있음 — 재고와 공급을 먼저 확보' },
+  cash: { label: '지켜야 할 품목', short: '지킬 것', color: '#2B72C8',
+          desc: '매출은 큰데 성장이 멈춤 — 이탈·가격 방어가 필요' },
+  question: { label: '키워볼 품목', short: '키울 것', color: '#E8900A',
+          desc: '아직 작지만 빠르게 크는 중 — 밀어줄지 판단' },
+  dog: { label: '정리 검토 품목', short: '뺄 것', color: '#8A9A94',
+          desc: '작고 성장도 없음 — 단종·재고 축소 검토' },
 };
-
-// ────────────────────────────────
-// 포트폴리오 산점도 (성장률 × 매출)
-// ────────────────────────────────
-function paScatterSvg(a, topN) {
-  const items = a.items.slice(0, topN || 80).filter(i => i.sales > 0);
-  if (items.length < 3) return '';
-  const W = 720, H = 420, L = 58, R = 16, T = 18, B = 46;
-  const pw = W - L - R, ph = H - T - B;
-
-  // X: 성장률 (신규는 오른쪽 끝에 몰아 표시), Y: 매출 로그 스케일
-  const gs = items.filter(i => i.growth !== null).map(i => i.growth);
-  const gMin = Math.max(-100, Math.min.apply(null, gs.concat([-50])));
-  const gMax = Math.min(300, Math.max.apply(null, gs.concat([50])));
-  const span = (gMax - gMin) || 1;
-  const x = g => L + (Math.max(gMin, Math.min(gMax, g === null ? gMax : g)) - gMin) / span * pw;
-  const sMin = Math.max(1, Math.min.apply(null, items.map(i => i.sales)));
-  const sMax = Math.max.apply(null, items.map(i => i.sales));
-  const ly = v => Math.log10(Math.max(1, v));
-  const y = v => T + ph - (ly(v) - ly(sMin)) / ((ly(sMax) - ly(sMin)) || 1) * ph;
-  const rad = i => 3.5 + Math.sqrt(Math.max(1, i.clientCount)) * 1.1;
-
-  const mx = x(a.medGrowth), my = y(a.medSales);
-  let out = '';
-  // 4분면 배경
-  out += '<rect x="' + mx.toFixed(1) + '" y="' + T + '" width="' + (L + pw - mx).toFixed(1) + '" height="' + (my - T).toFixed(1) + '" fill="#00A582" opacity=".05"/>';
-  out += '<rect x="' + L + '" y="' + T + '" width="' + (mx - L).toFixed(1) + '" height="' + (my - T).toFixed(1) + '" fill="#2B72C8" opacity=".05"/>';
-  out += '<rect x="' + mx.toFixed(1) + '" y="' + my.toFixed(1) + '" width="' + (L + pw - mx).toFixed(1) + '" height="' + (T + ph - my).toFixed(1) + '" fill="#E8900A" opacity=".05"/>';
-  // 축·중앙선
-  out += '<line x1="' + L + '" y1="' + (T + ph) + '" x2="' + (L + pw) + '" y2="' + (T + ph) + '" stroke="currentColor" opacity=".28"/>';
-  out += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (T + ph) + '" stroke="currentColor" opacity=".28"/>';
-  out += '<line x1="' + mx.toFixed(1) + '" y1="' + T + '" x2="' + mx.toFixed(1) + '" y2="' + (T + ph) + '" stroke="currentColor" stroke-dasharray="4 4" opacity=".35"/>';
-  out += '<line x1="' + L + '" y1="' + my.toFixed(1) + '" x2="' + (L + pw) + '" y2="' + my.toFixed(1) + '" stroke="currentColor" stroke-dasharray="4 4" opacity=".35"/>';
-  // 사분면 라벨
-  const qlab = (tx, ty, t, c, anchor) => '<text x="' + tx + '" y="' + ty + '" font-size="11.5" font-weight="700" fill="' + c + '" opacity=".8" text-anchor="' + anchor + '">' + t + '</text>';
-  out += qlab(L + pw - 6, T + 15, '스타', '#00A582', 'end');
-  out += qlab(L + 6, T + 15, '캐시카우', '#2B72C8', 'start');
-  out += qlab(L + pw - 6, T + ph - 6, '물음표', '#E8900A', 'end');
-  out += qlab(L + 6, T + ph - 6, '정체', '#8A9A94', 'start');
-  // 축 눈금
-  [gMin, a.medGrowth, gMax].forEach(g => {
-    out += '<text x="' + x(g).toFixed(1) + '" y="' + (T + ph + 17) + '" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6" font-family="ui-monospace,monospace">'
-      + (g >= 0 ? '+' : '') + Math.round(g) + '%</text>';
-  });
-  out += '<text x="' + (L + pw / 2) + '" y="' + (T + ph + 36) + '" font-size="10.5" text-anchor="middle" fill="currentColor" opacity=".6">최근 대비 성장률 →</text>';
-  [sMin, a.medSales, sMax].forEach(v => {
-    out += '<text x="' + (L - 7) + '" y="' + (y(v) + 3.5).toFixed(1) + '" font-size="10" text-anchor="end" fill="currentColor" opacity=".6" font-family="ui-monospace,monospace">' + moneyShort(v) + '</text>';
-  });
-  // 점
-  items.forEach(i => {
-    const c = PA_QUAD[i.quadrant].color;
-    const gtxt = i.growth === null ? '신규' : (i.growth >= 0 ? '+' : '') + Math.round(i.growth) + '%';
-    out += '<g><title>' + escHtml(i.name + '\n' + moneyShort(i.sales) + '원 · 성장 ' + gtxt
-      + ' · 거래처 ' + i.clientCount + '곳(침투 ' + i.penetration.toFixed(0) + '%)') + '</title>'
-      + '<circle cx="' + x(i.growth).toFixed(1) + '" cy="' + y(i.sales).toFixed(1) + '" r="' + rad(i).toFixed(1)
-      + '" fill="' + c + '" fill-opacity=".55" stroke="' + c + '" stroke-width="1.2"/></g>';
-  });
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" width="100%"'
-    + ' style="min-width:620px;height:auto;display:block"'
-    + ' aria-label="품목 포트폴리오 산점도. 가로축 성장률, 세로축 매출 규모(로그), 원 크기는 거래처 수.">'
-    + out + '</svg>';
-}
 
 // ────────────────────────────────
 // 렌더
@@ -184,28 +126,67 @@ function renderProductAnalytics() {
       + (a.recent[0] || '-') + '~' + (a.recent[a.recent.length - 1] || '-') + '</b></div>'
     : '';
 
-  // ── 포트폴리오 ──
+  // ── 포트폴리오: 이름이 항상 보이는 목록 중심 ──
   const counts = { star: 0, cash: 0, question: 0, dog: 0 };
   const sums = { star: 0, cash: 0, question: 0, dog: 0 };
   a.items.forEach(i => { counts[i.quadrant]++; sums[i.quadrant] += i.sales; });
-  const quadCards = Object.keys(PA_QUAD).map(k => {
-    const list = a.items.filter(i => i.quadrant === k).slice(0, 4);
+
+  // 증감액 기준 — "무엇이 늘고 무엇이 줄었나"가 이 페이지의 핵심 질문
+  const moved = a.items.filter(i => i.growth !== null && (i.rec > 0 || i.pri > 0))
+    .map(i => Object.assign({}, i, { diff: i.rec - i.pri }));
+  const ups = moved.filter(i => i.diff > 0).sort((x, y) => y.diff - x.diff).slice(0, 7);
+  const downs = moved.filter(i => i.diff < 0).sort((x, y) => x.diff - y.diff).slice(0, 7);
+  const maxDiff = Math.max.apply(null, [1].concat(ups.map(i => i.diff)).concat(downs.map(i => -i.diff)));
+
+  const moveRow = (i, dir) => {
+    const w = Math.max(2, Math.abs(i.diff) / maxDiff * 100);
+    const pct = i.pri > 0 ? ((i.rec - i.pri) / i.pri * 100) : null;
+    return '<div class="pa-move ' + dir + '">'
+      + '<div class="pa-move-n" title="' + escHtml(i.name) + '">' + escHtml(i.name) + '</div>'
+      + '<div class="pa-move-t"><i style="width:' + w.toFixed(0) + '%"></i></div>'
+      + '<div class="pa-move-v">' + (i.diff >= 0 ? '+' : '−') + moneyShort(Math.abs(i.diff))
+      + '<span>' + (pct === null ? '신규' : (pct >= 0 ? '+' : '') + Math.round(pct) + '%') + '</span></div>'
+      + '</div>';
+  };
+
+  const headline = (ups.length || downs.length)
+    ? '<div class="pa-lead">'
+      + (ups[0] ? '<b class="up">' + escHtml(ups[0].name) + '</b>가 <b class="up">+' + moneyShort(ups[0].diff) + '</b>으로 가장 많이 늘었고, ' : '')
+      + (downs[0] ? '<b class="down">' + escHtml(downs[0].name) + '</b>가 <b class="down">−' + moneyShort(-downs[0].diff) + '</b>으로 가장 많이 줄었습니다.' : '')
+      + '</div>'
+    : '';
+
+  const quadCards = ['star', 'cash', 'question', 'dog'].map(k => {
+    const list = a.items.filter(i => i.quadrant === k).slice(0, 5);
     return '<div class="pa-quad" style="border-left-color:' + PA_QUAD[k].color + '">'
       + '<div class="pa-quad-h"><b style="color:' + PA_QUAD[k].color + '">' + PA_QUAD[k].label + '</b>'
-      + '<span>' + counts[k] + '종 · ' + (a.total ? (sums[k] / a.total * 100).toFixed(0) : 0) + '%</span></div>'
+      + '<span>' + counts[k] + '종 · 매출 ' + (a.total ? (sums[k] / a.total * 100).toFixed(0) : 0) + '%</span></div>'
       + '<div class="pa-quad-d">' + PA_QUAD[k].desc + '</div>'
-      + '<div class="pa-quad-l">' + list.map(i =>
-          '<div class="da-li"><span>' + escHtml(i.name) + '</span><b>' + moneyShort(i.sales) + '</b></div>').join('')
-        + (counts[k] > 4 ? '<div class="da-more">외 ' + (counts[k] - 4) + '종</div>' : '') + '</div></div>';
+      + '<div class="pa-quad-l">' + list.map(i => {
+          const pct = i.growth === null ? null : Math.round(i.growth);
+          const tag = pct === null ? '<em class="up">신규</em>'
+            : '<em class="' + (pct >= 0 ? 'up' : 'down') + '">' + (pct >= 0 ? '+' : '') + pct + '%</em>';
+          return '<div class="pa-item"><span title="' + escHtml(i.name) + '">' + escHtml(i.name) + '</span>'
+            + '<b>' + moneyShort(i.sales) + '</b>' + tag + '</div>';
+        }).join('')
+        + (counts[k] > 5 ? '<div class="da-more">외 ' + (counts[k] - 5) + '종</div>' : '') + '</div></div>';
   }).join('');
 
   put('pa-portfolio',
-    partialNote
+    partialNote + headline
     + '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="chart-card-title">품목 포트폴리오</div>'
-    + '<div class="chart-card-sub">가로 = 성장률 · 세로 = 매출 규모(로그) · 원 크기 = 거래처 수 · 점선은 중앙값</div>'
-    + '<div class="pa-svgwrap">' + paScatterSvg(a, 80) + '</div></div>'
-    + '<div class="pa-quads">' + quadCards + '</div>');
+    + '<div class="chart-card-title">가장 많이 늘어난 품목 · 줄어든 품목</div>'
+    + '<div class="chart-card-sub">막대 길이 = 증감 금액 (직전 동일 기간 대비)</div>'
+    + '<div class="pa-moves">'
+    + '<div><div class="pa-move-h up">늘어난 품목</div>'
+      + (ups.length ? ups.map(i => moveRow(i, 'up')).join('') : '<div class="da-more">해당 품목 없음</div>') + '</div>'
+    + '<div><div class="pa-move-h down">줄어든 품목</div>'
+      + (downs.length ? downs.map(i => moveRow(i, 'down')).join('') : '<div class="da-more">해당 품목 없음</div>') + '</div>'
+    + '</div></div>'
+    + '<div class="chart-card" style="margin-bottom:16px">'
+    + '<div class="chart-card-title">무엇을 밀고 무엇을 뺄까</div>'
+    + '<div class="chart-card-sub">매출 규모와 성장세를 함께 보고 네 갈래로 나눴습니다 (기준은 전체 품목의 중앙값)</div>'
+    + '<div class="pa-quads">' + quadCards + '</div></div>');
 
   // ── 확산도 ──
   const top = a.items.slice(0, 40);
