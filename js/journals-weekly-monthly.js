@@ -60,6 +60,50 @@ function getWeekNum(d) {
   return Math.round(diff) + 1;
 }
 
+function getWeeksInReportYear(year) {
+  const jan1 = new Date(year, 0, 1);
+  const firstThursday = getWeekStart(jan1);
+  const nextJan1 = new Date(year + 1, 0, 1);
+  const nextFirstThursday = getWeekStart(nextJan1);
+  return Math.round((nextFirstThursday - firstThursday) / (7 * 86400000));
+}
+
+function getWeekStartFromNumber(year, week) {
+  const jan1 = new Date(year, 0, 1);
+  const firstThursday = getWeekStart(jan1);
+  const start = new Date(firstThursday);
+  start.setDate(firstThursday.getDate() + (week - 1) * 7);
+  start.setHours(0,0,0,0);
+  return start;
+}
+
+function getReportLabelMonth(start) {
+  const monthWeekdays = {};
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    const dow = day.getDay();
+    if (dow === 0 || dow === 6) continue;
+    const key = `${day.getFullYear()}-${day.getMonth()}`;
+    monthWeekdays[key] = (monthWeekdays[key] || 0) + 1;
+  }
+  const entries = Object.entries(monthWeekdays).sort((a, b) => b[1] - a[1]);
+  const labelKey = entries.find(([, count]) => count >= 3)?.[0] || entries[0]?.[0] || `${start.getFullYear()}-${start.getMonth()}`;
+  const [labelYear, labelMonthIdx] = labelKey.split('-').map(Number);
+  return { year: labelYear, monthIdx: labelMonthIdx };
+}
+
+function getReportWeekOfMonth(start, labelYear, labelMonthIdx) {
+  const firstMonthDay = new Date(labelYear, labelMonthIdx, 1);
+  let firstLabelWeekStart = getWeekStart(firstMonthDay);
+  const firstLabelMonth = getReportLabelMonth(firstLabelWeekStart);
+  if (firstLabelMonth.year !== labelYear || firstLabelMonth.monthIdx !== labelMonthIdx) {
+    firstLabelWeekStart = new Date(firstLabelWeekStart);
+    firstLabelWeekStart.setDate(firstLabelWeekStart.getDate() + 7);
+  }
+  return Math.floor((start - firstLabelWeekStart) / (7 * 86400000)) + 1;
+}
+
 function getWeekRange(year, week) {
   // 해당 연도 1주차 시작(목요일) 계산
   const jan1 = new Date(year, 0, 1);
@@ -101,6 +145,32 @@ function wkReportTitle(report, range) {
   return !savedTitle || /^\d{4}년 \d{1,2}월 \d+주차 \([^)]+\) 주간업무보고$/.test(savedTitle)
     ? autoTitle
     : savedTitle;
+}
+
+function getWeekRange(year, week) {
+  const start = getWeekStartFromNumber(year, week);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  const labelMonth = getReportLabelMonth(start);
+  const labelYear = labelMonth.year;
+  const labelMonthIdx = labelMonth.monthIdx;
+  const weekOfMonth = getReportWeekOfMonth(start, labelYear, labelMonthIdx);
+  const m = labelMonthIdx + 1;
+  return {
+    start, end,
+    label: `${labelYear}\ub144 ${m}\uc6d4 ${weekOfMonth}\uc8fc\ucc28`,
+    rangeLabel: `${fmt(start)}~${fmt(end)}`,
+    fullLabel: `${labelYear}\ub144 ${m}\uc6d4 ${weekOfMonth}\uc8fc\ucc28 (${fmt(start)}~${fmt(end)})`
+  };
+}
+
+function wkReportTitle(report, range) {
+  const reportSuffix = '\uc8fc\uac04\uc5c5\ubb34\ubcf4\uace0';
+  const autoTitle = `${range.fullLabel} ${reportSuffix}`;
+  const savedTitle = String(report?.title || '').trim();
+  const normalAutoPattern = /^\d{4}\ub144 \d{1,2}\uc6d4 \d+\uc8fc\ucc28 \([^)]+\) \uc8fc\uac04\uc5c5\ubb34\ubcf4\uace0$/;
+  return !savedTitle || normalAutoPattern.test(savedTitle) ? autoTitle : savedTitle;
 }
 
 function wkReportStorageKey(userId) {
@@ -366,13 +436,13 @@ function wkApplyReadOnly() {
 
 function wkFormPrev() {
   _wkWeekNum--;
-  if (_wkWeekNum < 1) { _wkYear--; _wkWeekNum = 52; }
+  if (_wkWeekNum < 1) { _wkYear--; _wkWeekNum = getWeeksInReportYear(_wkYear); }
   wkUpdateFormPeriod(true);
 }
 
 function wkFormNext() {
   _wkWeekNum++;
-  if (_wkWeekNum > 52) { _wkYear++; _wkWeekNum = 1; }
+  if (_wkWeekNum > getWeeksInReportYear(_wkYear)) { _wkYear++; _wkWeekNum = 1; }
   wkUpdateFormPeriod(true);
 }
 
@@ -381,10 +451,16 @@ function wkUpdateFormPeriod(autoTitle) {
   const periodEl = document.getElementById('wk-form-period');
   const subtitleEl = document.getElementById('wk-form-subtitle');
   if (periodEl) periodEl.textContent = range.fullLabel;
+  if (subtitleEl) subtitleEl.textContent = range.rangeLabel + ' \uc8fc\uac04 \uc5c5\ubb34 \uc694\uc57d';
   if (subtitleEl) subtitleEl.textContent = range.rangeLabel + ' 주간 업무 요약';
   if (autoTitle) {
     const titleEl = document.getElementById('wk-title');
     if (titleEl) titleEl.value = range.fullLabel + ' 주간업무보고';
+  }
+  if (subtitleEl) subtitleEl.textContent = range.rangeLabel + ' \uc8fc\uac04 \uc5c5\ubb34 \uc694\uc57d';
+  if (autoTitle) {
+    const titleEl = document.getElementById('wk-title');
+    if (titleEl) titleEl.value = wkReportTitle(null, range);
   }
   wkAutoCount();
 }
