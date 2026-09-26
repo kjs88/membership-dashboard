@@ -1,0 +1,20 @@
+name: 원가분석 조회 구조 확인
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: pip install playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: python scripts/amarans_cost_inspect.py
+        env:
+          AMARANS_USERNAME: ${{ secrets.AMARANS_USERNAME }}
+          AMARANS_PASSWORD: ${{ secrets.AMARANS_PASSWORD }}
