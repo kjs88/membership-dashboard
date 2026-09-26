@@ -47,6 +47,7 @@ TARGET_YEAR = int(os.environ.get("AMARANS_YEAR", str(now_kst().year)))
 CUSTOMER_GROUPS = ["V10002", "V10003", "V10004", "V10005", "V10006"]
 ITEM_GROUPS = ["TM00", "TP00"]
 COST_ITEM_GROUPS = ["TM00"]
+COST_CUSTOMER_GROUPS = ["V10002", "V10003", "V10004", "V10005", "V10006", "V10007"]
 
 # 한 번에 받을 최대 행수. 이 값에 도달하면 자동 경고. 부족하면 더 늘려라.
 PAGE_SIZE = int(os.environ.get("AMARANS_PAGE_SIZE", "99999"))
@@ -299,6 +300,23 @@ COST_ANALYSIS_JOB = {
     "url_hash": "#/BL/BLG0130/BLG0130",
 }
 
+COST_ANALYSIS_VIEWS = [
+    {"key": "closing-customer", "tab": "마감기준", "label": "고객", "topTab": "0", "subTab": "0", "codeFields": ["trCd", "hKey"], "nameFields": ["trNm", "hKeyNm"]},
+    {"key": "closing-item", "tab": "마감기준", "label": "품목", "topTab": "0", "subTab": "1", "codeFields": ["itemCd", "hKey"], "nameFields": ["itemNm", "hKeyNm"]},
+    {"key": "closing-employee", "tab": "마감기준", "label": "담당자", "topTab": "0", "subTab": "2", "codeFields": ["empCd", "hKey"], "nameFields": ["empNm", "hKeyNm"]},
+    {"key": "closing-management", "tab": "마감기준", "label": "관리구분", "topTab": "0", "subTab": "3", "codeFields": ["mgmtCd", "hKey"], "nameFields": ["mgmtNm", "hKeyNm"]},
+    {"key": "closing-project", "tab": "마감기준", "label": "프로젝트", "topTab": "0", "subTab": "4", "codeFields": ["pjtCd", "hKey"], "nameFields": ["pjtNm", "hKeyNm"]},
+    {"key": "closing-dept", "tab": "마감기준", "label": "부서", "topTab": "0", "subTab": "5", "codeFields": ["deptCd", "hKey"], "nameFields": ["deptNm", "hKeyNm"]},
+    {"key": "mgmt-customer-class", "tab": "관리분류별", "label": "고객분류", "topTab": "1", "subTab": "6", "codeFields": ["trgrpCd", "hKey"], "nameFields": ["trgrpNm", "hKeyNm"]},
+    {"key": "mgmt-area", "tab": "관리분류별", "label": "지역", "topTab": "1", "subTab": "7", "codeFields": ["areaCd", "hKey"], "nameFields": ["areaNm", "hKeyNm"]},
+    {"key": "mgmt-area-group", "tab": "관리분류별", "label": "지역그룹", "topTab": "1", "subTab": "8", "codeFields": ["areagrpCd", "hKey"], "nameFields": ["areagrpNm", "hKeyNm"]},
+    {"key": "mgmt-manager-group", "tab": "관리분류별", "label": "담당그룹", "topTab": "1", "subTab": "9", "codeFields": ["plnsCd", "deptCd", "hKey"], "nameFields": ["plnsNm", "deptNm", "hKeyNm"]},
+    {"key": "item-group", "tab": "품목분류별", "label": "품목군", "topTab": "2", "subTab": "10", "codeFields": ["itemgrpCd", "hKey"], "nameFields": ["itemgrpNm", "hKeyNm"]},
+    {"key": "item-large", "tab": "품목분류별", "label": "대분류", "topTab": "2", "subTab": "11", "codeFields": ["lCd", "hKey"], "nameFields": ["lNm", "hKeyNm"]},
+    {"key": "item-middle", "tab": "품목분류별", "label": "중분류", "topTab": "2", "subTab": "12", "codeFields": ["mCd", "hKey"], "nameFields": ["mNm", "hKeyNm"]},
+    {"key": "item-small", "tab": "품목분류별", "label": "소분류", "topTab": "2", "subTab": "13", "codeFields": ["sCd", "hKey"], "nameFields": ["sNm", "hKeyNm"]},
+]
+
 
 # ============================================================
 # 누적 데이터 / 대시보드 변환 / merge
@@ -317,15 +335,16 @@ def _cost_month_range(year, month):
     return f"{year}{month:02d}01", f"{year}{month:02d}{last_day:02d}"
 
 
-def build_cost_analysis_payload(year, month):
+def build_cost_analysis_payload(year, month, view=None):
     date_from, date_to = _cost_month_range(year, month)
+    view = view or COST_ANALYSIS_VIEWS[6]
     return {
         "option0": "1",
         "option0Ym": "",
         "option1": "0",
         "option1Ym": "",
-        "topTab": "1",
-        "subTab": "6",
+        "topTab": view["topTab"],
+        "subTab": view["subTab"],
         "gridFg": "header",
         "checkedKey": None,
         "hKey": "",
@@ -342,7 +361,7 @@ def build_cost_analysis_payload(year, month):
         "itemCdExcludes": [],
         "itemgrpCds": COST_ITEM_GROUPS,
         "soFgs": [],
-        "tradeGrps": [],
+        "tradeGrps": COST_CUSTOMER_GROUPS,
         "plnFg": "0",
         "plnCds": [],
         "plnsCds": [],
@@ -389,28 +408,24 @@ def _safe_int(v):
     return int(round(_safe_num(v)))
 
 
-def normalize_cost_analysis_rows(rows):
+def _first_value(row, fields):
+    for field in fields:
+        value = _safe_str(row.get(field))
+        if value:
+            return value
+    return ""
+
+
+def normalize_cost_analysis_rows(rows, view=None):
+    view = view or COST_ANALYSIS_VIEWS[6]
     normalized = []
     seen = set()
     for row in rows or []:
-        name = _safe_str(
-            row.get("hKeyNm")
-            or row.get("trgrpNm")
-            or row.get("mgmtNm")
-            or row.get("trNm")
-        )
-        if "도매" not in name:
-            continue
+        name = _first_value(row, view["nameFields"] + ["hKeyNm", "trgrpNm", "trNm", "itemNm"])
         item_group = _safe_str(row.get("itemgrpNm"))
         if item_group and item_group != "상품":
             continue
-        code = _safe_str(
-            row.get("hKey")
-            or row.get("trgrpCd")
-            or row.get("mgmtCd")
-            or row.get("trCd")
-            or name
-        )
+        code = _first_value(row, view["codeFields"] + ["hKey", "trgrpCd", "trCd", "itemCd"]) or name
         if not code or code in seen:
             continue
         seen.add(code)
@@ -1175,8 +1190,9 @@ def collect_cost_analysis(page, year):
             f"erp/costAnalysis/{year}/filters",
             {
                 "basis": "마감기준",
-                "view": "관리분류별",
+                "views": COST_ANALYSIS_VIEWS,
                 "itemGroups": COST_ITEM_GROUPS,
+                "customerGroups": COST_CUSTOMER_GROUPS,
                 "customerClassContains": "도매",
             },
             method="PUT",
@@ -1184,38 +1200,62 @@ def collect_cost_analysis(page, year):
 
     for month in range(1, last_month + 1):
         month_key = f"{year}-{month:02d}"
-        payload = build_cost_analysis_payload(year, month)
+        views_payload = {}
+        default_rows = []
+        date_from, date_to = _cost_month_range(year, month)
+        synced_at = now_kst_iso()
         print(f"\n  [{month_key}] 조회")
-        body, info = run_job(
-            page,
-            COST_ANALYSIS_JOB,
-            replace_payload=True,
-            override_payload=payload,
-        )
-        if body is None:
-            failed.append({"month": month_key, "error": info.get("error") or info.get("status")})
-            print(f"  ✗ {month_key} 실패: {failed[-1]['error']}")
-            continue
-        try:
-            data = json.loads(body.decode("utf-8"))
-        except Exception as exc:
-            failed.append({"month": month_key, "error": f"json parse failed: {exc}"})
-            print(f"  ✗ {month_key} JSON 파싱 실패: {exc}")
-            continue
-        raw_rows, rows_path = find_rows(data)
-        rows = normalize_cost_analysis_rows(raw_rows or [])
-        print(f"  rows={rows_path or '-'}")
+        for view in COST_ANALYSIS_VIEWS:
+            payload = build_cost_analysis_payload(year, month, view)
+            print(f"    - {view['tab']} / {view['label']}")
+            body, info = run_job(
+                page,
+                COST_ANALYSIS_JOB,
+                replace_payload=True,
+                override_payload=payload,
+            )
+            if body is None:
+                failed.append({"month": month_key, "view": view["key"], "error": info.get("error") or info.get("status")})
+                print(f"      ✗ 실패: {failed[-1]['error']}")
+                continue
+            try:
+                data = json.loads(body.decode("utf-8"))
+            except Exception as exc:
+                failed.append({"month": month_key, "view": view["key"], "error": f"json parse failed: {exc}"})
+                print(f"      ✗ JSON 파싱 실패: {exc}")
+                continue
+            raw_rows, rows_path = find_rows(data)
+            rows = normalize_cost_analysis_rows(raw_rows or [], view)
+            totals = {
+                "sales": sum(row["sales"] for row in rows),
+                "cost": sum(row["cost"] for row in rows),
+                "profit": sum(row["profit"] for row in rows),
+            }
+            totals["marginRate"] = round((totals["profit"] / totals["sales"]) * 100, 3) if totals["sales"] else 0
+            views_payload[view["key"]] = {
+                "key": view["key"],
+                "tab": view["tab"],
+                "label": view["label"],
+                "rowCount": len(rows),
+                "rows": rows,
+                "totals": totals,
+            }
+            if view["key"] == "mgmt-customer-class":
+                default_rows = rows
+            print(f"      rows={rows_path or '-'} | {len(rows)}행 | 매출 {totals['sales']:,} | 매익 {totals['profit']:,}")
+        rows = default_rows
         payload_remote = {
-            "syncedAt": now_kst_iso(),
+            "syncedAt": synced_at,
             "basis": "마감기준",
-            "view": "관리분류별",
             "month": month_key,
-            "dateFrom": payload["clsDtFrom"],
-            "dateTo": payload["clsDtTo"],
+            "dateFrom": date_from,
+            "dateTo": date_to,
             "itemGroups": COST_ITEM_GROUPS,
+            "customerGroups": COST_CUSTOMER_GROUPS,
             "customerClassContains": "도매",
             "rowCount": len(rows),
             "rows": rows,
+            "views": views_payload,
             "totals": {
                 "sales": sum(row["sales"] for row in rows),
                 "cost": sum(row["cost"] for row in rows),
@@ -1223,9 +1263,9 @@ def collect_cost_analysis(page, year):
             },
         }
         totals = payload_remote["totals"]
-        totals["marginRate"] = round((totals["profit"] / totals["sales"]) * 100, 2) if totals["sales"] else 0
+        totals["marginRate"] = round((totals["profit"] / totals["sales"]) * 100, 3) if totals["sales"] else 0
         print(
-            f"  ✓ {len(rows)}행 | 매출 {totals['sales']:,} | 원가 {totals['cost']:,} | 매익 {totals['profit']:,}"
+            f"  ✓ {len(views_payload)}/{len(COST_ANALYSIS_VIEWS)}개 기준 저장 | 기본 {len(rows)}행 | 매출 {totals['sales']:,} | 매익 {totals['profit']:,}"
         )
         if not SKIP_FIREBASE_UPLOAD:
             ok = _firebase_write(
