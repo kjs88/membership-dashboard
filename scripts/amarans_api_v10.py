@@ -18,6 +18,7 @@ import sys
 import json
 import time
 import getpass
+import calendar
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -290,6 +291,13 @@ JOBS = [
     },
 ]
 
+COST_ANALYSIS_JOB = {
+    "slug": "cost-analysis",
+    "menu_name": "원가분석현황(마감기준)",
+    "endpoint": "/logis/BLG0130/0lo00001",
+    "url_hash": "#/BL/BLG0130/BLG0130",
+}
+
 
 # ============================================================
 # 누적 데이터 / 대시보드 변환 / merge
@@ -301,6 +309,56 @@ def compute_date_range(days):
         return (f"{today.year}0101", f"{today.year}1231")
     start = today - timedelta(days=days)
     return (start.strftime("%Y%m%d"), today.strftime("%Y%m%d"))
+
+
+def _cost_month_range(year, month):
+    last_day = calendar.monthrange(year, month)[1]
+    return f"{year}{month:02d}01", f"{year}{month:02d}{last_day:02d}"
+
+
+def build_cost_analysis_payload(year, month):
+    date_from, date_to = _cost_month_range(year, month)
+    return {
+        "option0": "1",
+        "option0Ym": "",
+        "option1": "0",
+        "option1Ym": "",
+        "topTab": "1",
+        "subTab": "6",
+        "gridFg": "header",
+        "checkedKey": None,
+        "hKey": "",
+        "divCds": [],
+        "deptCds": [],
+        "empCds": [],
+        "clsDtFrom": date_from,
+        "clsDtTo": date_to,
+        "rtFg": "0",
+        "trCds": [],
+        "trCdExcludes": [],
+        "shipCds": [],
+        "itemCds": [],
+        "itemCdExcludes": [],
+        "itemgrpCds": ITEM_GROUPS,
+        "soFgs": [],
+        "tradeGrps": [],
+        "plnFg": "0",
+        "plnCds": [],
+        "plnsCds": [],
+        "mgmtCds": [],
+        "pjtCds": [],
+        "pjtgrpCds": [],
+        "areaCds": [],
+        "areaGrps": [],
+        "lCds": [],
+        "mCds": [],
+        "sCds": [],
+        "acctFgs": [],
+        "odrFgs": [],
+        "setitemFgs": [],
+        "lotFgs": [],
+        "deptFg": "0",
+    }
 
 
 def _safe_num(v):
@@ -324,6 +382,55 @@ def _safe_str(v):
     if s.lower() in ("nan", "none", "nat"):
         return ""
     return s
+
+
+def _safe_int(v):
+    return int(round(_safe_num(v)))
+
+
+def normalize_cost_analysis_rows(rows):
+    normalized = []
+    seen = set()
+    for row in rows or []:
+        name = _safe_str(
+            row.get("hKeyNm")
+            or row.get("trgrpNm")
+            or row.get("mgmtNm")
+            or row.get("trNm")
+        )
+        if "도매" not in name:
+            continue
+        item_group = _safe_str(row.get("itemgrpNm"))
+        if item_group and item_group != "상품":
+            continue
+        code = _safe_str(
+            row.get("hKey")
+            or row.get("trgrpCd")
+            or row.get("mgmtCd")
+            or row.get("trCd")
+            or name
+        )
+        if not code or code in seen:
+            continue
+        seen.add(code)
+        sales = _safe_int(row.get("clsgAm"))
+        cost = _safe_int(row.get("costAm"))
+        profit = _safe_int(row.get("benefitAm"))
+        if not cost and sales and profit:
+            cost = sales - profit
+        rate = round(_safe_num(row.get("benefitRt")), 2)
+        if not rate and sales:
+            rate = round((profit / sales) * 100, 2)
+        normalized.append({
+            "code": code,
+            "name": name,
+            "sales": sales,
+            "cost": cost,
+            "profit": profit,
+            "marginRate": rate,
+        })
+    normalized.sort(key=lambda item: item["sales"], reverse=True)
+    return normalized
 
 
 def merge_by_key(existing, new_rows, key_fields):
@@ -936,7 +1043,38 @@ def run_job(page, job, replace_payload=True, override_payload=None):
             except Exception:
                 pass
 
-    page.route(lambda url: job["endpoint"] in url, handle_route)
+    route_predicate = lambda url: job["endpoint"] in url
+    page.route(route_predicate, handle_route)
+
+    def click_visible_search_button():
+        clicked_js = page.evaluate(
+            """() => {
+                const candidates = [...document.querySelectorAll('button')].filter((button) => {
+                    const rect = button.getBoundingClientRect();
+                    const style = window.getComputedStyle(button);
+                    const cls = String(button.className || '');
+                    const isSearch =
+                        button.id === 'tutorial-conditionPanel-search' ||
+                        cls.includes('OBTConditionPanel_searchButton') ||
+                        button.innerText.trim() === '조회';
+                    return isSearch &&
+                        rect.width > 0 &&
+                        rect.height > 0 &&
+                        rect.top > 150 &&
+                        style.visibility !== 'hidden' &&
+                        style.display !== 'none';
+                });
+                const target = candidates[candidates.length - 1];
+                if (!target) return false;
+                for (const type of ['pointerdown', 'mousedown', 'mouseup', 'click']) {
+                    target.dispatchEvent(new MouseEvent(type, {bubbles: true, cancelable: true, view: window}));
+                }
+                return true;
+            }"""
+        )
+        if clicked_js:
+            page.wait_for_timeout(1000)
+        return clicked_js
 
     try:
         # 조회 버튼이 간헐적으로 안 떠서 페이지 새로고침 + 재시도 (최대 3회)
@@ -957,17 +1095,22 @@ def run_job(page, job, replace_payload=True, override_payload=None):
                 print(f"[4/5] 조회 버튼 클릭 (페이지가 sign 만들어서 API 호출 → 우리가 가로채기)")
                 # 조회 버튼 후보 여러 개 시도
                 for locator in [
+                    page.locator("#tutorial-conditionPanel-search").last,
                     page.get_by_role("button", name="조회").first,
                     page.locator("button").filter(has_text="조회").first,
+                    page.locator(".OBTConditionPanel_searchButton__fpGKw").last,
+                    page.locator(".OBTButton_root__JCv3f").first,
                     page.locator(".OBTButton_root__1g4ov").first,
                 ]:
                     try:
-                        locator.wait_for(state="visible", timeout=8000)
+                        locator.wait_for(state="visible", timeout=2500)
                         locator.click()
                         clicked = True
                         break
                     except Exception:
                         continue
+                if not clicked:
+                    clicked = click_visible_search_button()
                 if clicked:
                     break
                 print(f"  ⚠ 조회 버튼 못 찾음 — 새로고침 후 재시도 ({attempt}/{max_attempts})")
@@ -993,7 +1136,7 @@ def run_job(page, job, replace_payload=True, override_payload=None):
             page.wait_for_timeout(500)
     finally:
         try:
-            page.unroute(lambda url: job["endpoint"] in url, handle_route)
+            page.unroute(route_predicate, handle_route)
         except Exception:
             pass
 
@@ -1013,6 +1156,89 @@ def run_job(page, job, replace_payload=True, override_payload=None):
         return None, captured
 
     return captured["body"], captured
+
+
+def collect_cost_analysis(page, year):
+    print(f"\n{'='*60}")
+    print(f"  {COST_ANALYSIS_JOB['menu_name']} 월별 수집")
+    print(f"{'='*60}")
+
+    current = now_kst()
+    last_month = 12 if year < current.year else current.month
+    uploaded = 0
+    failed = []
+
+    if not SKIP_FIREBASE_UPLOAD:
+        _firebase_write(f"erp/costAnalysis/{year}/schemaVersion", 1, method="PUT")
+        _firebase_write(
+            f"erp/costAnalysis/{year}/filters",
+            {
+                "basis": "마감기준",
+                "view": "관리분류별",
+                "itemGroups": ITEM_GROUPS,
+                "customerClassContains": "도매",
+            },
+            method="PUT",
+        )
+
+    for month in range(1, last_month + 1):
+        month_key = f"{year}-{month:02d}"
+        payload = build_cost_analysis_payload(year, month)
+        print(f"\n  [{month_key}] 조회")
+        body, info = run_job(
+            page,
+            COST_ANALYSIS_JOB,
+            replace_payload=True,
+            override_payload=payload,
+        )
+        if body is None:
+            failed.append({"month": month_key, "error": info.get("error") or info.get("status")})
+            print(f"  ✗ {month_key} 실패: {failed[-1]['error']}")
+            continue
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except Exception as exc:
+            failed.append({"month": month_key, "error": f"json parse failed: {exc}"})
+            print(f"  ✗ {month_key} JSON 파싱 실패: {exc}")
+            continue
+        raw_rows, rows_path = find_rows(data)
+        rows = normalize_cost_analysis_rows(raw_rows or [])
+        print(f"  rows={rows_path or '-'}")
+        payload_remote = {
+            "syncedAt": now_kst_iso(),
+            "basis": "마감기준",
+            "view": "관리분류별",
+            "month": month_key,
+            "dateFrom": payload["clsDtFrom"],
+            "dateTo": payload["clsDtTo"],
+            "itemGroups": ITEM_GROUPS,
+            "customerClassContains": "도매",
+            "rowCount": len(rows),
+            "rows": rows,
+            "totals": {
+                "sales": sum(row["sales"] for row in rows),
+                "cost": sum(row["cost"] for row in rows),
+                "profit": sum(row["profit"] for row in rows),
+            },
+        }
+        totals = payload_remote["totals"]
+        totals["marginRate"] = round((totals["profit"] / totals["sales"]) * 100, 2) if totals["sales"] else 0
+        print(
+            f"  ✓ {len(rows)}행 | 매출 {totals['sales']:,} | 원가 {totals['cost']:,} | 매익 {totals['profit']:,}"
+        )
+        if not SKIP_FIREBASE_UPLOAD:
+            ok = _firebase_write(
+                f"erp/costAnalysis/{year}/months/{month_key}",
+                payload_remote,
+                method="PUT",
+            )
+            if ok:
+                uploaded += 1
+
+    if failed:
+        print(f"  ⚠ 원가분석 실패 월: {failed}")
+    print(f"  원가분석 업로드 완료: {uploaded}/{last_month}개월")
+    return {"uploaded": uploaded, "failed": failed}
 
 
 # ============================================================
@@ -1116,7 +1342,7 @@ def process_job(page, job, days, save_xlsx=False):
     }
 
 
-def run(playwright: Playwright, days=60, save_xlsx=False):
+def run(playwright: Playwright, days=60, save_xlsx=False, cost_only=False):
     username = os.environ.get("AMARANS_USERNAME") or input("Amarans ID: ").strip()
     password = os.environ.get("AMARANS_PASSWORD") or getpass.getpass("Amarans password: ").strip()
     if not username or not password:
@@ -1126,7 +1352,7 @@ def run(playwright: Playwright, days=60, save_xlsx=False):
     headless = is_auto and os.environ.get("AMARANS_HEADLESS", "1") != "0"
 
     remote_payload = None
-    if days is not None and not SKIP_FIREBASE_UPLOAD:
+    if not cost_only and days is not None and not SKIP_FIREBASE_UPLOAD:
         remote_payload = fetch_remote_dashboard_payload()
         if not remote_payload_has_full_year_base(remote_payload):
             print("  Remote full-year base not found; switching this run to full-year bootstrap.")
@@ -1151,10 +1377,16 @@ def run(playwright: Playwright, days=60, save_xlsx=False):
         login(page, username, password)
         switch_company(page)
 
-        for job in JOBS:
-            r = process_job(page, job, days=days, save_xlsx=save_xlsx)
-            if r:
-                results[r["slug"]] = r
+        if not cost_only:
+            for job in JOBS:
+                r = process_job(page, job, days=days, save_xlsx=save_xlsx)
+                if r:
+                    results[r["slug"]] = r
+
+        try:
+            results["cost-analysis"] = collect_cost_analysis(page, TARGET_YEAR)
+        except Exception as exc:
+            print(f"  ⚠ 원가분석 수집 실패: {exc}")
 
         # 대시보드 erp-data.js 생성
         if "ship" in results or "order" in results:
@@ -1259,8 +1491,10 @@ if __name__ == "__main__":
     # --recent N : 최근 N일 (기본 60)
     # --auto : 환경변수 ID/PW + headless (작업 스케줄러용)
     # --with-xlsx : xlsx 양식 매핑도 같이 저장
+    # --cost-only : 원가분석현황(마감기준) Firebase 노드만 갱신
     days = 60
     save_xlsx = "--with-xlsx" in args
+    cost_only = "--cost-only" in args
     if "--full" in args:
         days = None
         print(f"  모드: 올해 전체 (--full)")
@@ -1274,6 +1508,8 @@ if __name__ == "__main__":
         print(f"  모드: 최근 {days}일 (--recent)")
     else:
         print(f"  모드: 기본 (최근 {days}일 증분)")
+    if cost_only:
+        print(f"  모드: 원가분석만 (--cost-only)")
 
     if "--auto" in args:
         print(f"  AUTO: headless + 환경변수 사용")
@@ -1289,4 +1525,4 @@ if __name__ == "__main__":
 
     print("=" * 60)
     with sync_playwright() as pw:
-        run(pw, days=days, save_xlsx=save_xlsx)
+        run(pw, days=days, save_xlsx=save_xlsx, cost_only=cost_only)
