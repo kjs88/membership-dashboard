@@ -3,7 +3,11 @@ const costAnalysis = (() => {
   const state = { month: '', years: new Map(), loading: false, error: '', request: 0, controller: null, chart: null };
   const money = value => Math.round(value).toLocaleString('ko-KR');
   const rate = (profit, sales) => sales === 0 ? null : profit / sales * 100;
-  const rateText = value => value === null ? '-' : `${value.toFixed(1)}%`;
+  const rateText = value => value === null ? '-' : `${value.toFixed(3)}%`;
+  const rateValue = (profit, sales) => {
+    const value = rate(profit, sales);
+    return value === null ? null : Number(value.toFixed(3));
+  };
   const currentMonth = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit' }).format(new Date());
   const total = rows => rows.reduce((sum, row) => ({ sales: sum.sales + row.sales, cost: sum.cost + row.cost, profit: sum.profit + row.profit }), { sales: 0, cost: 0, profit: 0 });
 
@@ -122,7 +126,7 @@ const costAnalysis = (() => {
   function exportExcel(data) {
     if (!data || !currentUser || !userCanOpenPage('cost')) return;
     const sum = total(data.rows);
-    const values = row => [row.name, row.sales, row.cost, row.profit, rate(row.profit, row.sales)];
+    const values = row => [row.name, row.sales, row.cost, row.profit, rateValue(row.profit, row.sales)];
     const sheet = XLSX.utils.aoa_to_sheet([['관리구분', '매출', '원가', '매익', '매익률(%)'], ...data.rows.map(values), values({ name: '합계', ...sum })]);
     sheet['!cols'] = [{ wch: 28 }, ...Array(4).fill({ wch: 19 })];
     const workbook = XLSX.utils.book_new();
