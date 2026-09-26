@@ -12,7 +12,17 @@ def main():
         page = browser.new_page()
         page.set_default_timeout(20000)
         login(page, os.environ["AMARANS_USERNAME"], os.environ["AMARANS_PASSWORD"])
-        switch_company(page)
+        try:
+            switch_company(page)
+        except Exception:
+            print("COMPANY_SWITCH_FAILED", page.url)
+            text = page.locator("body").inner_text()
+            for secret in [os.environ["AMARANS_USERNAME"], os.environ["AMARANS_PASSWORD"]]:
+                if secret:
+                    text = text.replace(secret, "[REDACTED]")
+            print("VISIBLE_LOGIN_STATE", text[:3000])
+            browser.close()
+            raise RuntimeError("Company switch unavailable; inspect visible login state.") from None
         for label in ["영업관리", "매출마감관리", "원가분석현황(마감기준)", "관리분류별", "관리구분별"]:
             locator = page.get_by_text(label, exact=True)
             visible = [item for item in locator.all() if item.is_visible()]
