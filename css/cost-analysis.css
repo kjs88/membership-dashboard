@@ -1,0 +1,43 @@
+#cost-analysis-root { min-width: 0; color: var(--text); }
+.cost-toolbar, .cost-controls, .cost-month-nav, .cost-table-heading { display: flex; align-items: center; gap: 12px; }
+.cost-toolbar, .cost-table-heading { justify-content: space-between; flex-wrap: wrap; }
+.cost-toolbar h2 { font-size: 18px; margin: 0 0 5px; }
+.cost-toolbar p, .cost-sync, .cost-table-heading span { font-size: 12px; color: var(--text2); }
+.cost-toolbar p { margin: 0; }
+.cost-controls { flex-wrap: wrap; gap: 8px; }
+.cost-month-nav { border: 1px solid var(--border); background: var(--surface); border-radius: 6px; gap: 4px; padding: 3px; height: 38px; }
+.cost-month-nav button { width: 30px; height: 30px; border: 0; background: transparent; color: var(--text); font-size: 21px; cursor: pointer; }
+.cost-month-nav input { width: 145px; height: 30px; border: 0; background: transparent; font: inherit; color: inherit; text-align: center; }
+.cost-controls button:disabled { opacity: .4; cursor: default; }
+.cost-sync { min-height: 20px; margin: 12px 0; }
+.cost-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--surface); border-block: 1px solid var(--border); }
+.cost-metric { padding: 20px; min-width: 0; }
+.cost-metric + .cost-metric { border-left: 1px solid var(--border); }
+.cost-metric > span { display: block; color: var(--text2); font-size: 12px; margin-bottom: 8px; }
+.cost-metric strong { display: block; font-size: 23px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cost-metric small { font-size: 11px; font-weight: 400; margin-left: 4px; }
+.cost-trend, .cost-detail { padding: 20px 0; }
+.cost-trend { border-bottom: 1px solid var(--border); }
+#cost-analysis-root h3 { font-size: 14px; margin: 0 0 12px; }
+.cost-chart { height: 250px; position: relative; min-width: 0; }
+.cost-detail table { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--surface); font-size: 12px; }
+.cost-detail th, .cost-detail td { padding: 12px 10px; text-align: right; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cost-detail tr > :first-child { text-align: left; width: 28%; }
+.cost-detail thead { color: var(--text2); }
+.cost-detail tfoot { font-weight: 700; background: #edf6f3; }
+.cost-detail tbody th { font-weight: 500; }
+.cost-profit { color: #00725b; font-weight: 700; }
+.cost-negative { color: #c53939; }
+#cost-analysis-root .cost-empty { text-align: center; padding: 40px 12px; color: var(--text2); font-size: 13px; }
+@media (max-width: 1000px) {
+  .cost-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cost-metric:nth-child(3) { border-left: 0; }
+  .cost-metric:nth-child(n+3) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 600px) {
+  .cost-metric { padding: 14px 10px; }
+  .cost-metric strong { font-size: 18px; }
+  .cost-detail th, .cost-detail td { padding: 10px 4px; font-size: 11px; }
+  .cost-detail tr > :first-child { width: 24%; }
+  .cost-chart { height: 220px; }
+}

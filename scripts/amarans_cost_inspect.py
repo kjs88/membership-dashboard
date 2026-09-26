@@ -17,10 +17,10 @@ def main():
         except Exception:
             print("COMPANY_SWITCH_FAILED", page.url)
             text = page.locator("body").inner_text()
-            for secret in [os.environ["AMARANS_USERNAME"], os.environ["AMARANS_PASSWORD"]]:
-                if secret:
-                    text = text.replace(secret, "[REDACTED]")
-            print("VISIBLE_LOGIN_STATE", text[:3000])
+            if "아이디/비밀번호가 일치하지 않습니다" in text:
+                print("LOGIN_REJECTED: stored Amarans credentials do not match. No retry.")
+            else:
+                print("LOGIN_OR_COMPANY_SELECTION_UNAVAILABLE")
             browser.close()
             raise RuntimeError("Company switch unavailable; inspect visible login state.") from None
         for label in ["영업관리", "매출마감관리", "원가분석현황(마감기준)", "관리분류별", "관리구분별"]:
@@ -38,7 +38,7 @@ def main():
         if "원가분석" not in page.locator("body").inner_text():
             print("REPORT_NOT_OPENED")
             browser.close()
-            return
+            raise RuntimeError("Cost report navigation must be verified.")
 
         def inspect(response):
             if "/logis/" not in response.url or response.request.method != "POST":
@@ -65,6 +65,9 @@ def main():
         if query.count():
             query.first.click()
             page.wait_for_timeout(10000)
+        else:
+            browser.close()
+            raise RuntimeError("Cost report query control was not found.")
         browser.close()
 
 
