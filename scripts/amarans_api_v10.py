@@ -46,6 +46,7 @@ TARGET_YEAR = int(os.environ.get("AMARANS_YEAR", str(now_kst().year)))
 #  ※ 소매(V10001 등)는 제외. 전체 그룹 수집 시 데이터가 너무 커서 ERP가 502 발생 → 코드로 필터.
 CUSTOMER_GROUPS = ["V10002", "V10003", "V10004", "V10005", "V10006"]
 ITEM_GROUPS = ["TM00", "TP00"]
+COST_ITEM_GROUPS = ["TM00"]
 
 # 한 번에 받을 최대 행수. 이 값에 도달하면 자동 경고. 부족하면 더 늘려라.
 PAGE_SIZE = int(os.environ.get("AMARANS_PAGE_SIZE", "99999"))
@@ -339,7 +340,7 @@ def build_cost_analysis_payload(year, month):
         "shipCds": [],
         "itemCds": [],
         "itemCdExcludes": [],
-        "itemgrpCds": ITEM_GROUPS,
+        "itemgrpCds": COST_ITEM_GROUPS,
         "soFgs": [],
         "tradeGrps": [],
         "plnFg": "0",
@@ -1175,7 +1176,7 @@ def collect_cost_analysis(page, year):
             {
                 "basis": "마감기준",
                 "view": "관리분류별",
-                "itemGroups": ITEM_GROUPS,
+                "itemGroups": COST_ITEM_GROUPS,
                 "customerClassContains": "도매",
             },
             method="PUT",
@@ -1211,7 +1212,7 @@ def collect_cost_analysis(page, year):
             "month": month_key,
             "dateFrom": payload["clsDtFrom"],
             "dateTo": payload["clsDtTo"],
-            "itemGroups": ITEM_GROUPS,
+            "itemGroups": COST_ITEM_GROUPS,
             "customerClassContains": "도매",
             "rowCount": len(rows),
             "rows": rows,
