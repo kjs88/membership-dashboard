@@ -242,7 +242,11 @@ function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel, da
           + escHtml(i.desc) + '</span></div>').join('')
       + '</div></div></details>'
     : '');
-  put('stats-calendar', suCalendarCard(a.rows, dateTo));
+  // 달력은 월을 넘겨가며 보는 화면이라 기간 필터에 묶으면 이전 달이 빈 채로 보인다.
+  // 채널·영업사원 조건만 적용하고 기간은 전체를 넘긴다.
+  const calRows = (allOrders || []).filter(o => orderChannel(o) === channel && caIsProductRow(o)
+    && (typeof statsPersonId === 'undefined' || statsPersonId === 'all' || o.person === statsPersonId));
+  put('stats-calendar', suCalendarCard(calRows, dateTo));
   put('stats-treemap-mini', suTreemapCard(a, delta, { compact: true }));
   put('stats-treemap', suTreemapCard(a, delta, { compact: false }));
 

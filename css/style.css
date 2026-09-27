@@ -1064,12 +1064,28 @@ td.tm{color:var(--text);font-weight:500;}
 }
 
 /* ══════════ 실적 분석 일별 매출 캘린더 ══════════ */
-/* 일간일지 캘린더(.dly-cell)와 같은 규칙을 그대로 쓴다.
-   stats 수식자는 클릭 동작이 없다는 점만 다르게 하고, 생김새는 건드리지 않는다. */
-.dly-cell.stats{cursor:default}
-.dly-cell.stats:hover{background:var(--surface)}
-.dly-cell.stats.has-entry:hover{background:var(--green-subtle)}
-.dly-cell.stats.today:hover{background:var(--green-light)}
-.dly-cell.stats.other-month:hover{background:var(--surface2)}
-.dly-hol{font-size:10px;color:var(--red);font-weight:600;margin-bottom:2px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 기간 선택기(.drp-cal)와 같은 형식. 색 농도만 매출 규모로 덧입힌다.
+   선택기 자체에 영향이 가지 않도록 .su-drp 안에서만 적용한다. */
+.su-drp{margin-top:10px}
+.su-drp-top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin-bottom:4px}
+.su-drp-sum{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text2)}
+.su-drp-sum b{font-family:var(--mono);color:var(--text);font-variant-numeric:tabular-nums}
+.su-drp .drp-calendars{padding:12px 0 4px}
+.su-drp .drp-day{cursor:default}
+.su-drp .drp-day:hover:not(.empty){background:var(--green-light);color:var(--green-dark)}
+.su-drp .drp-day.lv1{background:#E6F5EE}
+.su-drp .drp-day.lv2{background:#BFE6D4;color:var(--green-dark)}
+.su-drp .drp-day.lv3{background:#79CBAA;color:#0E3B2C}
+.su-drp .drp-day.lv4{background:#2FA47F;color:#fff}
+.su-drp .drp-day.lv3.sun,.su-drp .drp-day.lv4.sun{color:#fff}
+.su-drp-legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);
+  flex-wrap:wrap;margin-top:6px}
+.su-drp-legend i{width:16px;height:12px;border-radius:3px;display:block}
+.su-drp-legend i.lv1{background:#E6F5EE} .su-drp-legend i.lv2{background:#BFE6D4}
+.su-drp-legend i.lv3{background:#79CBAA} .su-drp-legend i.lv4{background:#2FA47F}
+.su-drp-legend em{font-style:normal;margin-left:8px}
+@media(max-width:700px){
+  .su-drp .drp-calendars{flex-direction:column;gap:14px}
+  .su-drp .drp-cal+.drp-cal{border-left:none;padding-left:0;border-top:1px solid var(--border);padding-top:14px}
+}
