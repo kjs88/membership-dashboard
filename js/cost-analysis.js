@@ -7,7 +7,7 @@ const costAnalysis = (() => {
   ];
   const VIEW_MAP = new Map(VIEW_GROUPS.flatMap(group => group.views.map(([key, label]) => [key, { key, label, tab: group.tab }])));
   const DEFAULT_VIEW = 'mgmt-customer-class';
-  const state = { month: '', view: DEFAULT_VIEW, years: new Map(), loading: false, error: '', request: 0, controller: null, chart: null };
+  const state = { month: '', view: DEFAULT_VIEW, query: '', sort: { key: 'sales', dir: 'desc' }, years: new Map(), loading: false, error: '', request: 0, controller: null, chart: null };
   const money = value => Math.round(value).toLocaleString('ko-KR');
   const rate = (profit, sales) => sales === 0 ? null : profit / sales * 100;
   const rateText = value => value === null ? '-' : `${value.toFixed(3)}%`;
@@ -25,6 +25,27 @@ const costAnalysis = (() => {
     if (view) return Array.isArray(view.rows) ? view.rows : [];
     return state.view === DEFAULT_VIEW ? data.rows || [] : [];
   };
+  const rowRate = row => rate(row.profit, row.sales);
+  const filterRows = rows => {
+    const query = state.query.trim().toLowerCase();
+    if (!query) return [...rows];
+    return rows.filter(row => `${row.name || ''} ${row.code || ''}`.toLowerCase().includes(query));
+  };
+  const sortedRows = rows => {
+    const { key, dir } = state.sort;
+    const sign = dir === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = key === 'name' ? (a.name || '') : key === 'rate' ? rowRate(a) : a[key];
+      const bv = key === 'name' ? (b.name || '') : key === 'rate' ? rowRate(b) : b[key];
+      if (typeof av === 'string' || typeof bv === 'string') return sign * String(av).localeCompare(String(bv), 'ko');
+      const an = av === null || av === undefined ? -Infinity : av;
+      const bn = bv === null || bv === undefined ? -Infinity : bv;
+      return sign * (an - bn) || (a.name || '').localeCompare(b.name || '', 'ko');
+    });
+  };
+  const displayRows = rows => sortedRows(filterRows(rows));
+  const sortMark = key => state.sort.key === key ? (state.sort.dir === 'asc' ? '▲' : '▼') : '';
+  const sortableTh = (key, label, scope = 'col') => `<th scope="${scope}" class="cost-sortable ${state.sort.key === key ? 'active' : ''}" data-cost-sort="${key}"><button type="button">${escHtml(label)} <span>${sortMark(key)}</span></button></th>`;
 
   function validate(payload, year) {
     if (payload === null) return {};
@@ -96,7 +117,8 @@ const costAnalysis = (() => {
     const group = activeGroup();
     const viewRows = rowsFor(data);
     const sum = data ? total(viewRows) : null;
-    const rows = data ? [...viewRows].sort((a, b) => b.sales - a.sales || a.name.localeCompare(b.name, 'ko')) : [];
+    const rows = data ? displayRows(viewRows) : [];
+    const filteredSum = data ? total(rows) : null;
     const unavailable = state.loading ? '불러오는 중입니다.' : state.error || '이 월의 마감기준 데이터가 아직 수집되지 않았습니다.';
     state.chart?.destroy();
     state.chart = null;
@@ -121,10 +143,16 @@ const costAnalysis = (() => {
         ${[['매출', 'sales'], ['원가', 'cost'], ['매익', 'profit'], ['매익률', 'rate']].map(([label, key]) => `<div class="cost-metric"><span>${label}</span><strong class="${key === 'profit' && sum?.profit < 0 ? 'cost-negative' : ''}">${sum ? key === 'rate' ? rateText(rate(sum.profit, sum.sales)) : money(sum[key]) + '<small>원</small>' : '-'}</strong></div>`).join('')}
       </div>
       <section class="cost-trend"><h3>${state.month.slice(0, 4)}년 월별 매출 · 매익</h3><div class="cost-chart">${Object.keys(months).length ? '<canvas id="cost-monthly-chart" aria-label="월별 매출과 매익 추이" role="img"></canvas>' : `<div class="cost-empty">${escHtml(unavailable)}</div>`}</div></section>
-      <section class="cost-detail"><div class="cost-table-heading"><h3>${state.month.replace('-', '년 ')}월 ${escHtml(meta.label)}별 현황</h3><span>${data ? `${rows.length}개 구분 · 단위 원` : '단위 원'}</span></div>
-        <table><thead><tr><th scope="col">${escHtml(meta.label)}</th><th scope="col">매출</th><th scope="col">원가</th><th scope="col">매익</th><th scope="col">매익률</th></tr></thead>
+      <section class="cost-detail"><div class="cost-table-heading"><h3>${state.month.replace('-', '년 ')}월 ${escHtml(meta.label)}별 현황</h3><span>${data ? `표시 ${rows.length} / 전체 ${viewRows.length}개 · 단위 원` : '단위 원'}</span></div>
+        <div class="cost-table-tools">
+          <input type="search" id="cost-row-filter" value="${escHtml(state.query)}" placeholder="${escHtml(meta.label)}명 또는 코드 검색" aria-label="${escHtml(meta.label)} 필터">
+          <select id="cost-row-sort" aria-label="정렬 기준">
+            ${[['sales:desc', '매출 높은순'], ['profit:desc', '매익 높은순'], ['rate:desc', '매익률 높은순'], ['cost:desc', '원가 높은순'], ['name:asc', `${meta.label} 가나다순`]].map(([value, label]) => `<option value="${value}"${`${state.sort.key}:${state.sort.dir}` === value ? ' selected' : ''}>${escHtml(label)}</option>`).join('')}
+          </select>
+        </div>
+        <table><thead><tr>${sortableTh('name', meta.label)}${sortableTh('sales', '매출')}${sortableTh('cost', '원가')}${sortableTh('profit', '매익')}${sortableTh('rate', '매익률')}</tr></thead>
         <tbody>${!data ? `<tr><td colspan="5" class="cost-empty">${escHtml(unavailable)}</td></tr>` : !rows.length ? '<tr><td colspan="5" class="cost-empty">조회 조건에 해당하는 마감 내역이 없습니다.</td></tr>' : rows.map(row => `<tr><th scope="row">${escHtml(row.name || '미지정')}</th><td>${money(row.sales)}</td><td>${money(row.cost)}</td><td class="${row.profit < 0 ? 'cost-negative' : 'cost-profit'}">${money(row.profit)}</td><td>${rateText(rate(row.profit, row.sales))}</td></tr>`).join('')}</tbody>
-        ${sum ? `<tfoot><tr><th scope="row">합계</th><td>${money(sum.sales)}</td><td>${money(sum.cost)}</td><td class="${sum.profit < 0 ? 'cost-negative' : 'cost-profit'}">${money(sum.profit)}</td><td>${rateText(rate(sum.profit, sum.sales))}</td></tr></tfoot>` : ''}</table>
+        ${filteredSum ? `<tfoot><tr><th scope="row">${state.query ? '필터 합계' : '합계'}</th><td>${money(filteredSum.sales)}</td><td>${money(filteredSum.cost)}</td><td class="${filteredSum.profit < 0 ? 'cost-negative' : 'cost-profit'}">${money(filteredSum.profit)}</td><td>${rateText(rate(filteredSum.profit, filteredSum.sales))}</td></tr></tfoot>` : ''}</table>
       </section>`;
     const canvas = document.getElementById('cost-monthly-chart');
     if (canvas && typeof Chart !== 'undefined') {
@@ -161,11 +189,28 @@ const costAnalysis = (() => {
       const nextGroup = VIEW_GROUPS.find(item => item.tab === button.dataset.costTab);
       if (!nextGroup) return;
       state.view = nextGroup.views[0][0];
+      state.query = '';
       draw();
     }));
     root.querySelectorAll('[data-cost-view]').forEach(button => button.addEventListener('click', () => {
       if (!VIEW_MAP.has(button.dataset.costView)) return;
       state.view = button.dataset.costView;
+      state.query = '';
+      draw();
+    }));
+    root.querySelector('#cost-row-filter')?.addEventListener('input', event => {
+      state.query = event.target.value || '';
+      draw();
+      document.getElementById('cost-row-filter')?.focus();
+    });
+    root.querySelector('#cost-row-sort')?.addEventListener('change', event => {
+      const [key, dir] = event.target.value.split(':');
+      state.sort = { key, dir };
+      draw();
+    });
+    root.querySelectorAll('[data-cost-sort]').forEach(button => button.addEventListener('click', () => {
+      const key = button.dataset.costSort;
+      state.sort = state.sort.key === key ? { key, dir: state.sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'name' ? 'asc' : 'desc' };
       draw();
     }));
   }
@@ -173,7 +218,7 @@ const costAnalysis = (() => {
   function exportExcel(data) {
     if (!data || !currentUser || !userCanOpenPage('cost')) return;
     const meta = viewMeta();
-    const rows = rowsFor(data);
+    const rows = displayRows(rowsFor(data));
     const sum = total(rows);
     const values = row => [row.name, row.sales, row.cost, row.profit, rateValue(row.profit, row.sales)];
     const sheet = XLSX.utils.aoa_to_sheet([[meta.label, '매출', '원가', '매익', '매익률(%)'], ...rows.map(values), values({ name: '합계', ...sum })]);

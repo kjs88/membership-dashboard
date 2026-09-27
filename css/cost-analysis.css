@@ -32,6 +32,14 @@
 .cost-detail thead { color: var(--text2); }
 .cost-detail tfoot { font-weight: 700; background: #edf6f3; }
 .cost-detail tbody th { font-weight: 500; }
+.cost-table-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin: -4px 0 10px; }
+.cost-table-tools input, .cost-table-tools select { height: 34px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; padding: 0 10px; }
+.cost-table-tools input { width: min(320px, 100%); }
+.cost-sortable { padding: 0 !important; }
+.cost-sortable button { width: 100%; min-height: 42px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: right; padding: 12px 10px; }
+.cost-sortable:first-child button { text-align: left; }
+.cost-sortable.active button { color: var(--primary); }
+.cost-sortable span { display: inline-block; min-width: 12px; margin-left: 4px; font-size: 10px; }
 .cost-profit { color: #00725b; font-weight: 700; }
 .cost-negative { color: #c53939; }
 #cost-analysis-root .cost-empty { text-align: center; padding: 40px 12px; color: var(--text2); font-size: 13px; }
