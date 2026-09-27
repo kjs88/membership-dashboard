@@ -112,15 +112,14 @@ function suTreemapCard(a, delta, opts) {
     + '</div>';
 }
 
-// 일간일지 캘린더와 같은 형식(월 단위 전체 그리드, dly-* 클래스)을 그대로 쓴다.
-// 매출은 칸 안에 금액으로 적고, 색 농도는 보조로만 쓴다.
+// 일간일지 캘린더와 완전히 같은 형식. 마크업·클래스·높이·색을 그대로 쓰고
+// 칸 안의 내용만 '일지 목록' 대신 '매출/건수'로 바꾼다.
 let suCalYm = null;   // 'YYYY-MM' — 사용자가 월을 넘기면 유지된다
 
 function suCalShift(delta) {
   const base = suCalYm || todayYmd().slice(0, 7);
-  const [y, m] = base.split('-').map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  suCalYm = ymLocal(d);
+  const y = Number(base.slice(0, 4)), m = Number(base.slice(5, 7));
+  suCalYm = ymLocal(new Date(y, m - 1 + delta, 1));
   if (typeof renderStats === 'function') renderStats();
 }
 function suCalToday() {
@@ -140,64 +139,51 @@ function suCalendarCard(rows, dateTo) {
 
   const fallback = (dateTo || days[days.length - 1] || todayYmd()).slice(0, 7);
   const ym = suCalYm || fallback;
-  const [y, m0] = ym.split('-').map(Number);
-  const m = m0 - 1;
+  const y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7)) - 1;
   if (isNaN(y) || isNaN(m)) return '';
-
-  const vals = Object.values(byDay).filter(v => v > 0).sort((x, z) => x - z);
-  const q = p => vals[Math.min(vals.length - 1, Math.floor(vals.length * p))];
-  const scale = vals.length ? [q(0.25), q(0.5), q(0.75)] : [0, 0, 0];
-  const tone = v => {
-    if (!v || v <= 0) return '';
-    if (v > scale[2]) return ' lv3';
-    if (v > scale[1]) return ' lv2';
-    if (v > scale[0]) return ' lv1';
-    return '';
-  };
 
   const today = todayYmd();
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
-  const fmt = (yr, mo, d) => `${yr}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const fmt = (yr, mo, d) => yr + '-' + String(mo + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
   const firstDay = new Date(y, m, 1).getDay();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const prevDays = new Date(y, m, 0).getDate();
 
+  // 이전 달 공백
   let cells = '';
   for (let i = firstDay - 1; i >= 0; i--) {
-    cells += '<div class="dly-cell compact other-month"><div class="dly-day-num">' + (prevDays - i) + '</div></div>';
+    cells += '<div class="dly-cell stats other-month"><div class="dly-day-num">' + (prevDays - i) + '</div></div>';
   }
+  // 이번 달
   let monthSum = 0, monthDays = 0;
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = fmt(y, m, d);
     const dow = new Date(y, m, d).getDay();
     const v = byDay[ds] || 0;
+    const n = cntDay[ds] || 0;
     const hol = (typeof krHolidayName === 'function') ? krHolidayName(ds) : null;
     const future = ds > today;
-    let cls = 'dly-cell compact';
+    let cls = 'dly-cell stats';
     if (ds === today) cls += ' today';
+    if (v > 0) cls += ' has-entry';
     if (dow === 0) cls += ' sun';
     if (dow === 6) cls += ' sat';
-    if (future) cls += ' future';
-    else cls += tone(v);
     if (v > 0) { monthSum += v; monthDays++; }
     const tip = ds + ' (' + DOW[dow] + ')' + (hol ? ' · ' + hol : '')
-      + (future ? ' · 예정' : ' · ' + Math.round(v).toLocaleString() + '원 · ' + (cntDay[ds] || 0) + '건');
+      + (future ? ' · 예정' : ' · ' + Math.round(v).toLocaleString() + '원 · ' + n + '건');
     cells += '<div class="' + cls + '" title="' + escHtml(tip) + '">'
       + '<div class="dly-day-num">' + d + '</div>'
-      + (hol ? '<div class="dly-cal-hol">' + escHtml(hol) + '</div>' : '')
+      + (hol ? '<div class="dly-hol">' + escHtml(hol) + '</div>' : '')
       + (!future && v > 0
-          ? '<div class="dly-cal-amt">' + moneyShort(v) + '</div><div class="dly-cal-cnt">' + (cntDay[ds] || 0) + '건</div>'
+          ? '<div class="dly-entry-dot">● ' + moneyShort(v) + '원 / ' + n + '건</div>'
           : '')
       + '</div>';
   }
-  const totalCells = firstDay + daysInMonth;
-  const remainder = totalCells % 7;
+  // 다음 달 공백 (주 단위로 채움)
+  const remainder = (firstDay + daysInMonth) % 7;
   for (let d = 1; d <= (remainder === 0 ? 0 : 7 - remainder); d++) {
-    cells += '<div class="dly-cell compact other-month"><div class="dly-day-num">' + d + '</div></div>';
+    cells += '<div class="dly-cell stats other-month"><div class="dly-day-num">' + d + '</div></div>';
   }
-
-  const dowHead = DOW.map((w, i) =>
-    '<div class="dly-cal-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + w + '</div>').join('');
 
   // 요일별 평균 (표시 중인 달 기준)
   const dowSum = [0, 0, 0, 0, 0, 0, 0], dowCnt = [0, 0, 0, 0, 0, 0, 0];
@@ -215,32 +201,38 @@ function suCalendarCard(rows, dateTo) {
     const best = weekdays.slice().sort((x, z) => dowAvg[z] - dowAvg[x])[0];
     const worst = weekdays.slice().sort((x, z) => dowAvg[x] - dowAvg[z])[0];
     const maxAvg = Math.max.apply(null, weekdays.map(i => dowAvg[i])) || 1;
-    patternHtml = '<div class="su-dow"><div class="su-dow-t">요일별 평균</div>'
+    patternHtml = '<div class="su-calwrap"><div class="su-dow"><div class="su-dow-t">요일별 평균</div>'
       + [1, 2, 3, 4, 5].map(i => '<div class="su-dow-row"><b>' + DOW[i] + '</b>'
           + '<div class="su-dow-track"><i style="width:' + Math.round(dowAvg[i] / maxAvg * 100)
           + '%;background:' + (i === best ? 'var(--green)' : i === worst ? 'var(--amber)' : 'var(--blue)') + '"></i></div>'
           + '<span>' + moneyShort(dowAvg[i]) + '</span></div>').join('')
       + '<div class="su-dow-note">가장 강한 요일 <b>' + DOW[best] + '</b> · 가장 약한 요일 <b>' + DOW[worst] + '</b></div>'
-      + '</div>';
+      + '</div></div>';
   }
 
-  return '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="dly-cal-bar">'
-    + '<div class="dly-cal-nav">'
-    + '<button type="button" class="btn-sm btn-ghost" onclick="suCalShift(-1)">‹</button>'
-    + '<div class="dly-cal-title">' + y + '년 ' + (m + 1) + '월</div>'
-    + '<button type="button" class="btn-sm btn-ghost" onclick="suCalShift(1)">›</button>'
-    + '<button type="button" class="btn-sm btn-ghost" onclick="suCalToday()">오늘</button>'
+  // 헤더와 격자 구조는 일간일지(index.html의 dly-cal-view)와 같은 마크업을 쓴다
+  return '<div class="section-header" style="margin-bottom:10px">'
+    + '<div style="display:flex;align-items:center;gap:8px">'
+    + '<button type="button" class="btn-sm btn-ghost" style="padding:4px 10px" onclick="suCalShift(-1)">‹</button>'
+    + '<div style="font-size:14px;font-weight:700;color:var(--text);min-width:90px;text-align:center">'
+    + y + '년 ' + (m + 1) + '월</div>'
+    + '<button type="button" class="btn-sm btn-ghost" style="padding:4px 10px" onclick="suCalShift(1)">›</button>'
+    + '<button type="button" class="btn-sm btn-ghost" style="margin-left:2px;padding:4px 10px" onclick="suCalToday()">오늘</button>'
     + '</div>'
-    + '<div class="dly-cal-sum">매출 <b>' + moneyShort(monthSum) + '원</b>'
-    + (monthDays ? ' · 거래일 ' + monthDays + '일 · 일평균 ' + moneyShort(monthSum / monthDays) + '원' : '') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px">'
+    + '<div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:12px">'
+    + '<span>매출 <b style="font-family:var(--mono);color:var(--text2)">' + moneyShort(monthSum) + '원</b>'
+    + (monthDays ? ' · 거래일 ' + monthDays + '일' : '') + '</span>'
+    + '<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px"></span>매출 있음</span>'
+    + '</div></div></div>'
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden">'
+    + '<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">'
+    + DOW.map((w, i) => '<div style="padding:7px 0;text-align:center;font-size:11px;font-weight:700;color:'
+        + (i === 0 ? 'var(--red)' : i === 6 ? 'var(--blue)' : 'var(--text2)') + '">' + w + '</div>').join('')
     + '</div>'
-    + '<div class="dly-cal-box">'
-    + '<div class="dly-cal-dowrow">' + dowHead + '</div>'
-    + '<div class="dly-cal-body">' + cells + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(7,1fr)">' + cells + '</div>'
     + '</div>'
-    + (patternHtml ? '<div class="su-calwrap">' + patternHtml + '</div>' : '')
-    + '</div>';
+    + patternHtml;
 }
 
 // ────────────────────────────────
