@@ -177,14 +177,6 @@ function cwRenderSavedList() {
   }).join('');
 }
 
-function escHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function escInlineJs(s) {
-  return escHtml(String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
-}
-function safeColor(c, fallback = '#999999') {
-  return /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(String(c || '')) ? c : fallback;
-}
-
 function dlyCanManageEntry(entry) {
   if (!entry) return false;
   return isAdminUser(currentUser) || !entry.personId || entry.personId === currentUser?.id;

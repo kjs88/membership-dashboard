@@ -19,7 +19,12 @@ if ($branch -ne "main") {
 
 & (Join-Path $PSScriptRoot "security-scan.ps1") -Root $root
 & (Join-Path $PSScriptRoot "code-health.ps1") -Root $root
+foreach ($test in @("test-app-architecture.cjs", "test-app-data.cjs", "test-cost-analysis.cjs")) {
+  node (Join-Path $PSScriptRoot $test)
+  if ($LASTEXITCODE -ne 0) { throw "Node test failed: $test" }
+}
 git diff --check
+if ($LASTEXITCODE -ne 0) { throw "git diff --check failed." }
 
 $status = git status --porcelain
 if ($status) {

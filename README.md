@@ -43,7 +43,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Join-Path $env:TEMP
 - 코드 역할과 리팩터링 기준은 [CODE_HEALTH.md](CODE_HEALTH.md)를 기준으로 합니다.
 - `scripts/security-scan.ps1`은 비밀정보와 위험 실행 패턴을 차단합니다.
 - `scripts/code-health.ps1`은 큰 파일, `innerHTML`, 인라인 이벤트, 전역 함수가 많은 파일을 요약합니다.
-- `deploy.cmd`는 보안 스캔, 코드 건강도 요약, `git diff --check`를 통과한 뒤 푸시합니다.
+- `scripts/test-app-architecture.cjs`는 스크립트 순서, 공통 함수 중복, 잘못된 HTML 속성, 공통 UI helper를 검사합니다.
+- `deploy.cmd`는 보안 스캔, 코드 건강도 요약, 구조 테스트, 기능 테스트, `git diff --check`를 통과한 뒤 푸시합니다.
 
 ## 운영 구조
 
@@ -114,9 +115,14 @@ git push origin main
 - `index.html`: GitHub Pages 진입 파일
 - `css/style.css`: 공통 스타일
 - `js/storage.js`: Firebase 공유 데이터 로드/저장
+- `js/app-data.js`: 공유 데이터 초기화와 활성 화면 갱신
+- `js/ui-utils.js`: 공통 출력 정화 helper
+- `js/ui-feedback.js`: 공통 모달과 알림
 - `js/products-grades-erp.js`: 제품별 현황, 거래처 등급, ERP 데이터 반영
 - `js/core-auth-nav.js`: 로그인, 권한, 메뉴, 주문/출고 기준 전환
-- `js/dashboard-records-users.js`: 대시보드/기록/계정/목표 화면
+- `js/dashboard-sales.js`: 대시보드/영업현황 집계와 차트
+- `js/records.js`, `js/users.js`, `js/targets.js`, `js/account.js`: 기록/계정/목표/비밀번호 화면
+- `js/journals-weekly.js`, `js/journals-monthly.js`, `js/daily-entry.js`: 주간/월간/일간 영업일지
 - `js/stats-notices.js`: 실적 분석, 공지사항, 재방문 화면
 - `.github/workflows/amarans-sync.yml`: 아마란스 자동/수동 수집
 - `scripts/amarans_api_v10.py`: 아마란스 Playwright 수집기
