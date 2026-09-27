@@ -82,3 +82,4 @@
 @media (max-width: 760px) {
   #drp-cost .drp-dropdown { min-width: 0; width: calc(100vw - 48px); }
 }
+.cost-trend-sub { font-size: 11.5px; color: var(--text3); margin: 2px 0 6px; }

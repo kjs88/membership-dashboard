@@ -242,7 +242,7 @@ const costAnalysis = (() => {
       <div class="cost-summary">
         ${[['매출', 'sales'], ['원가', 'cost'], ['매익', 'profit'], ['매익률', 'rate']].map(([label, key]) => `<div class="cost-metric"><span>${label}</span><strong class="${key === 'profit' && sum?.profit < 0 ? 'cost-negative' : ''}">${sum ? key === 'rate' ? rateText(rate(sum.profit, sum.sales)) : money(sum[key]) + '<small>원</small>' : '-'}</strong></div>`).join('')}
       </div>
-      <section class="cost-trend"><h3>${state.month.slice(0, 4)}년 월별 매출 · 매익</h3><div class="cost-chart">${Object.keys(months).length ? '<canvas id="cost-monthly-chart" aria-label="월별 매출과 매익 추이" role="img"></canvas>' : `<div class="cost-empty">${escHtml(unavailable)}</div>`}</div></section>
+      <section class="cost-trend"><h3>${state.month.slice(0, 4)}년 월별 매출 · 매익</h3><p class="cost-trend-sub">매출은 왼쪽 축(막대), 매익은 오른쪽 축(선)으로 눈금이 다릅니다 · 점에 올리면 매익률이 나옵니다</p><div class="cost-chart">${Object.keys(months).length ? '<canvas id="cost-monthly-chart" aria-label="월별 매출과 매익 추이" role="img"></canvas>' : `<div class="cost-empty">${escHtml(unavailable)}</div>`}</div></section>
       <section class="cost-detail"><div class="cost-table-heading"><h3>${escHtml(periodLabel)} ${escHtml(meta.label)}별 현황</h3><span>${hasData ? `표시 ${rows.length} / 전체 ${viewRows.length}개 · 단위 원` : '단위 원'}</span></div>
         <div class="cost-filters">
           <div class="cost-frow">
@@ -288,13 +288,41 @@ const costAnalysis = (() => {
       const year = state.month.slice(0, 4);
       const count = year === currentMonth().slice(0, 4) ? Number(currentMonth().slice(5)) : 12;
       const series = Array.from({ length: count }, (_, i) => months[`${year}-${String(i + 1).padStart(2, '0')}`]);
+      // 매익은 매출의 4% 수준이라 같은 축에 두면 보이지 않는다.
+      // 매출은 왼쪽 축(막대), 매익은 오른쪽 축(선)으로 분리하고 매익률을 함께 그린다.
+      const sums = series.map(item => item ? total(rowsFor(item)) : null);
+      const salesData = sums.map(t => t ? t.sales : null);
+      const profitData = sums.map(t => t ? t.profit : null);
+      const rateData = sums.map(t => t ? rateValue(t.profit, t.sales) : null);
+      const short = v => `${money(v / 10000)}만`;
       state.chart = new Chart(canvas, {
-        type: 'bar',
         data: { labels: series.map((_, i) => `${i + 1}월`), datasets: [
-          { label: '매출', data: series.map(item => item ? total(rowsFor(item)).sales : null), backgroundColor: '#478bc9', borderRadius: 3 },
-          { label: '매익', data: series.map(item => item ? total(rowsFor(item)).profit : null), backgroundColor: '#00876a', borderRadius: 3 }
+          { type: 'bar', label: '매출', data: salesData, backgroundColor: '#8FBEDF',
+            borderRadius: 3, yAxisID: 'y', order: 3 },
+          { type: 'line', label: '매익', data: profitData, yAxisID: 'y1', order: 1,
+            borderColor: '#00876a', backgroundColor: '#00876a', borderWidth: 2.5,
+            pointRadius: 3.5, pointHoverRadius: 5, tension: .25 }
         ] },
-        options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { position: 'top', align: 'end' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${money(ctx.parsed.y)}원` } } }, scales: { y: { ticks: { callback: value => `${money(value / 10000)}만` } } } }
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8 } },
+            tooltip: { callbacks: { label: ctx => {
+              const base = `${ctx.dataset.label}: ${money(ctx.parsed.y)}원`;
+              if (ctx.dataset.label !== '매익') return base;
+              const r = rateData[ctx.dataIndex];
+              return base + (r === null || r === undefined ? '' : ` (매익률 ${r.toFixed(3)}%)`);
+            } } }
+          },
+          scales: {
+            y: { position: 'left', title: { display: true, text: '매출', color: '#4b7ea6' },
+                 ticks: { color: '#4b7ea6', callback: short }, beginAtZero: true },
+            y1: { position: 'right', title: { display: true, text: '매익', color: '#00876a' },
+                  ticks: { color: '#00876a', callback: short }, grid: { drawOnChartArea: false },
+                  beginAtZero: true }
+          }
+        }
       });
     }
     // 기간 선택기 — 다른 화면(실적분석·품목별 등)과 같은 달력을 쓴다.
