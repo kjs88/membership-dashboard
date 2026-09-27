@@ -112,83 +112,108 @@ function suTreemapCard(a, delta, opts) {
     + '</div>';
 }
 
-// ────────────────────────────────
-// 캘린더 히트맵
-// ────────────────────────────────
+// 일간일지 캘린더와 같은 형식(월 단위 전체 그리드, dly-* 클래스)을 그대로 쓴다.
+// 매출은 칸 안에 금액으로 적고, 색 농도는 보조로만 쓴다.
+let suCalYm = null;   // 'YYYY-MM' — 사용자가 월을 넘기면 유지된다
+
+function suCalShift(delta) {
+  const base = suCalYm || todayYmd().slice(0, 7);
+  const [y, m] = base.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  suCalYm = ymLocal(d);
+  if (typeof renderStats === 'function') renderStats();
+}
+function suCalToday() {
+  suCalYm = null;
+  if (typeof renderStats === 'function') renderStats();
+}
+
 function suCalendarCard(rows, dateTo) {
-  const byDay = {};
+  const byDay = {}, cntDay = {};
   (rows || []).forEach(o => {
     if (!o.date) return;
     byDay[o.date] = (byDay[o.date] || 0) + (parseFloat(o.supply) || 0);
+    cntDay[o.date] = (cntDay[o.date] || 0) + 1;
   });
   const days = Object.keys(byDay).sort();
   if (!days.length) return '';
-  const endStr = dateTo || days[days.length - 1];
-  const end = new Date(endStr + 'T00:00:00');
-  if (isNaN(end)) return '';
 
-  const months = [];
-  for (let k = 2; k >= 0; k--) {
-    const d = new Date(end.getFullYear(), end.getMonth() - k, 1);
-    months.push({ y: d.getFullYear(), m: d.getMonth() });
-  }
-  const vals = Object.values(byDay).filter(v => v > 0).sort((x, y) => x - y);
-  if (!vals.length) return '';
+  const fallback = (dateTo || days[days.length - 1] || todayYmd()).slice(0, 7);
+  const ym = suCalYm || fallback;
+  const [y, m0] = ym.split('-').map(Number);
+  const m = m0 - 1;
+  if (isNaN(y) || isNaN(m)) return '';
+
+  const vals = Object.values(byDay).filter(v => v > 0).sort((x, z) => x - z);
   const q = p => vals[Math.min(vals.length - 1, Math.floor(vals.length * p))];
-  const scale = [q(0.2), q(0.4), q(0.6), q(0.8)];
-  const palette = ['#E1F2EA', '#B8E2CE', '#6FC7A6', '#3FAF87', '#1F8A62'];
-  const colorOf = v => {
-    if (!v || v <= 0) return null;
-    let i = 0;
-    while (i < scale.length && v > scale[i]) i++;
-    return palette[i];
+  const scale = vals.length ? [q(0.25), q(0.5), q(0.75)] : [0, 0, 0];
+  const tone = v => {
+    if (!v || v <= 0) return '';
+    if (v > scale[2]) return ' lv3';
+    if (v > scale[1]) return ' lv2';
+    if (v > scale[0]) return ' lv1';
+    return '';
   };
+
   const today = todayYmd();
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+  const fmt = (yr, mo, d) => `${yr}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const prevDays = new Date(y, m, 0).getDate();
 
-  const monthHtml = months.map(mo => {
-    const y = mo.y, m = mo.m;
-    const lead = new Date(y, m, 1).getDay();
-    const dim = new Date(y, m + 1, 0).getDate();
-    let cells = '';
-    for (let i = 0; i < lead; i++) cells += '<div class="su-cal-c empty"></div>';
-    for (let d = 1; d <= dim; d++) {
-      const ds = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      const v = byDay[ds] || 0;
-      const hol = (typeof krHolidayName === 'function') ? krHolidayName(ds) : null;
-      const future = ds > today;
-      const bg = colorOf(v);
-      let cls = 'su-cal-c', style = '';
-      if (future) cls += ' future';
-      else if (hol) cls += ' hol';
-      else if (bg) {
-        style = 'background:' + bg;
-        if (bg === '#3FAF87' || bg === '#1F8A62') style += ';color:#fff';
-      } else cls += ' zero';
-      const tip = ds + ' (' + DOW[new Date(ds + 'T00:00:00').getDay()] + ')'
-        + (hol ? ' · ' + hol : '') + (future ? ' · 예정' : ' · ' + Math.round(v).toLocaleString() + '원');
-      cells += '<div class="' + cls + '" style="' + style + '" title="' + escHtml(tip) + '">' + d + '</div>';
-    }
-    return '<div class="su-cal"><div class="su-cal-t">' + y + '년 ' + (m + 1) + '월</div>'
-      + '<div class="su-cal-g su-cal-dows">'
-      + DOW.map((w, i) => '<div class="su-cal-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + w + '</div>').join('')
-      + '</div><div class="su-cal-g">' + cells + '</div></div>';
-  }).join('');
+  let cells = '';
+  for (let i = firstDay - 1; i >= 0; i--) {
+    cells += '<div class="dly-cell compact other-month"><div class="dly-day-num">' + (prevDays - i) + '</div></div>';
+  }
+  let monthSum = 0, monthDays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = fmt(y, m, d);
+    const dow = new Date(y, m, d).getDay();
+    const v = byDay[ds] || 0;
+    const hol = (typeof krHolidayName === 'function') ? krHolidayName(ds) : null;
+    const future = ds > today;
+    let cls = 'dly-cell compact';
+    if (ds === today) cls += ' today';
+    if (dow === 0) cls += ' sun';
+    if (dow === 6) cls += ' sat';
+    if (future) cls += ' future';
+    else cls += tone(v);
+    if (v > 0) { monthSum += v; monthDays++; }
+    const tip = ds + ' (' + DOW[dow] + ')' + (hol ? ' · ' + hol : '')
+      + (future ? ' · 예정' : ' · ' + Math.round(v).toLocaleString() + '원 · ' + (cntDay[ds] || 0) + '건');
+    cells += '<div class="' + cls + '" title="' + escHtml(tip) + '">'
+      + '<div class="dly-day-num">' + d + '</div>'
+      + (hol ? '<div class="dly-cal-hol">' + escHtml(hol) + '</div>' : '')
+      + (!future && v > 0
+          ? '<div class="dly-cal-amt">' + moneyShort(v) + '</div><div class="dly-cal-cnt">' + (cntDay[ds] || 0) + '건</div>'
+          : '')
+      + '</div>';
+  }
+  const totalCells = firstDay + daysInMonth;
+  const remainder = totalCells % 7;
+  for (let d = 1; d <= (remainder === 0 ? 0 : 7 - remainder); d++) {
+    cells += '<div class="dly-cell compact other-month"><div class="dly-day-num">' + d + '</div></div>';
+  }
 
-  // 요일별 평균
+  const dowHead = DOW.map((w, i) =>
+    '<div class="dly-cal-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + w + '</div>').join('');
+
+  // 요일별 평균 (표시 중인 달 기준)
   const dowSum = [0, 0, 0, 0, 0, 0, 0], dowCnt = [0, 0, 0, 0, 0, 0, 0];
-  Object.keys(byDay).forEach(ds => {
-    if (ds > today) return;
-    const w = new Date(ds + 'T00:00:00').getDay();
-    dowSum[w] += byDay[ds];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = fmt(y, m, d);
+    if (ds > today) continue;
+    const w = new Date(y, m, d).getDay();
+    dowSum[w] += byDay[ds] || 0;
     dowCnt[w]++;
-  });
+  }
   const dowAvg = dowSum.map((s, i) => dowCnt[i] ? s / dowCnt[i] : 0);
   const weekdays = [1, 2, 3, 4, 5].filter(i => dowCnt[i] > 0);
   let patternHtml = '';
   if (weekdays.length >= 3) {
-    const best = weekdays.slice().sort((x, y) => dowAvg[y] - dowAvg[x])[0];
-    const worst = weekdays.slice().sort((x, y) => dowAvg[x] - dowAvg[y])[0];
+    const best = weekdays.slice().sort((x, z) => dowAvg[z] - dowAvg[x])[0];
+    const worst = weekdays.slice().sort((x, z) => dowAvg[x] - dowAvg[z])[0];
     const maxAvg = Math.max.apply(null, weekdays.map(i => dowAvg[i])) || 1;
     patternHtml = '<div class="su-dow"><div class="su-dow-t">요일별 평균</div>'
       + [1, 2, 3, 4, 5].map(i => '<div class="su-dow-row"><b>' + DOW[i] + '</b>'
@@ -200,12 +225,21 @@ function suCalendarCard(rows, dateTo) {
   }
 
   return '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="chart-card-title">일별 매출 캘린더</div>'
-    + '<div class="chart-card-sub">색이 진할수록 매출이 큰 날 · 빨강은 공휴일 · 회색은 아직 오지 않은 날</div>'
-    + '<div class="su-calwrap"><div class="su-cals">' + monthHtml + '</div>' + patternHtml + '</div>'
-    + '<div class="su-legend" style="margin-top:10px"><span>적음</span>'
-    + palette.map(p => '<i style="background:' + p + '"></i>').join('')
-    + '<span>많음</span><em style="color:var(--red)">■ 공휴일</em></div>'
+    + '<div class="dly-cal-bar">'
+    + '<div class="dly-cal-nav">'
+    + '<button type="button" class="btn-sm btn-ghost" onclick="suCalShift(-1)">‹</button>'
+    + '<div class="dly-cal-title">' + y + '년 ' + (m + 1) + '월</div>'
+    + '<button type="button" class="btn-sm btn-ghost" onclick="suCalShift(1)">›</button>'
+    + '<button type="button" class="btn-sm btn-ghost" onclick="suCalToday()">오늘</button>'
+    + '</div>'
+    + '<div class="dly-cal-sum">매출 <b>' + moneyShort(monthSum) + '원</b>'
+    + (monthDays ? ' · 거래일 ' + monthDays + '일 · 일평균 ' + moneyShort(monthSum / monthDays) + '원' : '') + '</div>'
+    + '</div>'
+    + '<div class="dly-cal-box">'
+    + '<div class="dly-cal-dowrow">' + dowHead + '</div>'
+    + '<div class="dly-cal-body">' + cells + '</div>'
+    + '</div>'
+    + (patternHtml ? '<div class="su-calwrap">' + patternHtml + '</div>' : '')
     + '</div>';
 }
 
@@ -286,7 +320,7 @@ function suPersonCards(mtx, rows, prevRows, isDist, historyRows) {
 
     const sub = isDist ? (m.count.toLocaleString() + '건 · 건당 ' + moneyShort(m.avgOrder) + '원')
                        : ('거래처 ' + m.clientCount + '곳 · 건당 ' + moneyShort(m.avgOrder) + '원');
-    const click = isDist ? ' onclick="openClient360(\'' + escInlineJs(m.person) + '\')" style="cursor:pointer"' : '';
+    const click = isDist ? ` ${uiAction('click', () => openClient360(m.person))} style="cursor:pointer"` : '';
     return '<div class="su-pc"' + click + '>'
       + '<div class="su-pc-h"><div class="su-pc-av" style="background:' + safe + '">'
       + escHtml(String(m.person || '?').slice(0, 1)) + '</div>'

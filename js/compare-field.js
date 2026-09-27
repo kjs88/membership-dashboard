@@ -51,12 +51,12 @@ function renderCompare() {
   if (!host) return;
   const rows = allOrders || [];
   if (!rows.length) {
-    host.innerHTML = emptyState('비교할 매출 데이터가 없습니다', 'ERP 동기화 후 다시 확인해 주세요', '📊');
+    uiSetHtml(host, emptyState('비교할 매출 데이터가 없습니다', 'ERP 동기화 후 다시 확인해 주세요', '📊'));
     return;
   }
   const groups = cmpBuildGroups(rows);
   if (!groups.length) {
-    host.innerHTML = emptyState('비교할 대상이 없습니다', '기간이나 기준을 바꿔 보세요', '📊');
+    uiSetHtml(host, emptyState('비교할 대상이 없습니다', '기간이나 기준을 바꿔 보세요', '📊'));
     return;
   }
 
@@ -107,14 +107,14 @@ function renderCompare() {
       th + '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
   }
 
-  host.innerHTML = '<div class="cmp-grid">' + cards + '</div>' + table;
+  uiSetHtml(host, '<div class="cmp-grid">' + cards + '</div>' + table);
 }
 
 // ════════════════════════════════════
 // 모바일 현장 모드
 // ════════════════════════════════════
 function fieldItem(title, sub, onclickName, tag, tagClass) {
-  return '<div class="fld-item" onclick="openClient360(\'' + escInlineJs(onclickName) + '\')">' +
+  return `<div class="fld-item" ${uiAction('click', () => openClient360(onclickName))}>` +
     '<div><b>' + escHtml(title) + '</b><span>' + escHtml(sub) + '</span></div>' +
     '<em class="' + (tagClass || '') + '">' + escHtml(tag) + '</em></div>';
 }
@@ -146,13 +146,9 @@ function renderField() {
     ? doneToday.map(e => fieldItem(e.institution || '', (e.clientType || '') + ' · 가능성 ' + (e.dealPossibility || '-'), e.institution || '', '›', '')).join('')
     : emptyState('오늘 기록한 방문이 없습니다', '위의 “일지 쓰기”로 바로 기록할 수 있습니다', '📝');
 
-  host.innerHTML =
-    '<div class="fld-hello"><b>' + escHtml(me || '오늘 일정') + '</b>' +
-      '<span>' + today + ' · 오늘 ' + doneToday.length + '건 기록</span></div>' +
-    '<div class="fld-actions">' +
-      '<button class="fld-btn primary" onclick="showPage(\'input\')">📝 일지 쓰기</button>' +
-      '<button class="fld-btn" onclick="openGlobalSearch()">🔍 거래처 찾기</button></div>' +
-    '<div class="fld-sec"><h3>오늘 방문할 곳 <span>' + planned.length + '</span></h3>' + plannedHtml + '</div>' +
-    '<div class="fld-sec"><h3>연락 우선순위 <span>' + overdue.length + '</span></h3>' + overdueHtml + '</div>' +
-    '<div class="fld-sec"><h3>오늘 기록한 방문 <span>' + doneToday.length + '</span></h3>' + doneHtml + '</div>';
+  uiSetHtml(host, '<div class="fld-hello"><b>' + escHtml(me || '오늘 일정') + '</b>' + '<span>' + today + ' · 오늘 ' + doneToday.length + '건 기록</span></div>' + '<div class="fld-actions">' + `<button class="fld-btn primary" ${uiAction("click", function (event, uiValues) {
+  showPage('input');
+}, [])}>📝 일지 쓰기</button>` + `<button class="fld-btn" ${uiAction("click", function (event, uiValues) {
+  openGlobalSearch();
+}, [])}>🔍 거래처 찾기</button></div>` + '<div class="fld-sec"><h3>오늘 방문할 곳 <span>' + planned.length + '</span></h3>' + plannedHtml + '</div>' + '<div class="fld-sec"><h3>연락 우선순위 <span>' + overdue.length + '</span></h3>' + overdueHtml + '</div>' + '<div class="fld-sec"><h3>오늘 기록한 방문 <span>' + doneToday.length + '</span></h3>' + doneHtml + '</div>');
 }

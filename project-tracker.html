@@ -3,10 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="no-referrer">
 <title>프로젝트 관리</title>
 <link rel="stylesheet" href="css/project-tracker.css?v=20260723-spaghetti-cleanup">
+<script src="vendor/purify-3.4.16.min.js" integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL" crossorigin="anonymous"></script>
+<script src="js/security-dom.js?v=20260927-security"></script>
+<script src="js/security-files.js?v=20260927-security"></script>
 </head>
 <body>
   <div class="app-head">
@@ -18,19 +21,19 @@
       <div class="sub">프로젝트, 태스크, 보드, 타임라인을 한 곳에서 관리합니다.</div>
     </div>
     <div class="head-actions">
-      <button class="btn-ghost" onclick="openCommandPalette()">명령 <span class="shortcut-hint">Ctrl K</span></button>
-      <button class="btn-ghost" onclick="openInbox()">인박스 <span class="compact-badge" id="inboxCount">0</span></button>
-      <button class="btn-ghost" onclick="openIntake()">요청</button>
-      <button class="btn-ghost" onclick="openDependencyRadar()">의존성</button>
-      <button class="btn-ghost" onclick="openAudit()">활동</button>
-      <button class="btn-ghost" onclick="openAnalysis()">분석</button>
-      <button class="btn-ghost" onclick="openIssues()">이슈</button>
-      <button class="btn-ghost" onclick="exportWorkspace()">백업</button>
-      <button class="btn-ghost" onclick="exportCsv()">CSV</button>
-      <label class="btn-ghost">복원 <input type="file" accept="application/json" onchange="importWorkspace(event)" hidden></label>
-      <button class="btn-ghost" onclick="openTrash()">휴지통 <span class="trash-count" id="trashCount">0</span></button>
-      <button class="btn-primary" onclick="openProjectDrawer()">+ 프로젝트</button>
-      <button class="btn-primary" onclick="openTaskDrawer()">+ 태스크</button>
+      <button class="btn-ghost" data-ui-static-click="s0">명령 <span class="shortcut-hint">Ctrl K</span></button>
+      <button class="btn-ghost" data-ui-static-click="s1">인박스 <span class="compact-badge" id="inboxCount">0</span></button>
+      <button class="btn-ghost" data-ui-static-click="s2">요청</button>
+      <button class="btn-ghost" data-ui-static-click="s3">의존성</button>
+      <button class="btn-ghost" data-ui-static-click="s4">활동</button>
+      <button class="btn-ghost" data-ui-static-click="s5">분석</button>
+      <button class="btn-ghost" data-ui-static-click="s6">이슈</button>
+      <button class="btn-ghost" data-ui-static-click="s7">백업</button>
+      <button class="btn-ghost" data-ui-static-click="s8">CSV</button>
+      <label class="btn-ghost">복원 <input type="file" accept="application/json" data-ui-static-change="s9" hidden></label>
+      <button class="btn-ghost" data-ui-static-click="s10">휴지통 <span class="trash-count" id="trashCount">0</span></button>
+      <button class="btn-primary" data-ui-static-click="s11">+ 프로젝트</button>
+      <button class="btn-primary" data-ui-static-click="s12">+ 태스크</button>
     </div>
   </div>
 
@@ -38,32 +41,32 @@
     <div class="toolbar-row toolbar-main">
       <div class="toolbar-group">
         <div class="view-tabs" aria-label="보기 방식">
-          <button class="view-tab active" data-view="table" onclick="setView('table')">표</button>
-          <button class="view-tab" data-view="board" onclick="setView('board')">보드</button>
-          <button class="view-tab" data-view="timeline" onclick="setView('timeline')">타임라인</button>
-          <button class="view-tab" data-view="calendar" onclick="setView('calendar')">달력</button>
+          <button class="view-tab active" data-view="table" data-ui-static-click="s13">표</button>
+          <button class="view-tab" data-view="board" data-ui-static-click="s14">보드</button>
+          <button class="view-tab" data-view="timeline" data-ui-static-click="s15">타임라인</button>
+          <button class="view-tab" data-view="calendar" data-ui-static-click="s16">달력</button>
         </div>
       </div>
       <div class="toolbar-group toolbar-search">
-        <input id="q" placeholder="태스크, 태그, 담당자 검색" oninput="renderWorkspace()">
+        <input id="q" placeholder="태스크, 태그, 담당자 검색" data-ui-static-input="s17">
       </div>
       <div class="toolbar-group toolbar-selects">
-        <select id="filterOwner" onchange="renderWorkspace()"><option value="">담당자 전체</option></select>
-        <select id="filterStatus" onchange="renderWorkspace()">
+        <select id="filterOwner" data-ui-static-change="s18"><option value="">담당자 전체</option></select>
+        <select id="filterStatus" data-ui-static-change="s19">
           <option value="">상태 전체</option>
           <option value="todo">할 일</option>
           <option value="progress">진행 중</option>
           <option value="review">검토</option>
           <option value="done">완료</option>
         </select>
-        <select id="sortBy" onchange="renderWorkspace()">
+        <select id="sortBy" data-ui-static-change="s20">
           <option value="manual">기본순</option>
           <option value="due">마감 임박순</option>
           <option value="priority">우선순위순</option>
           <option value="risk">리스크순</option>
           <option value="progress">진행률순</option>
         </select>
-        <select id="groupBy" onchange="renderWorkspace()">
+        <select id="groupBy" data-ui-static-change="s21">
           <option value="">그룹 없음</option>
           <option value="project">프로젝트별</option>
           <option value="owner">담당자별</option>
@@ -71,8 +74,8 @@
           <option value="status">상태별</option>
           <option value="priority">우선순위별</option>
         </select>
-        <select id="filterSprint" onchange="renderWorkspace()"><option value="">스프린트 전체</option></select>
-        <select id="roleView" onchange="renderWorkspace()">
+        <select id="filterSprint" data-ui-static-change="s22"><option value="">스프린트 전체</option></select>
+        <select id="roleView" data-ui-static-change="s23">
           <option value="">일반 보기</option>
           <option value="mywork">내 업무 보기</option>
           <option value="exec">리더 요약 보기</option>
@@ -84,21 +87,21 @@
     <div class="toolbar-row toolbar-sub">
       <div class="toolbar-label">빠른 필터</div>
       <div class="quick-tabs" aria-label="빠른 필터">
-        <button class="quick-tab active" data-quick="" onclick="setQuickFilter('')">전체</button>
-        <button class="quick-tab" data-quick="today" onclick="setQuickFilter('today')">오늘</button>
-        <button class="quick-tab" data-quick="overdue" onclick="setQuickFilter('overdue')">지연</button>
-        <button class="quick-tab" data-quick="week" onclick="setQuickFilter('week')">이번주</button>
-        <button class="quick-tab" data-quick="blocked" onclick="setQuickFilter('blocked')">대기</button>
-        <button class="quick-tab" data-quick="approval" onclick="setQuickFilter('approval')">승인</button>
-        <button class="quick-tab" data-quick="highrisk" onclick="setQuickFilter('highrisk')">고위험</button>
-        <button class="quick-tab" data-quick="pinned" onclick="setQuickFilter('pinned')">핀</button>
-        <button class="quick-tab" data-quick="mine" onclick="setQuickFilter('mine')">내 담당</button>
-        <button class="quick-tab" data-quick="nodate" onclick="setQuickFilter('nodate')">날짜없음</button>
+        <button class="quick-tab active" data-quick="" data-ui-static-click="s24">전체</button>
+        <button class="quick-tab" data-quick="today" data-ui-static-click="s25">오늘</button>
+        <button class="quick-tab" data-quick="overdue" data-ui-static-click="s26">지연</button>
+        <button class="quick-tab" data-quick="week" data-ui-static-click="s27">이번주</button>
+        <button class="quick-tab" data-quick="blocked" data-ui-static-click="s28">대기</button>
+        <button class="quick-tab" data-quick="approval" data-ui-static-click="s29">승인</button>
+        <button class="quick-tab" data-quick="highrisk" data-ui-static-click="s30">고위험</button>
+        <button class="quick-tab" data-quick="pinned" data-ui-static-click="s31">핀</button>
+        <button class="quick-tab" data-quick="mine" data-ui-static-click="s32">내 담당</button>
+        <button class="quick-tab" data-quick="nodate" data-ui-static-click="s33">날짜없음</button>
       </div>
       <div class="toolbar-tools">
-        <select id="savedViewSelect" class="saved-view-select" onchange="applySavedView(this.value)"><option value="">저장된 뷰</option></select>
-        <button class="mini-btn" onclick="saveCurrentView()">뷰 저장</button>
-        <button class="mini-btn" onclick="deleteSavedView()">삭제</button>
+        <select id="savedViewSelect" class="saved-view-select" data-ui-static-change="s34"><option value="">저장된 뷰</option></select>
+        <button class="mini-btn" data-ui-static-click="s35">뷰 저장</button>
+        <button class="mini-btn" data-ui-static-click="s36">삭제</button>
         <select id="templateSelect" class="saved-view-select">
           <option value="">템플릿</option>
           <option value="meeting">회의 준비</option>
@@ -106,16 +109,16 @@
           <option value="launch">출시/오픈</option>
           <option value="issue">이슈 해결</option>
         </select>
-        <button class="mini-btn" onclick="createFromTemplate()">추가</button>
+        <button class="mini-btn" data-ui-static-click="s37">추가</button>
       </div>
     </div>
   </div>
 
   <div class="quick-add">
-    <input id="quickTaskName" placeholder="빠른 태스크 입력 후 Enter" onkeydown="if(event.key==='Enter')quickAddTask()">
+    <input id="quickTaskName" placeholder="빠른 태스크 입력 후 Enter" data-ui-static-keydown="s38">
     <select id="quickTaskProject"></select>
     <select id="quickTaskOwner"></select>
-    <button class="btn-primary" onclick="quickAddTask()">바로 추가</button>
+    <button class="btn-primary" data-ui-static-click="s39">바로 추가</button>
   </div>
 
   <div class="layout">
@@ -126,10 +129,10 @@
           <div class="panel-sub" id="projectCount">0개</div>
         </div>
         <div class="project-filter">
-          <button class="mini-btn active" data-pfilter="active" onclick="setProjectFilter('active')">진행</button>
-          <button class="mini-btn" data-pfilter="favorite" onclick="setProjectFilter('favorite')">즐겨</button>
-          <button class="mini-btn" data-pfilter="archived" onclick="setProjectFilter('archived')">보관</button>
-          <button class="mini-btn" onclick="selectProject('all')">전체</button>
+          <button class="mini-btn active" data-pfilter="active" data-ui-static-click="s40">진행</button>
+          <button class="mini-btn" data-pfilter="favorite" data-ui-static-click="s41">즐겨</button>
+          <button class="mini-btn" data-pfilter="archived" data-ui-static-click="s42">보관</button>
+          <button class="mini-btn" data-ui-static-click="s43">전체</button>
         </div>
       </div>
       <div class="project-list" id="projectList"></div>
@@ -142,9 +145,9 @@
         <select id="bulkStatus"><option value="">상태 변경</option></select>
         <select id="bulkOwner"><option value="">담당 변경</option></select>
         <select id="bulkPriority"><option value="">우선순위 변경</option></select>
-        <button class="mini-btn" onclick="applyBulk()">적용</button>
-        <button class="mini-btn" onclick="bulkDelete()">삭제</button>
-        <button class="mini-btn" onclick="clearBulkSelection()">해제</button>
+        <button class="mini-btn" data-ui-static-click="s44">적용</button>
+        <button class="mini-btn" data-ui-static-click="s45">삭제</button>
+        <button class="mini-btn" data-ui-static-click="s46">해제</button>
       </section>
       <section class="panel" id="viewHost"></section>
     </main>
@@ -157,7 +160,7 @@
           <div class="drawer-title" id="projectDrawerTitle">프로젝트 추가</div>
           <div class="sub">프로젝트 속성을 수정하면 관련 태스크 화면에 바로 반영됩니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeProjectDrawer()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s47">닫기</button>
       </div>
       <div class="drawer-body">
         <div class="form-grid">
@@ -172,11 +175,11 @@
         </div>
       </div>
       <div class="drawer-foot">
-        <button class="btn-danger" id="deleteProjectBtn" onclick="deleteCurrentProject()">삭제</button>
+        <button class="btn-danger" id="deleteProjectBtn" data-ui-static-click="s48">삭제</button>
         <div>
-          <button class="btn-ghost" id="duplicateProjectBtn" onclick="duplicateCurrentProject()">복제</button>
-          <button class="btn-ghost" onclick="closeProjectDrawer()">취소</button>
-          <button class="btn-primary" onclick="saveProject()">저장</button>
+          <button class="btn-ghost" id="duplicateProjectBtn" data-ui-static-click="s49">복제</button>
+          <button class="btn-ghost" data-ui-static-click="s50">취소</button>
+          <button class="btn-primary" data-ui-static-click="s51">저장</button>
         </div>
       </div>
     </div>
@@ -189,7 +192,7 @@
           <div class="drawer-title" id="taskDrawerTitle">태스크 추가</div>
           <div class="sub">하위 태스크, 의존성, 진행 기록까지 한 페이지에서 관리합니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeTaskDrawer()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s52">닫기</button>
       </div>
       <div class="drawer-body">
         <div class="form-grid">
@@ -234,21 +237,21 @@
         <div class="field">
           <label>댓글 추가</label>
           <div class="comment-compose">
-            <input id="commentInput" placeholder="@이름 으로 멘션하고 Enter" onkeydown="if(event.key==='Enter')addComment()">
-            <button class="mini-btn" onclick="addComment()">등록</button>
+            <input id="commentInput" placeholder="@이름 으로 멘션하고 Enter" data-ui-static-keydown="s53">
+            <button class="mini-btn" data-ui-static-click="s54">등록</button>
           </div>
         </div>
         <div class="field">
           <label>기록 추가</label>
-          <input id="activityInput" placeholder="진행 상황을 입력하고 Enter" onkeydown="if(event.key==='Enter')addActivity()">
+          <input id="activityInput" placeholder="진행 상황을 입력하고 Enter" data-ui-static-keydown="s55">
         </div>
       </div>
       <div class="drawer-foot">
-        <button class="btn-danger" id="deleteTaskBtn" onclick="deleteCurrentTask()">삭제</button>
+        <button class="btn-danger" id="deleteTaskBtn" data-ui-static-click="s56">삭제</button>
         <div>
-          <button class="btn-ghost" id="duplicateTaskBtn" onclick="duplicateCurrentTask()">복제</button>
-          <button class="btn-ghost" onclick="closeTaskDrawer()">취소</button>
-          <button class="btn-primary" onclick="saveTask()">저장</button>
+          <button class="btn-ghost" id="duplicateTaskBtn" data-ui-static-click="s57">복제</button>
+          <button class="btn-ghost" data-ui-static-click="s58">취소</button>
+          <button class="btn-primary" data-ui-static-click="s59">저장</button>
         </div>
       </div>
     </div>
@@ -261,12 +264,12 @@
           <div class="drawer-title">휴지통</div>
           <div class="sub">삭제한 프로젝트와 태스크를 복원할 수 있습니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeTrash()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s60">닫기</button>
       </div>
       <div class="drawer-body" id="trashBody"></div>
       <div class="drawer-foot">
-        <button class="btn-danger" onclick="emptyTrash()">휴지통 비우기</button>
-        <button class="btn-ghost" onclick="closeTrash()">닫기</button>
+        <button class="btn-danger" data-ui-static-click="s61">휴지통 비우기</button>
+        <button class="btn-ghost" data-ui-static-click="s62">닫기</button>
       </div>
     </div>
   </div>
@@ -278,7 +281,7 @@
           <div class="drawer-title">전체 활동</div>
           <div class="sub">프로젝트와 태스크의 주요 변경 이력입니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeAudit()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s63">닫기</button>
       </div>
       <div class="drawer-body">
         <div class="audit-list" id="auditList"></div>
@@ -293,7 +296,7 @@
           <div class="drawer-title">워크로드 분석</div>
           <div class="sub">담당자별 공수, 지연, 진행률을 모아 봅니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeAnalysis()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s64">닫기</button>
       </div>
       <div class="drawer-body" id="analysisBody"></div>
     </div>
@@ -306,7 +309,7 @@
           <div class="drawer-title">이슈 센터</div>
           <div class="sub">지연, 의존성 대기, 승인 대기, 고위험 태스크를 한 곳에 모았습니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeIssues()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s65">닫기</button>
       </div>
       <div class="drawer-body" id="issueBody"></div>
     </div>
@@ -319,7 +322,7 @@
           <div class="drawer-title">협업 인박스</div>
           <div class="sub">멘션, 승인 요청, 후속 확인, 내 업무를 한 곳에서 확인합니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeInbox()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s66">닫기</button>
       </div>
       <div class="drawer-body" id="inboxBody"></div>
     </div>
@@ -332,7 +335,7 @@
           <div class="drawer-title">업무 요청 접수</div>
           <div class="sub">흩어진 요청을 태스크로 표준화합니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeIntake()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s67">닫기</button>
       </div>
       <div class="drawer-body">
         <div class="request-grid">
@@ -346,8 +349,8 @@
         </div>
       </div>
       <div class="drawer-foot">
-        <button class="btn-ghost" onclick="closeIntake()">취소</button>
-        <button class="btn-primary" onclick="submitIntake()">태스크로 접수</button>
+        <button class="btn-ghost" data-ui-static-click="s68">취소</button>
+        <button class="btn-primary" data-ui-static-click="s69">태스크로 접수</button>
       </div>
     </div>
   </div>
@@ -359,17 +362,17 @@
           <div class="drawer-title">프로젝트 상태 업데이트</div>
           <div class="sub">진행률, 리스크, 다음 액션을 팀 공유용 업데이트로 남깁니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeProjectUpdate()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s70">닫기</button>
       </div>
       <div class="drawer-body">
-        <div class="field"><label>프로젝트</label><select id="updateProject" onchange="draftProjectUpdate()"></select></div>
+        <div class="field"><label>프로젝트</label><select id="updateProject" data-ui-static-change="s71"></select></div>
         <div class="field"><label>업데이트 초안</label><textarea id="updateText"></textarea></div>
         <div class="drawer-note">초안은 현재 태스크 상태에서 생성됩니다. 저장하면 프로젝트 업데이트 이력에 남습니다.</div>
         <div class="update-list" id="updateList"></div>
       </div>
       <div class="drawer-foot">
-        <button class="btn-ghost" onclick="draftProjectUpdate()">초안 다시 만들기</button>
-        <button class="btn-primary" onclick="saveProjectUpdate()">업데이트 저장</button>
+        <button class="btn-ghost" data-ui-static-click="s72">초안 다시 만들기</button>
+        <button class="btn-primary" data-ui-static-click="s73">업데이트 저장</button>
       </div>
     </div>
   </div>
@@ -381,16 +384,16 @@
           <div class="drawer-title">의존성 레이더</div>
           <div class="sub">막힌 업무와 선행 태스크를 빠르게 추적합니다.</div>
         </div>
-        <button class="mini-btn" onclick="closeDependencyRadar()">닫기</button>
+        <button class="mini-btn" data-ui-static-click="s74">닫기</button>
       </div>
       <div class="drawer-body" id="dependencyBody"></div>
     </div>
   </div>
 
-  <div class="command-mask" id="commandMask" onclick="if(event.target===this)closeCommandPalette()">
+  <div class="command-mask" id="commandMask" data-ui-static-click="s75">
     <div class="command-box">
       <div class="command-head">
-        <input id="commandInput" placeholder="명령, 프로젝트, 태스크 검색" oninput="renderCommandPalette()" onkeydown="handleCommandKey(event)">
+        <input id="commandInput" placeholder="명령, 프로젝트, 태스크 검색" data-ui-static-input="s76" data-ui-static-keydown="s77">
       </div>
       <div class="command-list" id="commandList"></div>
     </div>
@@ -398,6 +401,7 @@
 
   <div class="toast" id="toast"></div>
 
-<script src="js/project-tracker.js?v=20260723-spaghetti-cleanup"></script>
+<script src="js/project-tracker.js?v=20260927-security"></script>
+<script src="js/ui-static-project.js?v=20260927-security"></script>
 </body>
 </html>

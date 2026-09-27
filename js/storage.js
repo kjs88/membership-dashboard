@@ -30,9 +30,12 @@ const SENSITIVE_LOCAL_KEYS = new Set([
   'sj-erp-last-sync',
 ]);
 
+let storageCacheEpoch = 0;
+
 function _fbSyncPath(key) {
-  if (FB_SYNC_KEYS[key]) return FB_SYNC_KEYS[key];
-  const safePathKey = value => String(value || '').replace(/[.$#[\]/]/g, '_').slice(0, 120);
+  if (typeof key !== 'string') return null;
+  if (Object.hasOwn(FB_SYNC_KEYS, key)) return FB_SYNC_KEYS[key];
+  const safePathKey = value => String(value || '').replace(/[.$#[\]/?%\\\u0000-\u001f\u007f]/g, '_').slice(0, 120);
   const wm = key.match(/^sj-weekly-reports-(.+)$/);
   if (wm) return `data/weekly-reports/${safePathKey(wm[1])}`;
   const mm = key.match(/^sj-monthly-reports-(.+)$/);
@@ -41,6 +44,7 @@ function _fbSyncPath(key) {
 }
 
 function _fbUrl(path) {
+  if (typeof path !== 'string' || !/^(?:data|erp)(?:\/[^.$#[\]/?%\\\u0000-\u001f\u007f]+)*$/.test(path)) return null;
   const rawBase = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
   const base = typeof securityNormalizeFirebaseUrl === 'function' ? securityNormalizeFirebaseUrl(rawBase) : rawBase;
   return base ? `${base}/${path}.json` : null;
@@ -64,6 +68,8 @@ function _canRemoteWriteSharedKey(key) {
 }
 
 function clearSensitiveLocalCache(options = {}) {
+  storageCacheEpoch++;
+  erpIdbClear();
   const keepAuth = options.keepAuth === true;
   const keys = [];
   try {
@@ -191,6 +197,7 @@ function setErpRuntimeData(parsedOrder, parsedShip, payload = {}) {
 
 // 로그인 화면에서는 사용자/가입대기 정보만 최소 조회한다.
 async function syncAuthFromFirebase() {
+  const epoch = storageCacheEpoch;
   const rawBase = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
   const base = typeof securityNormalizeFirebaseUrl === 'function' ? securityNormalizeFirebaseUrl(rawBase) : rawBase;
   if (!base) return false;
@@ -203,10 +210,12 @@ async function syncAuthFromFirebase() {
 
     if (usersRes.ok) {
       const users = await usersRes.json().catch(() => null);
+      if (epoch !== storageCacheEpoch) return false;
       if (users !== null && users !== undefined) _safeSetJsonStorage('sj-users-v6', users);
     }
     if (pendingRes.ok) {
       const pending = await pendingRes.json().catch(() => null);
+      if (epoch !== storageCacheEpoch) return false;
       _safeSetJsonStorage('sj-signup-pending-v1', pending || []);
     }
     return true;
@@ -218,6 +227,7 @@ async function syncAuthFromFirebase() {
 
 // 앱 진입 시 Firebase /data + erp/latest 전체를 localStorage에 동기화
 async function syncFromFirebase() {
+  const epoch = storageCacheEpoch;
   const rawBase = (typeof DB_URL === 'string' ? DB_URL : '').replace(/\/+$/, '');
   const base = typeof securityNormalizeFirebaseUrl === 'function' ? securityNormalizeFirebaseUrl(rawBase) : rawBase;
   if (!base) return;
@@ -229,6 +239,7 @@ async function syncFromFirebase() {
       const data = typeof securitySanitizeData === 'function'
         ? securitySanitizeData(await res.json())
         : await res.json();
+      if (epoch !== storageCacheEpoch) return;
       if (data && typeof data === 'object') {
         if (data.entries          !== undefined) _safeSetJsonStorage('sj-entries-v4',        data.entries);
         if (data.users            !== undefined) _safeSetJsonStorage('sj-users-v6',          data.users);
@@ -254,7 +265,7 @@ async function syncFromFirebase() {
 
   // erp/latest (주문/출고 ERP 데이터) — loadAndRender() 전에 localStorage에 넣어야 렌더 시 데이터가 있음
   try {
-    await syncErpFromFirebase(base);
+    if (epoch === storageCacheEpoch) await syncErpFromFirebase(base);
   } catch (e) { console.warn('[storage:syncFromFirebase erp/latest]', e); }
 }
 
@@ -272,7 +283,10 @@ function erpIdbOpen() {
       const db = req.result;
       if (!db.objectStoreNames.contains(ERP_IDB_STORE)) db.createObjectStore(ERP_IDB_STORE);
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      req.result.onversionchange = () => req.result.close();
+      resolve(req.result);
+    };
     req.onerror = () => reject(req.error);
   });
 }
@@ -280,18 +294,30 @@ function erpIdbOpen() {
 function erpIdbGet(key) {
   return erpIdbOpen().then(db => new Promise((resolve, reject) => {
     const tx = db.transaction(ERP_IDB_STORE, 'readonly');
+    tx.oncomplete = () => db.close();
+    tx.onabort = () => { db.close(); reject(tx.error); };
     const r = tx.objectStore(ERP_IDB_STORE).get(key);
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
   })).catch(() => null);
 }
 
-function erpIdbPut(key, value) {
+function erpIdbPut(key, value, epoch = storageCacheEpoch) {
   return erpIdbOpen().then(db => new Promise((resolve, reject) => {
+    if (epoch !== storageCacheEpoch) { db.close(); resolve(false); return; }
     const tx = db.transaction(ERP_IDB_STORE, 'readwrite');
     tx.objectStore(ERP_IDB_STORE).put(value, key);
-    tx.oncomplete = () => resolve(true);
-    tx.onerror = () => reject(tx.error);
+    tx.oncomplete = () => { db.close(); resolve(true); };
+    tx.onabort = tx.onerror = () => { db.close(); reject(tx.error); };
+  })).catch(() => false);
+}
+
+function erpIdbClear() {
+  return erpIdbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(ERP_IDB_STORE, 'readwrite');
+    tx.objectStore(ERP_IDB_STORE).clear();
+    tx.oncomplete = () => { db.close(); resolve(true); };
+    tx.onabort = tx.onerror = () => { db.close(); reject(tx.error); };
   })).catch(() => false);
 }
 
@@ -331,6 +357,9 @@ function setErpLoadProgress(fn) { erpLoadProgress = typeof fn === 'function' ? f
 function _erpProgress(stage, detail) { try { if (erpLoadProgress) erpLoadProgress(stage, detail || {}); } catch (_) {} }
 
 async function syncErpFromFirebase(base) {
+  const epoch = storageCacheEpoch;
+  base = securityNormalizeFirebaseUrl(base);
+  if (!base) return false;
   // 1) 서버의 최신 동기화 시각만 먼저 확인 (수십 바이트)
   _erpProgress('check');
   let syncedAt = '';
@@ -340,8 +369,10 @@ async function syncErpFromFirebase(base) {
   } catch (_) {}
 
   // 2) 캐시가 같은 시각이면 다운로드 생략
+  if (epoch !== storageCacheEpoch) return false;
   if (syncedAt) {
     const cached = await erpIdbGet('packed');
+    if (epoch !== storageCacheEpoch) return false;
     if (cached && cached.syncedAt === syncedAt && cached.payload) {
       _erpProgress('cache');
       const order = erpUnpack(cached.payload.order);
@@ -360,6 +391,7 @@ async function syncErpFromFirebase(base) {
     const res = await fetch(`${base}/erp/latest/packed.json?_=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const packed = await res.json().catch(() => null);
+      if (epoch !== storageCacheEpoch) return false;
       // 압축본이 서버 최신 동기화보다 오래됐으면 신뢰하지 않고 원본으로 간다.
       const stale = syncedAt && packed && packed.syncedAt && packed.syncedAt !== syncedAt;
       if (stale) console.warn('[storage:erp] packed 오래됨 → 원본 사용', packed.syncedAt, '!=', syncedAt);
@@ -372,7 +404,7 @@ async function syncErpFromFirebase(base) {
             syncedAt: packed.syncedAt || syncedAt, source: 'packed',
             orderCount: order.length, shipCount: ship.length,
           });
-          erpIdbPut('packed', { syncedAt: packed.syncedAt || syncedAt, payload: packed });
+          erpIdbPut('packed', { syncedAt: packed.syncedAt || syncedAt, payload: packed }, epoch);
           _erpProgress('done', { cached: false, order: order.length, ship: ship.length });
           return true;
         }
@@ -381,11 +413,13 @@ async function syncErpFromFirebase(base) {
   } catch (e) { console.warn('[storage:erp:packed]', e); }
 
   // 4) 압축본이 아직 없으면 기존 원본으로 폴백
+  if (epoch !== storageCacheEpoch) return false;
   _erpProgress('fallback');
   try {
     const erpRes = await fetch(`${base}/erp/latest.json?_=${Date.now()}`, { cache: 'no-store' });
     if (erpRes.ok) {
       const payload = await erpRes.json().catch(() => null);
+      if (epoch !== storageCacheEpoch) return false;
       if (payload && typeof erpExtractApiRows === 'function') {
         const parsedOrder = erpNormalizeApiRows(erpExtractApiRows(payload, 'order'), 'order');
         const parsedShip  = erpNormalizeApiRows(erpExtractApiRows(payload, 'ship'),  'ship');

@@ -82,35 +82,41 @@ function renderUsers() {
     const access = new Set(getUserMenuAccess(u));
     return `
       <div class="user-menu-toolbar">
-        <button class="btn-sm btn-ghost" onclick="setUserMenuPreset('${escInlineJs(u.id)}','default')">기본 메뉴</button>
-        <button class="btn-sm btn-ghost" onclick="setUserMenuPreset('${escInlineJs(u.id)}','all')">전체 메뉴</button>
+        <button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  setUserMenuPreset(String(uiValues[0]), 'default');
+}, [u.id])}>기본 메뉴</button>
+        <button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  setUserMenuPreset(String(uiValues[0]), 'all');
+}, [u.id])}>전체 메뉴</button>
       </div>
       <div class="user-menu-grid">
         ${MENU_ACCESS_ITEMS.map(item => {
-          const fixed = typeof isAlwaysVisibleMenuKey === 'function' && isAlwaysVisibleMenuKey(item.key);
-          return `
+  const fixed = typeof isAlwaysVisibleMenuKey === 'function' && isAlwaysVisibleMenuKey(item.key);
+  return `
           <label class="user-menu-check" title="${escHtml(item.label)}">
-            <input type="checkbox" ${fixed || access.has(item.key)?'checked':''} ${fixed?'disabled':''} onchange="toggleUserMenuAccess('${escInlineJs(u.id)}','${escInlineJs(item.key)}',this.checked)" />
+            <input type="checkbox" ${fixed || access.has(item.key) ? 'checked' : ''} ${fixed ? 'disabled' : ''} ${uiAction("change", function (event, uiValues) {
+    toggleUserMenuAccess(String(uiValues[0]), String(uiValues[1]), this.checked);
+  }, [u.id, item.key])} />
             <span>${escHtml(item.label)}</span>
           </label>`;
-        }).join('')}
+}).join('')}
       </div>`;
   };
 
-  document.getElementById('users-list').innerHTML = allUsers.map(u=>{
-    const uid = escInlineJs(u.id);
-    const uname = escHtml(u.name || '');
-    const unameJs = escInlineJs(u.name || '');
-    const color = /^#[0-9a-f]{6}$/i.test(u.color || '') ? u.color : '#009E6A';
-    const stat = accountStats[u.id] || {};
-    const displayCount = stat.loginCount || stat.activityCount || 0;
-    const displayLast = stat.loginLast || stat.activityLast || '';
-    return `
+  uiSetHtml(document.getElementById('users-list'), allUsers.map(u => {
+  const uid = escInlineJs(u.id);
+  const uname = escHtml(u.name || '');
+  const unameJs = escInlineJs(u.name || '');
+  const color = /^#[0-9a-f]{6}$/i.test(u.color || '') ? u.color : '#009E6A';
+  const stat = accountStats[u.id] || {};
+  const displayCount = stat.loginCount || stat.activityCount || 0;
+  const displayLast = stat.loginLast || stat.activityLast || '';
+  return `
     <div class="user-card">
-      <div class="user-card-avatar" style="background:${color}22;color:${color}">${escHtml((u.name||'').slice(0,1))}</div>
+      <div class="user-card-avatar" style="background:${color}22;color:${color}">${escHtml((u.name || '').slice(0, 1))}</div>
       <div class="user-card-info">
         <div class="user-card-name">${uname}</div>
-        <div class="user-card-meta">ID: ${escHtml(u.id)} · 가입일: ${escHtml(u.createdAt||'-')}</div>
+        <div class="user-card-meta">ID: ${escHtml(u.id)} · 가입일: ${escHtml(u.createdAt || '-')}</div>
       </div>
       <div class="user-card-stats">
         <div class="user-card-count" style="color:var(--blue)">${displayCount}</div>
@@ -121,15 +127,21 @@ function renderUsers() {
         <div class="user-card-label">최근 접속</div>
       </div>
       <div class="user-card-actions">
-        <button class="btn-sm btn-ghost" onclick="openLoginLogs('${uid}')">접속기록</button>
-        <button class="btn-sm btn-amber" onclick="openResetPwModal('${uid}','${unameJs}')">비번 초기화</button>
-        ${u.id!=='admin'?`<button class="btn-sm btn-danger" onclick="deleteUser('${uid}')">삭제</button>`:''}
+        <button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+    openLoginLogs(String(uiValues[0]));
+  }, [u.id])}>접속기록</button>
+        <button class="btn-sm btn-amber" ${uiAction("click", function (event, uiValues) {
+    openResetPwModal(String(uiValues[0]), String(uiValues[1]));
+  }, [u.id, u.name || ''])}>비번 초기화</button>
+        ${u.id !== 'admin' ? `<button class="btn-sm btn-danger" ${uiAction("click", function (event, uiValues) {
+    deleteUser(String(uiValues[0]));
+  }, [u.id])}>삭제</button>` : ''}
       </div>
       <div class="user-menu-settings">
         ${menuSettingsHtml(u)}
       </div>
     </div>`;
-  }).join('');
+}).join(''));
 }
 
 // ── 접속기록 모달 ──
@@ -149,22 +161,22 @@ function openLoginLogs(userId) {
         if (isNaN(d)) return '-';
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
       };
-      body.innerHTML = `<div style="padding:10px 12px;color:var(--text2);font-size:12px;border-bottom:1px solid var(--border)">로그인 기록은 남아있지 않지만, 아래 작성 활동 기록이 확인됩니다.</div>
+      uiSetHtml(body, `<div style="padding:10px 12px;color:var(--text2);font-size:12px;border-bottom:1px solid var(--border)">로그인 기록은 남아있지 않지만, 아래 작성 활동 기록이 확인됩니다.</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr>
-            ${['일시','계정','활동','내용'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)">${h}</th>`).join('')}
+            ${['일시', '계정', '활동', '내용'].map(h => `<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)">${h}</th>`).join('')}
           </tr></thead>
-          <tbody>${activityList.slice(0,300).map(a=>`
+          <tbody>${activityList.slice(0, 300).map(a => `
             <tr>
               <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono)">${escHtml(fmtActivity(a.at))}</td>
-              <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-weight:600">${escHtml(a.name||a.id||'-')}</td>
-              <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(a.type||'-')}</td>
-              <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(a.title||'-')}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-weight:600">${escHtml(a.name || a.id || '-')}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(a.type || '-')}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(a.title || '-')}</td>
             </tr>`).join('')}
-          </tbody></table>`;
+          </tbody></table>`);
     } else
     if (!list.length) {
-      body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">접속기록이 없습니다.<br>이 기능 적용 이후의 로그인부터 기록됩니다.</div>';
+      uiSetHtml(body, '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">접속기록이 없습니다.<br>이 기능 적용 이후의 로그인부터 기록됩니다.</div>');
     } else {
       const fmt = iso => {
         const d = new Date(iso);
@@ -172,19 +184,19 @@ function openLoginLogs(userId) {
         const dow = ['일','월','화','수','목','금','토'][d.getDay()];
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} (${dow}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
       };
-      body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      uiSetHtml(body, `<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr>
-          ${['일시','계정','기기','IP'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)">${h}</th>`).join('')}
+          ${['일시', '계정', '기기', 'IP'].map(h => `<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)">${h}</th>`).join('')}
         </tr></thead>
-        <tbody>${list.slice(0,300).map(l=>`
+        <tbody>${list.slice(0, 300).map(l => `
           <tr>
             <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono)">${escHtml(fmt(l.at))}</td>
-            <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-weight:600">${escHtml(l.name||l.id||'-')}</td>
-            <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(l.device||'-')}</td>
-            <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">${escHtml(l.ip||'-')}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-weight:600">${escHtml(l.name || l.id || '-')}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${escHtml(l.device || '-')}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">${escHtml(l.ip || '-')}</td>
           </tr>`).join('')}
         </tbody></table>
-        ${list.length>300?`<div style="padding:10px;text-align:center;color:var(--text3);font-size:11px">최근 300건만 표시 (전체 ${list.length}건)</div>`:''}`;
+        ${list.length > 300 ? `<div style="padding:10px;text-align:center;color:var(--text3);font-size:11px">최근 300건만 표시 (전체 ${list.length}건)</div>` : ''}`);
     }
   }
   openModal('modal-login-logs');
@@ -302,42 +314,46 @@ function renderPendingSignups() {
   const wrap = document.getElementById('pending-signups-wrap');
   if (!wrap) return;
   const pending = getShared('sj-signup-pending-v1', []);
-  if (pending.length === 0) { wrap.innerHTML = ''; return; }
+  if (pending.length === 0) { uiSetHtml(wrap, ''); return; }
 
-  wrap.innerHTML = `
+  uiSetHtml(wrap, `
     <div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r);padding:14px 16px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <span style="font-size:14px">⏳</span>
         <span style="font-size:13px;font-weight:700;color:var(--amber)">가입 신청 대기 ${pending.length}건</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        ${pending.map(p=>{
-          const pid = escInlineJs(p.id);
-          const access = new Set(normalizeMenuAccess(p.menuAccess, 'user'));
-          return `
+        ${pending.map(p => {
+  const pid = escInlineJs(p.id);
+  const access = new Set(normalizeMenuAccess(p.menuAccess, 'user'));
+  return `
           <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:12px;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
             <div style="flex:1 1 180px;min-width:0">
               <div style="font-size:13px;font-weight:700;color:var(--text)">${escHtml(p.name)} <span style="font-size:11px;color:var(--text3);font-weight:400">(${escHtml(p.id)})</span></div>
-              <div style="font-size:11px;color:var(--text2);margin-top:2px">신청일시: ${escHtml((p.requestedAt||'').replace('T',' ').substring(0,16))}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">신청일시: ${escHtml((p.requestedAt || '').replace('T', ' ').substring(0, 16))}</div>
             </div>
             <div class="user-menu-grid" style="flex:2 1 420px;margin:0">
               ${MENU_ACCESS_ITEMS.map(item => {
-                const fixed = typeof isAlwaysVisibleMenuKey === 'function' && isAlwaysVisibleMenuKey(item.key);
-                return `
+    const fixed = typeof isAlwaysVisibleMenuKey === 'function' && isAlwaysVisibleMenuKey(item.key);
+    return `
                 <label class="user-menu-check" title="${escHtml(item.label)}">
-                  <input class="pending-menu-cb" data-pending-id="${escHtml(p.id)}" type="checkbox" value="${escHtml(item.key)}" ${fixed || access.has(item.key)?'checked':''} ${fixed?'disabled':''} />
+                  <input class="pending-menu-cb" data-pending-id="${escHtml(p.id)}" type="checkbox" value="${escHtml(item.key)}" ${fixed || access.has(item.key) ? 'checked' : ''} ${fixed ? 'disabled' : ''} />
                   <span>${escHtml(item.label)}</span>
                 </label>`;
-              }).join('')}
+  }).join('')}
             </div>
             <div style="display:flex;gap:6px;margin-left:auto">
-              <button class="btn-sm btn-primary" onclick="approveSignup('${pid}')">승인</button>
-              <button class="btn-sm btn-danger" onclick="rejectSignup('${pid}')">거절</button>
+              <button class="btn-sm btn-primary" ${uiAction("click", function (event, uiValues) {
+    approveSignup(String(uiValues[0]));
+  }, [p.id])}>승인</button>
+              <button class="btn-sm btn-danger" ${uiAction("click", function (event, uiValues) {
+    rejectSignup(String(uiValues[0]));
+  }, [p.id])}>거절</button>
             </div>
           </div>`;
-        }).join('')}
+}).join('')}
       </div>
-    </div>`;
+    </div>`);
 }
 
 async function approveSignup(id) {

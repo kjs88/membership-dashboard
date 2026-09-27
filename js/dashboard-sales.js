@@ -177,23 +177,17 @@ function renderSalesPage(options = {}) {
 
   document.getElementById('sh-month-val').textContent = monthSales.toLocaleString();
   setSalesKpiTarget('sh-sales-target-bar', 'sh-sales-target-pct', 'sh-sales-target-label', monthSales, teamSalesTarget);
-  document.getElementById('sh-month-sub').innerHTML = prevMonthSales > 0
-    ? `전월 대비 <span class="sales-kpi-badge ${monthDiff>=0?'up':'down'}">${monthDiff>=0?'▲':'▼'} ${Math.abs(monthDiff).toFixed(1)}%</span>`
-    : `${useErpForCharts ? erpMonth.length+'건 '+basisMeta.action+' 기준' : monthEntries.length+'건 방문 기준'}`;
+  uiSetHtml(document.getElementById('sh-month-sub'), prevMonthSales > 0 ? `전월 대비 <span class="sales-kpi-badge ${monthDiff >= 0 ? 'up' : 'down'}">${monthDiff >= 0 ? '▲' : '▼'} ${Math.abs(monthDiff).toFixed(1)}%</span>` : `${useErpForCharts ? erpMonth.length + '건 ' + basisMeta.action + ' 기준' : monthEntries.length + '건 방문 기준'}`);
 
   // 카드2 (구 오늘 매출 → 이번달 누적 사업소 매출)
   document.getElementById('sh-today-val').textContent = monthOfficeSales.toLocaleString();
   setSalesKpiTarget('sh-office-target-bar', 'sh-office-target-pct', 'sh-office-target-label', monthOfficeSales, officeTarget);
-  document.getElementById('sh-today-sub').innerHTML = prevMonthOfficeSales > 0
-    ? `전월 대비 <span class="sales-kpi-badge ${officeDiff>=0?'up':'down'}">${officeDiff>=0?'▲':'▼'} ${Math.abs(officeDiff).toFixed(1)}%</span> · 비중 ${officeShare}%`
-    : `${erpMonthOffice.length}건 · 비중 ${officeShare}%`;
+  uiSetHtml(document.getElementById('sh-today-sub'), prevMonthOfficeSales > 0 ? `전월 대비 <span class="sales-kpi-badge ${officeDiff >= 0 ? 'up' : 'down'}">${officeDiff >= 0 ? '▲' : '▼'} ${Math.abs(officeDiff).toFixed(1)}%</span> · 비중 ${officeShare}%` : `${erpMonthOffice.length}건 · 비중 ${officeShare}%`);
 
   // 카드3 (구 어제 매출 → 이번달 누적 유통사 매출)
   document.getElementById('sh-yesterday-val').textContent = monthDistSales.toLocaleString();
   setSalesKpiTarget('sh-dist-target-bar', 'sh-dist-target-pct', 'sh-dist-target-label', monthDistSales, distTarget);
-  document.getElementById('sh-yesterday-sub').innerHTML = prevMonthDistSales > 0
-    ? `전월 대비 <span class="sales-kpi-badge ${distDiff>=0?'up':'down'}">${distDiff>=0?'▲':'▼'} ${Math.abs(distDiff).toFixed(1)}%</span> · 비중 ${distShare}%`
-    : `${erpMonthDist.length}건 · 비중 ${distShare}%`;
+  uiSetHtml(document.getElementById('sh-yesterday-sub'), prevMonthDistSales > 0 ? `전월 대비 <span class="sales-kpi-badge ${distDiff >= 0 ? 'up' : 'down'}">${distDiff >= 0 ? '▲' : '▼'} ${Math.abs(distDiff).toFixed(1)}%</span> · 비중 ${distShare}%` : `${erpMonthDist.length}건 · 비중 ${distShare}%`);
 
   const daysInMonth = new Date(parseInt(ym.split('-')[0]), parseInt(ym.split('-')[1]), 0).getDate();
   const dailyDowType = [];
@@ -352,15 +346,13 @@ function renderDashPage() {
     const PCOL=['#E53935','#2B72C8','#43A047','#E8900A','#7856C8','#26c6da'];
     const getPC=(name,i)=>{const u=allUsers.find(u=>u.name===name);return u?u.color:PCOL[i%PCOL.length];};
     const lbEl = document.getElementById('leaderboard');
-    if (lbEl) lbEl.innerHTML = personList.length===0
-      ? emptyState('이번달 방문 기록이 없습니다', '일간일지에서 방문을 등록해 보세요', '📝')
-      : personList.map(([name,c],i)=>{
-          const pc=getPC(name,i);
-          const medal=i<3?`<span style="font-size:15px;width:24px;text-align:center;flex-shrink:0">${medals[i]}</span>`:`<div class="leader-rank">${i+1}</div>`;
-          const vTgt=(targets.personal||{})[allUsers.find(u=>u.name===name)?.id]||0;
-          const pct=vTgt?Math.min(Math.round(c/vTgt*100),999):null;
-          return `<div class="leader-item">${medal}<div class="leader-name">${name}<div class="leader-meta">${c}건${vTgt?` / 목표 ${vTgt}건`:''}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${c/maxP*100}%;background:${pc}"></div></div><div class="leader-num" style="color:${pc}">${c}<br>${pct!==null?`<span style="font-size:11px;color:var(--text3)">${pct}%</span>`:''}</div></div>`;
-        }).join('');
+    if (lbEl) uiSetHtml(lbEl, personList.length === 0 ? emptyState('이번달 방문 기록이 없습니다', '일간일지에서 방문을 등록해 보세요', '📝') : personList.map(([name, c], i) => {
+  const pc = getPC(name, i);
+  const medal = i < 3 ? `<span style="font-size:15px;width:24px;text-align:center;flex-shrink:0">${medals[i]}</span>` : `<div class="leader-rank">${i + 1}</div>`;
+  const vTgt = (targets.personal || {})[allUsers.find(u => u.name === name)?.id] || 0;
+  const pct = vTgt ? Math.min(Math.round(c / vTgt * 100), 999) : null;
+  return `<div class="leader-item">${medal}<div class="leader-name">${name}<div class="leader-meta">${c}건${vTgt ? ` / 목표 ${vTgt}건` : ''}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${c / maxP * 100}%;background:${pc}"></div></div><div class="leader-num" style="color:${pc}">${c}<br>${pct !== null ? `<span style="font-size:11px;color:var(--text3)">${pct}%</span>` : ''}</div></div>`;
+}).join(''));
 
     // 지역별 방문 바차트
     const regionMap={};
@@ -390,14 +382,15 @@ function renderDashPage() {
     const top10=Object.entries(instMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
     const maxT=top10[0]?.[1]||1;
     const top10El = document.getElementById('top10-list');
-    if (top10El) top10El.innerHTML = top10.length===0
-      ? emptyState('표시할 데이터가 없습니다', '기간·필터를 바꾸거나 ERP 동기화를 확인해 보세요', '📊')
-      : top10.map(([name,c],i)=>`<div class="leader-item"><div class="leader-rank">${i+1}</div><div class="leader-name c360-link" style="font-size:12px" onclick="event.stopPropagation();openClient360('${escInlineJs(name)}')" title="거래처 상세 보기">${escHtml(name)}</div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${c/maxT*100}%;background:var(--blue)"></div></div><div class="leader-num" style="color:var(--blue)">${c}회</div></div>`).join('');
+    if (top10El) uiSetHtml(top10El, top10.length === 0 ? emptyState('표시할 데이터가 없습니다', '기간·필터를 바꾸거나 ERP 동기화를 확인해 보세요', '📊') : top10.map(([name, c], i) => `<div class="leader-item"><div class="leader-rank">${i + 1}</div><div class="leader-name c360-link" style="font-size:12px" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  openClient360(String(uiValues[0]));
+}, [name])} title="거래처 상세 보기">${escHtml(name)}</div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${c / maxT * 100}%;background:var(--blue)"></div></div><div class="leader-num" style="color:var(--blue)">${c}회</div></div>`).join(''));
 
     // 최근 방문 기록
     const recent=[...pool].sort((a,b)=>new Date(b.ts||b.date)-new Date(a.ts||a.date)).slice(0,10);
     const recEl = document.getElementById('recent-table-wrap');
-    if (recEl && typeof tbl === 'function') recEl.innerHTML = tbl(recent, false);
+    if (recEl && typeof tbl === 'function') uiSetHtml(recEl, tbl(recent, false));
 
     if (typeof renderDashPending === 'function') renderDashPending();
   } catch (e) {
@@ -432,7 +425,7 @@ function renderDashPending() {
   if (!pending.length) { card.style.display = 'none'; return; }
   card.style.display = '';
   countEl.textContent = pending.length + '건';
-  listEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+  uiSetHtml(listEl, `<table style="width:100%;border-collapse:collapse;font-size:12px">
     <thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
       <th style="padding:8px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">사업소</th>
       <th style="padding:8px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">이슈 내용</th>
@@ -440,14 +433,14 @@ function renderDashPending() {
       <th style="padding:8px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">담당자</th>
       <th style="padding:8px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:700">주차</th>
     </tr></thead>
-    <tbody>${pending.map((p,i)=>`<tr style="border-bottom:1px solid var(--border);${i%2?'background:var(--surface2)':''}">
+    <tbody>${pending.map((p, i) => `<tr style="border-bottom:1px solid var(--border);${i % 2 ? 'background:var(--surface2)' : ''}">
       <td style="padding:8px 12px;font-weight:600">${escHtml(p.inst)}</td>
       <td style="padding:8px 12px;color:var(--text)">${escHtml(p.issue)}</td>
-      <td style="padding:8px 12px;color:var(--text2)">${escHtml(p.response||'-')}</td>
-      <td style="padding:8px 12px;color:var(--text3)">${escHtml(p.person||'-')}</td>
+      <td style="padding:8px 12px;color:var(--text2)">${escHtml(p.response || '-')}</td>
+      <td style="padding:8px 12px;color:var(--text3)">${escHtml(p.person || '-')}</td>
       <td style="padding:8px 12px;color:var(--text3);white-space:nowrap">${escHtml(p.year)}년 ${escHtml(p.week)}주차</td>
     </tr>`).join('')}</tbody>
-  </table>`;
+  </table>`);
 }
 
 function renderSalesPersonMonth() {
@@ -510,21 +503,15 @@ function renderSalesPersonMonth() {
 
   const listEl = document.getElementById('sh-person-list');
   if (listEl) {
-    listEl.innerHTML = personList.length === 0
-      ? emptyState(`${monthLabel} 매출이 없습니다`, '다른 월을 선택하거나 ERP 동기화를 확인해 보세요', '📊')
-      : personList.map(([name, amount], index) => {
-          const target = personSalesTargets[name] || 0;
-          const achievement = target ? Math.min(Math.round(amount / target * 100), 999) : null;
-          const color = getPersonColor(name, index);
-          const barWidth = target ? Math.min(amount / target * 100, 100) : (amount / maxPerson * 100);
-          const targetText = target
-            ? `<span style="font-size:11px;color:var(--text3)">목표 ${target.toLocaleString()}만</span>`
-            : '<span style="font-size:11px;color:var(--text3)">목표 미설정</span>';
-          const achievementText = achievement !== null
-            ? `<span style="font-size:13px;font-weight:700;font-family:var(--mono);color:${color}">${achievement}%</span>`
-            : '<span style="font-size:11px;color:var(--text3)">-</span>';
-          return `<div class="leader-item"><div class="leader-rank ${['r1','r2','r3'][index] || ''}">${index + 1}</div><div class="leader-name">${escHtml(name)}<div class="leader-meta">${countByPerson[name] || 0}건 ${useErp ? basisMeta.action : ''} ${targetText}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${barWidth}%;background:${color}"></div></div><div class="leader-num" style="color:${color};font-weight:700">${Math.round(amount).toLocaleString()}<br>${achievementText}</div></div>`;
-        }).join('');
+    uiSetHtml(listEl, personList.length === 0 ? emptyState(`${monthLabel} 매출이 없습니다`, '다른 월을 선택하거나 ERP 동기화를 확인해 보세요', '📊') : personList.map(([name, amount], index) => {
+  const target = personSalesTargets[name] || 0;
+  const achievement = target ? Math.min(Math.round(amount / target * 100), 999) : null;
+  const color = getPersonColor(name, index);
+  const barWidth = target ? Math.min(amount / target * 100, 100) : amount / maxPerson * 100;
+  const targetText = target ? `<span style="font-size:11px;color:var(--text3)">목표 ${target.toLocaleString()}만</span>` : '<span style="font-size:11px;color:var(--text3)">목표 미설정</span>';
+  const achievementText = achievement !== null ? `<span style="font-size:13px;font-weight:700;font-family:var(--mono);color:${color}">${achievement}%</span>` : '<span style="font-size:11px;color:var(--text3)">-</span>';
+  return `<div class="leader-item"><div class="leader-rank ${['r1', 'r2', 'r3'][index] || ''}">${index + 1}</div><div class="leader-name">${escHtml(name)}<div class="leader-meta">${countByPerson[name] || 0}건 ${useErp ? basisMeta.action : ''} ${targetText}</div></div><div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${barWidth}%;background:${color}"></div></div><div class="leader-num" style="color:${color};font-weight:700">${Math.round(amount).toLocaleString()}<br>${achievementText}</div></div>`;
+}).join(''));
   }
   rc(
     'chart-person-sales',
@@ -693,23 +680,24 @@ function shRenderRankPage(kind = 'office') {
   const pagerEl = document.getElementById(`sh-rank-${kind}-pager`);
   if (!listEl || !pagerEl) return;
   const rankMeta = (window._shRankExportMeta && window._shRankExportMeta[kind]) || {};
-  listEl.innerHTML = pageItems.length === 0
-    ? emptyState(`${salesDashboardMonthLabel(rankMeta.ym || salesDashboardCurrentYm())} 매출이 없습니다`, '다른 월을 선택해 보세요', '📊')
-    : pageItems.map(([name, amt], idx) => {
-        const globalIdx = start + idx;
-        const pct = totalRankAmt ? (amt / totalRankAmt * 100).toFixed(2) : '0.00';
-        const medal = globalIdx < 3 ? `<span style="font-size:15px;line-height:1;width:24px;text-align:center;flex-shrink:0">${medalIcons[globalIdx]}</span>` : `<div class="leader-rank">${globalIdx+1}</div>`;
-        return `<div class="leader-item">
+  uiSetHtml(listEl, pageItems.length === 0 ? emptyState(`${salesDashboardMonthLabel(rankMeta.ym || salesDashboardCurrentYm())} 매출이 없습니다`, '다른 월을 선택해 보세요', '📊') : pageItems.map(([name, amt], idx) => {
+  const globalIdx = start + idx;
+  const pct = totalRankAmt ? (amt / totalRankAmt * 100).toFixed(2) : '0.00';
+  const medal = globalIdx < 3 ? `<span style="font-size:15px;line-height:1;width:24px;text-align:center;flex-shrink:0">${medalIcons[globalIdx]}</span>` : `<div class="leader-rank">${globalIdx + 1}</div>`;
+  return `<div class="leader-item">
           ${medal}
-          <div class="leader-name c360-link" style="font-size:12px" onclick="event.stopPropagation();openClient360('${escInlineJs(name)}')" title="거래처 상세 보기">${escHtml(name)}</div>
-          <div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${amt/maxRank*100}%;background:${color}"></div></div>
+          <div class="leader-name c360-link" style="font-size:12px" ${uiAction("click", function (event, uiValues) {
+    event.stopPropagation();
+    openClient360(String(uiValues[0]));
+  }, [name])} title="거래처 상세 보기">${escHtml(name)}</div>
+          <div class="leader-bar-wrap"><div class="leader-bar-fill" style="width:${amt / maxRank * 100}%;background:${color}"></div></div>
           <div class="leader-num sales-rank-num" style="color:${color}">
             <span class="sales-rank-amount">${Math.round(amt).toLocaleString()}</span>
             <span class="sales-rank-pct">${pct}%</span>
           </div>
         </div>`;
-      }).join('');
-  if (totalPages <= 1) { pagerEl.innerHTML = ''; return; }
+}).join(''));
+  if (totalPages <= 1) { uiSetHtml(pagerEl, ''); return; }
   const btnStyle = 'background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:12px;min-width:30px';
   const activeStyle = 'background:var(--green);border:1px solid var(--green);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:700;min-width:30px';
   const disabledStyle = 'background:var(--surface2);border:1px solid var(--border);color:var(--text3);padding:4px 10px;border-radius:6px;cursor:not-allowed;font-family:var(--font);font-size:12px;min-width:30px;opacity:.5';
@@ -726,16 +714,22 @@ function shRenderRankPage(kind = 'office') {
   }
   const sorted = [...pages].sort((a, b) => a - b);
 
-  let html = `<button style="${prevDisabled?disabledStyle:btnStyle}" ${prevDisabled?'disabled':''} onclick="shRankPageMove('${kind}',-1)">‹</button>`;
+  let html = `<button style="${prevDisabled ? disabledStyle : btnStyle}" ${prevDisabled ? 'disabled' : ''} ${uiAction("click", function (event, uiValues) {
+  shRankPageMove(String(uiValues[0]), -1);
+}, [kind])}>‹</button>`;
   let prev = 0;
   for (const p of sorted) {
     if (prev && p - prev > 1) html += `<span style="${ellipsisStyle}">...</span>`;
-    html += `<button style="${p===page?activeStyle:btnStyle}" onclick="shRankGoPage('${kind}',${p})">${p}</button>`;
+    html += `<button style="${p === page ? activeStyle : btnStyle}" ${uiAction("click", function (event, uiValues) {
+  shRankGoPage(String(uiValues[0]), uiValues[1]);
+}, [kind, p])}>${p}</button>`;
     prev = p;
   }
-  html += `<button style="${nextDisabled?disabledStyle:btnStyle}" ${nextDisabled?'disabled':''} onclick="shRankPageMove('${kind}',1)">›</button>`;
+  html += `<button style="${nextDisabled ? disabledStyle : btnStyle}" ${nextDisabled ? 'disabled' : ''} ${uiAction("click", function (event, uiValues) {
+  shRankPageMove(String(uiValues[0]), 1);
+}, [kind])}>›</button>`;
   html += `<span style="color:var(--text3);font-size:11px;margin-left:8px">${page}/${totalPages} · 총 ${list.length}개</span>`;
-  pagerEl.innerHTML = html;
+  uiSetHtml(pagerEl, html);
 }
 function shRankPageMove(kind, dir) {
   const list = (window._shRankLists && window._shRankLists[kind]) || [];
@@ -942,7 +936,7 @@ function renderSalesTrendInsights(payload, derived) {
     const diff = Math.round(((derived.officeFlow[idx] || 0) - (derived.distFlow[idx] || 0)) * 10) / 10;
     const officePct = derived.officeFlow[idx] || 0;
     const distPct = derived.distFlow[idx] || 0;
-    el.innerHTML = `
+    uiSetHtml(el, `
       <div class="sales-trend-insight">
         <div class="sales-trend-insight-label">사업소 누적률</div>
         <div class="sales-trend-insight-value office">${officePct}%</div>
@@ -957,7 +951,7 @@ function renderSalesTrendInsights(payload, derived) {
         <div class="sales-trend-insight-label">${idx + 1}일 기준 누적률 차이</div>
         <div class="sales-trend-insight-value">${diff >= 0 ? '+' : ''}${diff}%p</div>
         <p>${diff >= 0 ? '사업소가 유통사보다 이번 달 매출이 더 빠르게 쌓이고 있습니다.' : '유통사가 사업소보다 이번 달 매출이 더 빠르게 쌓이고 있습니다.'}</p>
-      </div>`;
+      </div>`);
     return;
   }
 
@@ -966,7 +960,7 @@ function renderSalesTrendInsights(payload, derived) {
     const officeShare = total ? Math.round(officeTotal / total * 1000) / 10 : 0;
     const validDaily = derived.dailyDistShare.filter(v => v !== null);
     const avgDaily = validDaily.length ? Math.round(validDaily.reduce((s, v) => s + v, 0) / validDaily.length * 10) / 10 : 0;
-    el.innerHTML = `
+    uiSetHtml(el, `
       <div class="sales-trend-insight">
         <div class="sales-trend-insight-label">누적 사업소 비중</div>
         <div class="sales-trend-insight-value office">${officeShare}%</div>
@@ -981,13 +975,13 @@ function renderSalesTrendInsights(payload, derived) {
         <div class="sales-trend-insight-label">일별 평균 유통사 비중</div>
         <div class="sales-trend-insight-value">${avgDaily}%</div>
         <p>매출이 발생한 날짜만 기준으로 계산했습니다.</p>
-      </div>`;
+      </div>`);
     return;
   }
 
   let topIdx = 0;
   payload.total.forEach((v, i) => { if (v > payload.total[topIdx]) topIdx = i; });
-  el.innerHTML = `
+  uiSetHtml(el, `
     <div class="sales-trend-insight">
       <div class="sales-trend-insight-label">합계 매출</div>
       <div class="sales-trend-insight-value">${salesTrendMoney(total)}</div>
@@ -1002,7 +996,7 @@ function renderSalesTrendInsights(payload, derived) {
       <div class="sales-trend-insight-label">최고 매출일</div>
       <div class="sales-trend-insight-value">${topIdx + 1}일</div>
       <p>${salesTrendMoney(payload.total[topIdx])} 발생</p>
-    </div>`;
+    </div>`);
 }
 
 function renderSalesTrendChart(payload) {

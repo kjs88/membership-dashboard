@@ -112,16 +112,20 @@ function gsRender(q) {
   if (_gsSel >= _gsResults.length) _gsSel = 0;
 
   if (!_gsResults.length) {
-    box.innerHTML = `<div class="gs-empty">"${escHtml(q)}"에 해당하는 결과가 없습니다<br><span>거래처명, 품목명, 기관명으로 검색해 보세요</span></div>`;
+    uiSetHtml(box, `<div class="gs-empty">"${escHtml(q)}"에 해당하는 결과가 없습니다<br><span>거래처명, 품목명, 기관명으로 검색해 보세요</span></div>`);
     return;
   }
   const icon = { client: '🏢', product: '📦', entry: '📝', page: '🧭' };
-  box.innerHTML = _gsResults.map((r, i) => `
-    <div class="gs-item${i === _gsSel ? ' sel' : ''}" data-i="${i}" onmousedown="gsPick(${i})" onmouseenter="gsHover(${i})">
+  uiSetHtml(box, _gsResults.map((r, i) => `
+    <div class="gs-item${i === _gsSel ? ' sel' : ''}" data-i="${i}" ${uiAction("mousedown", function (event, uiValues) {
+  gsPick(uiValues[0]);
+}, [i])} ${uiAction("mouseenter", function (event, uiValues) {
+  gsHover(uiValues[0]);
+}, [i])}>
       <span class="gs-ic">${icon[r.type] || '•'}</span>
       <span class="gs-label">${escHtml(r.label)}</span>
       <span class="gs-sub">${escHtml(r.sub)}</span>
-    </div>`).join('');
+    </div>`).join(''));
 }
 
 function gsHover(i) {
@@ -256,7 +260,7 @@ function openClient360(name) {
 
   const body = document.getElementById('c360-body');
   if (!body) return;
-  body.innerHTML = `
+  uiSetHtml(body, `
     <div class="c360-kpis">
       <div class="c360-kpi"><span>누적 매출</span><b title="${Math.round(total).toLocaleString()}원">${moneyShort(total)}원</b></div>
       <div class="c360-kpi"><span>거래 횟수</span><b>${cyc.count}회</b></div>
@@ -273,30 +277,24 @@ function openClient360(name) {
       <div>
         <h4>월별 매출</h4>
         ${monthKeys.length ? `<div class="c360-spark">${monthKeys.map(m => {
-          const max = Math.max(...monthKeys.map(k => months[k]));
-          const h = max > 0 ? Math.max(3, Math.round(months[m] / max * 54)) : 3;
-          return `<div class="c360-bar" title="${m} · ${Math.round(months[m]).toLocaleString()}원"><i style="height:${h}px"></i><span>${m.slice(5)}</span></div>`;
-        }).join('')}</div>` : emptyState('매출 데이터가 없습니다', 'ERP 동기화 후 표시됩니다', '📈')}
+  const max = Math.max(...monthKeys.map(k => months[k]));
+  const h = max > 0 ? Math.max(3, Math.round(months[m] / max * 54)) : 3;
+  return `<div class="c360-bar" title="${m} · ${Math.round(months[m]).toLocaleString()}원"><i style="height:${h}px"></i><span>${m.slice(5)}</span></div>`;
+}).join('')}</div>` : emptyState('매출 데이터가 없습니다', 'ERP 동기화 후 표시됩니다', '📈')}
       </div>
       <div>
         <h4>주력 품목</h4>
-        ${topProd.length ? `<ul class="c360-list">${topProd.map(([p, v]) =>
-          `<li><span>${escHtml(p)}</span><b title="${Math.round(v).toLocaleString()}원">${moneyShort(v)}</b></li>`).join('')}</ul>`
-          : emptyState('품목 데이터가 없습니다', '', '📦')}
+        ${topProd.length ? `<ul class="c360-list">${topProd.map(([p, v]) => `<li><span>${escHtml(p)}</span><b title="${Math.round(v).toLocaleString()}원">${moneyShort(v)}</b></li>`).join('')}</ul>` : emptyState('품목 데이터가 없습니다', '', '📦')}
       </div>
       <div>
         <h4>미출고 잔량</h4>
-        ${backorder.length ? `<ul class="c360-list">${backorder.map(b =>
-          `<li><span>${escHtml(b.product)}</span><b class="neg">${b.gap.toLocaleString()}개</b></li>`).join('')}</ul>`
-          : `<div class="c360-ok">미출고 없음</div>`}
+        ${backorder.length ? `<ul class="c360-list">${backorder.map(b => `<li><span>${escHtml(b.product)}</span><b class="neg">${b.gap.toLocaleString()}개</b></li>`).join('')}</ul>` : `<div class="c360-ok">미출고 없음</div>`}
       </div>
       <div>
         <h4>최근 방문</h4>
-        ${entries.length ? `<ul class="c360-list">${entries.slice(0, 5).map(e =>
-          `<li><span>${escHtml(e.date || '')} ${escHtml(e.person || '')}</span><b>${escHtml(e.dealPossibility || '-')}</b></li>`).join('')}</ul>`
-          : emptyState('방문 기록이 없습니다', '일간일지에서 방문을 기록해 보세요', '📝')}
+        ${entries.length ? `<ul class="c360-list">${entries.slice(0, 5).map(e => `<li><span>${escHtml(e.date || '')} ${escHtml(e.person || '')}</span><b>${escHtml(e.dealPossibility || '-')}</b></li>`).join('')}</ul>` : emptyState('방문 기록이 없습니다', '일간일지에서 방문을 기록해 보세요', '📝')}
       </div>
-    </div>`;
+    </div>`);
 
   openModal('modal-c360');
 }
@@ -362,13 +360,13 @@ function toggleAlertPanel() {
   _alerts = buildAlerts();
   const body = document.getElementById('alert-list');
   if (body) {
-    body.innerHTML = _alerts.length
-      ? _alerts.map((a, i) => `
-        <div class="alert-item ${a.sev}" onclick="alertGo(${i})">
+    uiSetHtml(body, _alerts.length ? _alerts.map((a, i) => `
+        <div class="alert-item ${a.sev}" ${uiAction("click", function (event, uiValues) {
+  alertGo(uiValues[0]);
+}, [i])}>
           <span class="alert-ic">${a.icon}</span>
           <div><b>${escHtml(a.title)}</b><span>${escHtml(a.desc)}</span></div>
-        </div>`).join('')
-      : emptyState('지금 확인할 알림이 없습니다', '재방문 예정·목표 진척·미출고를 자동으로 감시합니다', '✅');
+        </div>`).join('') : emptyState('지금 확인할 알림이 없습니다', '재방문 예정·목표 진척·미출고를 자동으로 감시합니다', '✅'));
   }
   p.classList.add('on');
 }

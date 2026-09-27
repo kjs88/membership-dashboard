@@ -172,8 +172,8 @@ function securitySanitizeData(value, depth = 0, keyHint = '') {
   if (depth > SECURITY_MAX_DEPTH) return null;
   if (value == null || typeof value === 'number' || typeof value === 'boolean') return value;
   if (typeof value === 'string') {
-    if (keyHint === 'dataUrl' && /^data:[\w.+-]+\/[\w.+-]+;base64,/i.test(value)) {
-      return value.slice(0, SECURITY_MAX_DATA_URL_LENGTH);
+    if (keyHint === 'dataUrl') {
+      return typeof securityFiles !== 'undefined' && securityFiles.decodeDataUrl(value) ? value : '';
     }
     return securitySanitizeText(value);
   }
@@ -183,6 +183,7 @@ function securitySanitizeData(value, depth = 0, keyHint = '') {
     Object.entries(value).forEach(([key, val]) => {
       if (SECURITY_FORBIDDEN_KEYS.has(key) || /^on[a-z]/i.test(key)) return;
       const cleanKey = securitySanitizeText(key).replace(/[.$#[\]/]/g, '_');
+      if (SECURITY_FORBIDDEN_KEYS.has(cleanKey)) return;
       clean[cleanKey] = securitySanitizeData(val, depth + 1, cleanKey);
     });
     return securityNormalizeCredentialRecord(clean);
@@ -194,10 +195,9 @@ function securityNormalizeFirebaseUrl(url) {
   const text = String(url || '').trim().replace(/\/+$/, '');
   try {
     const parsed = new URL(text);
-    const allowed = parsed.protocol === 'https:' && (
-      parsed.hostname.endsWith('.firebaseio.com') ||
-      parsed.hostname.endsWith('.firebasedatabase.app')
-    );
+    const allowed = parsed.origin === 'https://membership-7aef2-default-rtdb.firebaseio.com'
+      && !parsed.username && !parsed.password && !parsed.search && !parsed.hash
+      && (parsed.pathname === '/' || parsed.pathname === '');
     return allowed ? parsed.origin : '';
   } catch (_) {
     return '';
@@ -206,13 +206,11 @@ function securityNormalizeFirebaseUrl(url) {
 
 function securityAssertSameOriginFrame() {
   try {
-    const isProjectFrame = /project-tracker\.html$/i.test(location.pathname);
-    if (window.self !== window.top && !isProjectFrame) {
-      document.documentElement.innerHTML = '';
-      window.top.location = window.location.href;
+    if (window.self !== window.top && window.top.location.origin !== location.origin) {
+      document.documentElement.replaceChildren();
     }
   } catch (_) {
-    document.documentElement.innerHTML = '';
+    document.documentElement.replaceChildren();
   }
 }
 

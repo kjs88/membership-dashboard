@@ -151,19 +151,25 @@ function drpRender(id) {
   const s = _drpState[id];
   const dd = document.getElementById('drp-'+id+'-dropdown');
   const shortcuts = _DRP_SHORTCUTS.map(sc =>
-    sc ? `<span class="ds" onclick="drpShortcut('${id}','${sc[0]}')">${sc[1]}</span>`
+    sc ? `<span class="ds" ${uiAction("click", function (event, uiValues) {
+  drpShortcut(String(uiValues[0]), String(uiValues[1]));
+}, [id, sc[0]])}>${sc[1]}</span>`
        : `<span class="ds-sep"></span>`
   ).join('');
-  dd.innerHTML = `
+  uiSetHtml(dd, `
     <div class="drp-shortcuts">${shortcuts}</div>
     <div class="drp-calendars" id="drp-${id}-cals"></div>
     <div class="drp-footer">
       <div class="drp-sel-label" id="drp-${id}-foot">선택: <span>-</span></div>
       <div class="drp-footer-btns">
-        <button type="button" class="btn-sm btn-ghost" onclick="drpCancel('${id}')">취소</button>
-        <button type="button" class="btn-sm btn-primary" onclick="drpConfirm('${id}')">확인</button>
+        <button type="button" class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  drpCancel(String(uiValues[0]));
+}, [id])}>취소</button>
+        <button type="button" class="btn-sm btn-primary" ${uiAction("click", function (event, uiValues) {
+  drpConfirm(String(uiValues[0]));
+}, [id])}>확인</button>
       </div>
-    </div>`;
+    </div>`);
   drpRenderCals(id);
   drpUpdateFooter(id);
 }
@@ -173,7 +179,7 @@ function drpRenderCals(id) {
   const s = _drpState[id];
   const el = document.getElementById('drp-'+id+'-cals');
   if (!el) return;
-  el.innerHTML = drpCalHtml(id,'L',s.leftY,s.leftM) + drpCalHtml(id,'R',s.rightY,s.rightM);
+  uiSetHtml(el, drpCalHtml(id, 'L', s.leftY, s.leftM) + drpCalHtml(id, 'R', s.rightY, s.rightM));
 }
 
 function drpCalHtml(id, side, y, m) {
@@ -188,29 +194,62 @@ function drpCalHtml(id, side, y, m) {
     const prevDate = new Date(y, m, -firstDay+i+1);
     const ds = fmt(prevDate);
     const base = 'drp-day empty other-month';
-    days += `<div class="${base} ${drpDayCls(s,ds,today)}" data-date="${ds}" data-base-cls="${base}" onmouseover="drpHover('${id}','${ds}')" onmouseout="drpHoverOut('${id}')" onclick="event.stopPropagation();drpClickDay('${id}','${ds}','${side}')">${prevDate.getDate()}</div>`;
+    days += `<div class="${base} ${drpDayCls(s, ds, today)}" data-date="${ds}" data-base-cls="${base}" ${uiAction("mouseover", function (event, uiValues) {
+  drpHover(String(uiValues[0]), String(uiValues[1]));
+}, [id, ds])} ${uiAction("mouseout", function (event, uiValues) {
+  drpHoverOut(String(uiValues[0]));
+}, [id])} ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  drpClickDay(String(uiValues[0]), String(uiValues[1]), String(uiValues[2]));
+}, [id, ds, side])}>${prevDate.getDate()}</div>`;
   }
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = fmt(new Date(y, m, d));
     const dow = new Date(y, m, d).getDay();
     const base = 'drp-day' + (dow===0?' sun':dow===6?' sat':'');
-    days += `<div class="${base} ${drpDayCls(s,ds,today)}" data-date="${ds}" data-base-cls="${base}" onmouseover="drpHover('${id}','${ds}')" onmouseout="drpHoverOut('${id}')" onclick="event.stopPropagation();drpClickDay('${id}','${ds}','${side}')">${d}</div>`;
+    days += `<div class="${base} ${drpDayCls(s, ds, today)}" data-date="${ds}" data-base-cls="${base}" ${uiAction("mouseover", function (event, uiValues) {
+  drpHover(String(uiValues[0]), String(uiValues[1]));
+}, [id, ds])} ${uiAction("mouseout", function (event, uiValues) {
+  drpHoverOut(String(uiValues[0]));
+}, [id])} ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  drpClickDay(String(uiValues[0]), String(uiValues[1]), String(uiValues[2]));
+}, [id, ds, side])}>${d}</div>`;
   }
   const total = firstDay + daysInMonth;
   for (let i = 0; i < (7 - total%7)%7; i++) {
     const nd = new Date(y, m+1, i+1);
     const ds = fmt(nd);
     const base = 'drp-day empty other-month';
-    days += `<div class="${base} ${drpDayCls(s,ds,today)}" data-date="${ds}" data-base-cls="${base}" onmouseover="drpHover('${id}','${ds}')" onmouseout="drpHoverOut('${id}')" onclick="event.stopPropagation();drpClickDay('${id}','${ds}','${side}')">${nd.getDate()}</div>`;
+    days += `<div class="${base} ${drpDayCls(s, ds, today)}" data-date="${ds}" data-base-cls="${base}" ${uiAction("mouseover", function (event, uiValues) {
+  drpHover(String(uiValues[0]), String(uiValues[1]));
+}, [id, ds])} ${uiAction("mouseout", function (event, uiValues) {
+  drpHoverOut(String(uiValues[0]));
+}, [id])} ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  drpClickDay(String(uiValues[0]), String(uiValues[1]), String(uiValues[2]));
+}, [id, ds, side])}>${nd.getDate()}</div>`;
   }
   const dows = _DOW.map(d=>`<div class="drp-cal-dow">${d}</div>`).join('');
   return `<div class="drp-cal">
     <div class="drp-cal-header">
-      <button type="button" class="drp-cal-nav double" onclick="event.stopPropagation();drpNavYear('${id}','${side}',-1)">&laquo;</button>
-      <button type="button" class="drp-cal-nav" onclick="event.stopPropagation();drpNavLeft('${id}','${side}',-1)">&lsaquo;</button>
+      <button type="button" class="drp-cal-nav double" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  drpNavYear(String(uiValues[0]), String(uiValues[1]), -1);
+}, [id, side])}>&laquo;</button>
+      <button type="button" class="drp-cal-nav" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  drpNavLeft(String(uiValues[0]), String(uiValues[1]), -1);
+}, [id, side])}>&lsaquo;</button>
       <span class="drp-cal-title">${mName}</span>
-      <button type="button" class="drp-cal-nav" onclick="event.stopPropagation();drpNavLeft('${id}','${side}',1)">&rsaquo;</button>
-      <button type="button" class="drp-cal-nav double" onclick="event.stopPropagation();drpNavYear('${id}','${side}',1)">&raquo;</button>
+      <button type="button" class="drp-cal-nav" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  drpNavLeft(String(uiValues[0]), String(uiValues[1]), 1);
+}, [id, side])}>&rsaquo;</button>
+      <button type="button" class="drp-cal-nav double" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  drpNavYear(String(uiValues[0]), String(uiValues[1]), 1);
+}, [id, side])}>&raquo;</button>
     </div>
     <div class="drp-cal-grid">${dows}${days}</div>
   </div>`;
@@ -232,9 +271,9 @@ function drpUpdateFooter(id) {
   const el = document.getElementById('drp-'+id+'-foot');
   if (!el) return;
   const from = s.selFrom, to = s.selTo;
-  if (!from) { el.innerHTML = '선택: <span>-</span>'; return; }
+  if (!from) { uiSetHtml(el, '선택: <span>-</span>'); return; }
   const days = to ? Math.round((new Date(to)-new Date(from))/(86400000))+1 : 1;
-  el.innerHTML = `선택: <span>${from}${to&&to!==from?' ~ '+to:''}</span> &nbsp;<span style="color:var(--text3);font-size:11px">(${days}일)</span>`;
+  uiSetHtml(el, `선택: <span>${from}${to && to !== from ? ' ~ ' + to : ''}</span> &nbsp;<span style="color:var(--text3);font-size:11px">(${days}일)</span>`);
 }
 
 // 외부 클릭 시 닫기

@@ -272,11 +272,11 @@ function renderDeep() {
   if (!host) return;
   const warn = document.getElementById('da-empty');
   if (!rows.length) {
-    if (warn) warn.innerHTML = emptyState('이 채널에 매출 데이터가 없습니다', '다른 채널을 선택하거나 ERP 동기화를 확인해 보세요', '📊');
+    if (warn) uiSetHtml(warn, emptyState('이 채널에 매출 데이터가 없습니다', '다른 채널을 선택하거나 ERP 동기화를 확인해 보세요', '📊'));
     host.style.display = 'none';
     return;
   }
-  if (warn) warn.innerHTML = '';
+  if (warn) uiSetHtml(warn, '');
   host.style.display = '';
 
   daRenderBridge(rows);
@@ -290,7 +290,7 @@ function daRenderBridge(rows) {
   const months = daMonths(rows);
   const sel = document.getElementById('da-bridge-month');
   if (sel && sel.options.length !== months.length) {
-    sel.innerHTML = months.slice(1).reverse().map(m => '<option value="' + m + '">' + m + '</option>').join('');
+    uiSetHtml(sel, months.slice(1).reverse().map(m => '<option value="' + m + '">' + m + '</option>').join(''));
   }
   const curYm = (sel && sel.value) || months[months.length - 1];
   const idx = months.indexOf(curYm);
@@ -302,35 +302,18 @@ function daRenderBridge(rows) {
     const items = b.detail[key].slice(0, 5);
     if (!items.length) return '';
     return '<div class="da-col"><h4 class="' + cls + '">' + title + ' <span>' + b.detail[key].length + '곳</span></h4>'
-      + items.map(i => '<div class="da-li" onclick="openClient360(&#39;' + escInlineJs(i.client) + '&#39;)">'
+      + items.map(i => `<div class="da-li" ${uiAction('click', () => openClient360(i.client))}>`
           + '<span>' + escHtml(i.client) + '</span><b class="' + cls + '">'
           + (i.amount >= 0 ? '+' : '') + moneyShort(i.amount) + '</b></div>').join('')
       + '</div>';
   };
 
-  document.getElementById('da-bridge').innerHTML =
-    '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="chart-card-title">매출 변동 분해 · ' + prevYm + ' → ' + curYm + '</div>'
-    + '<div class="chart-card-sub">증감을 신규·기존증가·기존감소·이탈 넷으로 완전 분해합니다'
-    + (check ? ' (합계 검증 ✓)' : ' <b style="color:var(--red)">(합계 불일치)</b>') + '</div>'
-    + '<div class="da-svgwrap">' + daBridgeSvg(b) + '</div>'
-    + '<div class="da-summary">'
-    + '<span>전월 <b>' + moneyShort(b.prevTotal) + '</b></span>'
-    + '<span class="' + (b.diff >= 0 ? 'up' : 'down') + '">' + (b.diff >= 0 ? '▲' : '▼') + ' ' + moneyShort(Math.abs(b.diff))
-    + ' (' + (b.prevTotal > 0 ? (b.diff / b.prevTotal * 100).toFixed(1) : '0') + '%)</span>'
-    + '<span>당월 <b>' + moneyShort(b.curTotal) + '</b></span>'
-    + '</div>'
-    + '<div class="da-cols">'
-    + list('drop', '가장 많이 줄어든 거래처', 'down')
-    + list('lost', '이탈한 거래처', 'down')
-    + list('grow', '가장 많이 늘어난 거래처', 'up')
-    + list('new', '새로 생긴 거래처', 'up')
-    + '</div></div>';
+  uiSetHtml(document.getElementById('da-bridge'), '<div class="chart-card" style="margin-bottom:16px">' + '<div class="chart-card-title">매출 변동 분해 · ' + prevYm + ' → ' + curYm + '</div>' + '<div class="chart-card-sub">증감을 신규·기존증가·기존감소·이탈 넷으로 완전 분해합니다' + (check ? ' (합계 검증 ✓)' : ' <b style="color:var(--red)">(합계 불일치)</b>') + '</div>' + '<div class="da-svgwrap">' + daBridgeSvg(b) + '</div>' + '<div class="da-summary">' + '<span>전월 <b>' + moneyShort(b.prevTotal) + '</b></span>' + '<span class="' + (b.diff >= 0 ? 'up' : 'down') + '">' + (b.diff >= 0 ? '▲' : '▼') + ' ' + moneyShort(Math.abs(b.diff)) + ' (' + (b.prevTotal > 0 ? (b.diff / b.prevTotal * 100).toFixed(1) : '0') + '%)</span>' + '<span>당월 <b>' + moneyShort(b.curTotal) + '</b></span>' + '</div>' + '<div class="da-cols">' + list('drop', '가장 많이 줄어든 거래처', 'down') + list('lost', '이탈한 거래처', 'down') + list('grow', '가장 많이 늘어난 거래처', 'up') + list('new', '새로 생긴 거래처', 'up') + '</div></div>');
 }
 
 function daRenderCohort(rows) {
   const { months, cohorts } = daCohort(rows);
-  if (!cohorts.length) { document.getElementById('da-cohort').innerHTML = ''; return; }
+  if (!cohorts.length) { uiSetHtml(document.getElementById('da-cohort'), ''); return; }
   const maxLen = Math.max.apply(null, cohorts.map(c => c.rates.length));
   const head = '<th>시작월</th><th class="r">거래처</th>'
     + Array.from({ length: maxLen }, (_, i) => '<th class="r">M+' + i + '</th>').join('');
@@ -366,18 +349,12 @@ function daRenderCohort(rows) {
       + '%)보다 크게 낮습니다. 그 시기에 늘어난 거래처가 정착하지 못했다는 뜻이라 원인 확인이 필요합니다.</div>';
   }
 
-  document.getElementById('da-cohort').innerHTML =
-    '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="chart-card-title">코호트 유지율</div>'
-    + '<div class="chart-card-sub">거래를 처음 시작한 달로 묶어, 이후 각 달에 다시 거래한 비율입니다</div>'
-    + note
-    + '<div class="ca-tablewrap"><table class="ca-table da-cohort-t"><thead><tr>' + head + '</tr></thead>'
-    + '<tbody>' + body + '</tbody></table></div></div>';
+  uiSetHtml(document.getElementById('da-cohort'), '<div class="chart-card" style="margin-bottom:16px">' + '<div class="chart-card-title">코호트 유지율</div>' + '<div class="chart-card-sub">거래를 처음 시작한 달로 묶어, 이후 각 달에 다시 거래한 비율입니다</div>' + note + '<div class="ca-tablewrap"><table class="ca-table da-cohort-t"><thead><tr>' + head + '</tr></thead>' + '<tbody>' + body + '</tbody></table></div></div>');
 }
 
 function daRenderRFM(rows) {
   const { segments, clients } = daRFM(rows);
-  if (!segments.length) { document.getElementById('da-rfm').innerHTML = ''; return; }
+  if (!segments.length) { uiSetHtml(document.getElementById('da-rfm'), ''); return; }
   const total = clients.length;
   const totalMoney = clients.reduce((s, c) => s + c.money, 0);
 
@@ -389,7 +366,7 @@ function daRenderRFM(rows) {
     + (totalMoney > 0 ? (s.money / totalMoney * 100).toFixed(0) : 0) + '%</div>'
     + '<div class="da-seg-d">' + escHtml(s.desc) + '</div>'
     + '<div class="da-seg-list">' + s.members.slice(0, 4).map(m =>
-        '<div class="da-li" onclick="openClient360(&#39;' + escInlineJs(m.client) + '&#39;)">'
+        `<div class="da-li" ${uiAction('click', () => openClient360(m.client))}>`
         + '<span>' + escHtml(m.client) + '</span><b>' + m.recency + '일 전</b></div>').join('')
       + (s.members.length > 4 ? '<div class="da-more">외 ' + (s.members.length - 4) + '곳</div>' : '')
     + '</div></div>').join('');
@@ -400,22 +377,14 @@ function daRenderRFM(rows) {
       + '누적 매출 ' + moneyShort(atrisk.money) + '원 규모라 가장 먼저 연락할 대상입니다.</div>'
     : '';
 
-  document.getElementById('da-rfm').innerHTML =
-    '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="chart-card-title">RFM 세그먼트</div>'
-    + '<div class="chart-card-sub">최근성(R)·거래빈도(F)·거래금액(M)을 5분위로 점수화해 거래처 '
-    + total + '곳을 분류했습니다</div>' + note
-    + '<div class="da-segs">' + cards + '</div></div>';
+  uiSetHtml(document.getElementById('da-rfm'), '<div class="chart-card" style="margin-bottom:16px">' + '<div class="chart-card-title">RFM 세그먼트</div>' + '<div class="chart-card-sub">최근성(R)·거래빈도(F)·거래금액(M)을 5분위로 점수화해 거래처 ' + total + '곳을 분류했습니다</div>' + note + '<div class="da-segs">' + cards + '</div></div>');
 }
 
 function daRenderCross(rows) {
   const { rules, clientCount } = daCrossSell(rows, 30, 0.45, 1.1);
   const host = document.getElementById('da-cross');
   if (!rules.length) {
-    host.innerHTML = '<div class="chart-card" style="margin-bottom:16px">'
-      + '<div class="chart-card-title">교차판매 기회</div>'
-      + emptyState('규칙을 만들 만한 거래처 수가 부족합니다', '거래처가 20곳 이상이고 품목군이 다양할 때 분석됩니다', '🔗')
-      + '</div>';
+    uiSetHtml(host, '<div class="chart-card" style="margin-bottom:16px">' + '<div class="chart-card-title">교차판매 기회</div>' + emptyState('규칙을 만들 만한 거래처 수가 부족합니다', '거래처가 20곳 이상이고 품목군이 다양할 때 분석됩니다', '🔗') + '</div>');
     return;
   }
   const body = rules.slice(0, 10).map(r =>
@@ -427,31 +396,18 @@ function daRenderCross(rows) {
     + '<td class="r" data-label="향상도" title="무작위 대비 몇 배로 함께 사는지">' + r.lift.toFixed(2) + '배</td>'
     + '<td class="r" data-label="미공략"><b class="da-op">' + r.missing.length + '곳</b></td>'
     + '<td class="da-targets">' + r.missing.slice(0, 3).map(c =>
-        '<span onclick="openClient360(&#39;' + escInlineJs(c) + '&#39;)">' + escHtml(c) + '</span>').join('')
+        `<span ${uiAction('click', () => openClient360(c))}>` + escHtml(c) + '</span>').join('')
       + (r.missing.length > 3 ? '<em>외 ' + (r.missing.length - 3) + '곳</em>' : '') + '</td></tr>').join('');
 
   const top = rules[0];
-  host.innerHTML =
-    '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="chart-card-title">교차판매 기회</div>'
-    + '<div class="chart-card-sub">함께 사는 경향이 강한 품목군 조합입니다 · 거래처 ' + clientCount + '곳 기준</div>'
-    + '<div class="da-note"><b>' + escHtml(top.from) + '</b>을 취급하는 거래처는 <b>' + escHtml(top.to)
-    + '</b>도 함께 살 확률이 무작위 대비 <b>' + top.lift.toFixed(1) + '배</b> 높습니다. '
-    + '그런데 아직 <b>' + top.missing.length + '곳</b>이 ' + escHtml(top.to) + '를 사지 않고 있습니다.</div>'
-    + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr>'
-    + '<th>이미 사는 품목군</th><th></th><th>제안 품목군</th><th class="r">신뢰도</th>'
-    + '<th class="r">향상도</th><th class="r">미공략</th><th>대상 거래처</th></tr></thead>'
-    + '<tbody>' + body + '</tbody></table></div></div>';
+  uiSetHtml(host, '<div class="chart-card" style="margin-bottom:16px">' + '<div class="chart-card-title">교차판매 기회</div>' + '<div class="chart-card-sub">함께 사는 경향이 강한 품목군 조합입니다 · 거래처 ' + clientCount + '곳 기준</div>' + '<div class="da-note"><b>' + escHtml(top.from) + '</b>을 취급하는 거래처는 <b>' + escHtml(top.to) + '</b>도 함께 살 확률이 무작위 대비 <b>' + top.lift.toFixed(1) + '배</b> 높습니다. ' + '그런데 아직 <b>' + top.missing.length + '곳</b>이 ' + escHtml(top.to) + '를 사지 않고 있습니다.</div>' + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr>' + '<th>이미 사는 품목군</th><th></th><th>제안 품목군</th><th class="r">신뢰도</th>' + '<th class="r">향상도</th><th class="r">미공략</th><th>대상 거래처</th></tr></thead>' + '<tbody>' + body + '</tbody></table></div></div>');
 }
 
 function daRenderPrice(rows) {
   const items = daPriceVariance(rows, 25);
   const host = document.getElementById('da-price');
   if (!items.length) {
-    host.innerHTML = '<div class="chart-card" style="margin-bottom:16px">'
-      + '<div class="chart-card-title">실질 단가 편차</div>'
-      + emptyState('표본이 충분한 품목이 없습니다', '한 품목당 25건 이상 거래가 있어야 분석됩니다', '💰')
-      + '</div>';
+    uiSetHtml(host, '<div class="chart-card" style="margin-bottom:16px">' + '<div class="chart-card-title">실질 단가 편차</div>' + emptyState('표본이 충분한 품목이 없습니다', '한 품목당 25건 이상 거래가 있어야 분석됩니다', '💰') + '</div>');
     return;
   }
   const normal = items.filter(i => !i.suspect).slice(0, 10);
@@ -485,13 +441,5 @@ function daRenderPrice(rows) {
       + suspect.map(row).join('') + '</tbody></table></div></details>'
     : '';
 
-  host.innerHTML =
-    '<div class="chart-card" style="margin-bottom:16px">'
-    + '<div class="chart-card-title">실질 단가 편차</div>'
-    + '<div class="chart-card-sub">공급가 ÷ 수량으로 계산한 실제 판매 단가입니다 · 같은 품목을 거래처마다 얼마에 파는지 보여줍니다</div>'
-    + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr><th>품목</th>'
-    + '<th class="r">중앙 단가</th><th>하위10% ─ 상위10%</th><th class="r">하위10%</th>'
-    + '<th class="r">상위10%</th><th class="r">편차</th><th class="r">건수</th></tr></thead><tbody>'
-    + normal.map(row).join('') + '</tbody></table></div>'
-    + suspectHtml + '</div>';
+  uiSetHtml(host, '<div class="chart-card" style="margin-bottom:16px">' + '<div class="chart-card-title">실질 단가 편차</div>' + '<div class="chart-card-sub">공급가 ÷ 수량으로 계산한 실제 판매 단가입니다 · 같은 품목을 거래처마다 얼마에 파는지 보여줍니다</div>' + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr><th>품목</th>' + '<th class="r">중앙 단가</th><th>하위10% ─ 상위10%</th><th class="r">하위10%</th>' + '<th class="r">상위10%</th><th class="r">편차</th><th class="r">건수</th></tr></thead><tbody>' + normal.map(row).join('') + '</tbody></table></div>' + suspectHtml + '</div>');
 }

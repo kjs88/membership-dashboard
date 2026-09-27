@@ -93,7 +93,7 @@ function renderTargetPlanTable() {
     const cells = row.values.map((v, idx) => `<td class="${idx===currentMonthIdx?'plan-current-month':''}">${v}</td>`).join('');
     return `<tr class="${i===0?'plan-section-start':''}">${sectionCell}${groupCell}<th class="plan-label">${row.label}</th>${cells}</tr>`;
   }).join('')).join('');
-  wrap.innerHTML = `<div class="target-plan-scroll"><table class="target-plan-table">${head}<tbody>${body}</tbody></table></div><div class="target-plan-note">현재 월 사업소/유통사 계획값은 매출 목표에 자동 반영됩니다.</div>`;
+  uiSetHtml(wrap, `<div class="target-plan-scroll"><table class="target-plan-table">${head}<tbody>${body}</tbody></table></div><div class="target-plan-note">현재 월 사업소/유통사 계획값은 매출 목표에 자동 반영됩니다.</div>`);
 }
 
 function renderTargets() {
@@ -134,31 +134,34 @@ function renderTargets() {
       sm[e.personId]=(sm[e.personId]||0)+(parseFloat(e.ourPurchase)||0);
     }
   });
-  document.getElementById('personal-targets').innerHTML = userList.map(u=>{
-    const uidAttr = escHtml(u.id);
-    const vTgt=(targets.personal||{})[u.id]||0;
-    const sTgt=(targets.personalSales||{})[u.id]||0;
-    const vAct=pm[u.id]||0, sAct=sm[u.id]||0;
-    const vpct=vTgt?Math.min(Math.round(vAct/vTgt*100),999):0;
-    const spct=sTgt?Math.min(Math.round(sAct/sTgt*100),999):0;
-    return `<div class="personal-block">
+  uiSetHtml(document.getElementById('personal-targets'), userList.map(u => {
+  const uidAttr = escHtml(u.id);
+  const vTgt = (targets.personal || {})[u.id] || 0;
+  const sTgt = (targets.personalSales || {})[u.id] || 0;
+  const vAct = pm[u.id] || 0,
+    sAct = sm[u.id] || 0;
+  const vpct = vTgt ? Math.min(Math.round(vAct / vTgt * 100), 999) : 0;
+  const spct = sTgt ? Math.min(Math.round(sAct / sTgt * 100), 999) : 0;
+  return `<div class="personal-block">
       <div class="personal-block-name">${escHtml(u.name)}</div>
       <div class="tgt-row">
         <span class="tgt-label">매출 목표</span>
-        <input class="target-input-sm" id="pts-${uidAttr}" type="text" value="${sTgt?sTgt.toLocaleString():''}" placeholder="0" oninput="fmtComma(this)" />
+        <input class="target-input-sm" id="pts-${uidAttr}" type="text" value="${sTgt ? sTgt.toLocaleString() : ''}" placeholder="0" ${uiAction("input", function (event, uiValues) {
+    fmtComma(this);
+  }, [])} />
         <span class="tgt-unit">원</span>
         <div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:${spct}%;background:var(--amber)"></div></div>
-        <span class="tgt-pct" style="color:var(--amber)">${sTgt?spct+'%':'-'}</span>
+        <span class="tgt-pct" style="color:var(--amber)">${sTgt ? spct + '%' : '-'}</span>
       </div>
       <div class="tgt-row">
         <span class="tgt-label">방문 목표</span>
-        <input class="target-input-sm" id="pt-${uidAttr}" type="number" value="${vTgt||''}" placeholder="0" />
+        <input class="target-input-sm" id="pt-${uidAttr}" type="number" value="${vTgt || ''}" placeholder="0" />
         <span class="tgt-unit">건</span>
         <div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:${vpct}%;background:var(--green)"></div></div>
-        <span class="tgt-pct" style="color:var(--green-dark)">${vTgt?vpct+'%':'-'}</span>
+        <span class="tgt-pct" style="color:var(--green-dark)">${vTgt ? vpct + '%' : '-'}</span>
       </div>
     </div>`;
-  }).join('');
+}).join(''));
 
   // chart
   const labels=userList.map(u=>u.name);

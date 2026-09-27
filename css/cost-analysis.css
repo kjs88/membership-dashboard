@@ -32,9 +32,6 @@
 .cost-detail thead { color: var(--text2); }
 .cost-detail tfoot { font-weight: 700; background: #edf6f3; }
 .cost-detail tbody th { font-weight: 500; }
-.cost-table-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin: -4px 0 10px; }
-.cost-table-tools input, .cost-table-tools select { height: 34px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; padding: 0 10px; }
-.cost-table-tools input { width: min(320px, 100%); }
 .cost-sortable { padding: 0 !important; }
 .cost-sortable button { width: 100%; min-height: 42px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: right; padding: 12px 10px; }
 .cost-sortable:first-child button { text-align: left; }
@@ -54,4 +51,29 @@
   .cost-detail th, .cost-detail td { padding: 10px 4px; font-size: 11px; }
   .cost-detail tr > :first-child { width: 24%; }
   .cost-chart { height: 220px; }
+}
+
+/* ══════════ 원가분석 상세 필터 ══════════ */
+.cost-filters{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.cost-frow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cost-f{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap}
+.cost-f select,.cost-f input{font-family:inherit;font-size:12px;font-weight:500;color:var(--text);
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 9px}
+.cost-f input[type=number]{width:74px;text-align:right;font-variant-numeric:tabular-nums}
+.cost-f input[type=month]{padding:5px 8px}
+.cost-tilde{color:var(--text3);font-weight:500}
+.cost-unit{font-size:11.5px;color:var(--text3);font-weight:600}
+.cost-filters #cost-row-filter{flex:1;min-width:150px;font-family:inherit;font-size:12px;
+  color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px}
+.cost-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cost-chip{font-family:inherit;font-size:11.5px;font-weight:600;color:var(--green-dark);
+  background:var(--green-light);border:1px solid transparent;border-radius:13px;
+  padding:4px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.cost-chip span{font-size:13px;line-height:1;opacity:.65}
+.cost-chip:hover{background:var(--green-mid)}
+.cost-chip.reset{background:transparent;color:var(--text3);border-color:var(--border)}
+.cost-chip.reset:hover{background:var(--surface2);color:var(--text2)}
+@media(max-width:640px){
+  .cost-f{font-size:11.5px}
+  .cost-filters #cost-row-filter{min-width:120px}
 }

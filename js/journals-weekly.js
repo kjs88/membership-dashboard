@@ -196,8 +196,7 @@ function wkInit() {
     const years = new Set([new Date().getFullYear()]);
     allWeeklyReports.forEach(r => years.add(r.year));
     const cur = parseInt(yearSel.value) || new Date().getFullYear();
-    yearSel.innerHTML = [...years].sort((a,b)=>b-a)
-      .map(y => `<option value="${y}"${y===cur?' selected':''}>${y}년</option>`).join('');
+    uiSetHtml(yearSel, [...years].sort((a, b) => b - a).map(y => `<option value="${y}"${y === cur ? ' selected' : ''}>${y}년</option>`).join(''));
   }
   wkRenderList();
 }
@@ -214,7 +213,7 @@ function wkRenderList() {
     .filter(r => r.year === filterYear)
     .sort((a,b) => b.week - a.week || (b.savedAt||'').localeCompare(a.savedAt||''));
 
-  tbody.innerHTML = '';
+  uiSetHtml(tbody, '');
   if (countEl) countEl.textContent = `총 ${filtered.length}건`;
 
   if (!filtered.length) {
@@ -231,25 +230,32 @@ function wkRenderList() {
     const reportId = escInlineJs(r.id);
     const canManage = wkCanManageReport(r);
     const tr = document.createElement('tr');
-    tr.innerHTML = `
+    uiSetHtml(tr, `
       <td class="bbs-num">${filtered.length - idx}</td>
       <td class="bbs-td-title">${escHtml(wkReportTitle(r, range))}${Array.isArray(r.attachments) && r.attachments.length ? ` <span style="color:var(--green-dark);font-size:11px;font-weight:700">📎 ${r.attachments.length}</span>` : ''}</td>
       <td>${escHtml(range.label)}</td>
       <td>${r.kpi?.visit?.actual ?? '-'}</td>
       <td>${r.kpi?.new?.actual ?? '-'}</td>
       <td style="font-weight:600;color:var(--green-dark)">${visitRate}</td>
-      <td>${escHtml(r.person||'-')}</td>
+      <td>${escHtml(r.person || '-')}</td>
       <td>${escHtml(savedDate)}</td>
-    `;
+    `);
     tr.style.cursor = 'pointer';
     tr.onclick = () => wkOpenForm(r.id);
     // 수정/삭제 버튼은 더블클릭 방지를 위해 마지막 셀에
     const actTd = document.createElement('td');
     actTd.style.cssText = 'white-space:nowrap';
-    actTd.innerHTML = canManage
-      ? `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();wkOpenForm('${reportId}')">수정</button>
-        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" onclick="event.stopPropagation();wkDeleteReport('${reportId}')">삭제</button>`
-      : `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();wkOpenForm('${reportId}')">열람</button>`;
+    uiSetHtml(actTd, canManage ? `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  wkOpenForm(String(uiValues[0]));
+}, [r.id])}>수정</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  wkDeleteReport(String(uiValues[0]));
+}, [r.id])}>삭제</button>` : `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  wkOpenForm(String(uiValues[0]));
+}, [r.id])}>열람</button>`);
     tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
@@ -315,7 +321,7 @@ function wkOpenForm(id) {
     setVal('wk-next-existing', r.nextWeekTarget?.existing);
     wkCalcNextTarget();
     const list = document.getElementById('wk-issues-list');
-    if (list) list.innerHTML = '';
+    if (list) uiSetHtml(list, '');
     loadPrevTarget(r.year, r.week, r.personId || currentUser.id);
     wkAutoCount();
     _wkReadOnly = readOnlyReport;
@@ -325,7 +331,7 @@ function wkOpenForm(id) {
     wkClearForm();
     wkUpdateFormPeriod(true);
     const list = document.getElementById('wk-issues-list');
-    if (list) list.innerHTML = '';
+    if (list) uiSetHtml(list, '');
     loadPrevTarget(_wkYear, _wkWeekNum, currentUser.id);
   }
 
@@ -348,9 +354,9 @@ function wkClearForm() {
     const el = document.getElementById(id); if (el) { el.value = ''; wkAutoResizeTextarea(el); }
   });
   const hlRows = document.getElementById('wk-hl-rows');
-  if (hlRows) hlRows.innerHTML = '';
+  if (hlRows) uiSetHtml(hlRows, '');
   const issueList = document.getElementById('wk-issues-list');
-  if (issueList) issueList.innerHTML = '';
+  if (issueList) uiSetHtml(issueList, '');
   const totN = document.getElementById('wk-next-target-total'); if (totN) totN.textContent = '0';
   ['visit','new','dormant','existing'].forEach(k => {
     const r = document.getElementById('wk-kpi-'+k+'-rate'); if (r) r.textContent = '-';
@@ -451,22 +457,30 @@ let _wkPhotos = []; // {dataUrl, name, rowInst}
 let _wkPhotoPage = 0;
 const WK_PHOTOS_PER_PAGE = 9;
 
-function wkHlAddPhotos(input) {
+async function wkHlAddPhotos(input) {
   if (_wkReadOnly) return;
   const row = input.closest('[data-inst]');
   const inst = row ? row.dataset.inst : '';
   const files = Array.from(input.files);
-  let loaded = 0;
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      _wkPhotos.push({ dataUrl: e.target.result, name: file.name, inst });
-      loaded++;
-      if (loaded === files.length) { _wkPhotoPage = Math.floor((_wkPhotos.length - 1) / WK_PHOTOS_PER_PAGE); wkRenderPhotoGallery(); }
-    };
-    reader.readAsDataURL(file);
-  });
   input.value = '';
+  for (const file of files) {
+    if (_wkPhotos.length >= 30 || file.size > WK_FILE_MAX_BYTES) {
+      showToast('사진은 각 1MB 이하, 최대 30장까지 첨부할 수 있습니다.', 'error');
+      continue;
+    }
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      if (!securityFiles.imageUrl(dataUrl)) throw new Error('Invalid image');
+      _wkPhotos.push({ dataUrl, name: file.name, inst });
+    } catch (_) { showToast('유효한 PNG, JPG, GIF, WebP 사진만 첨부할 수 있습니다.', 'error'); }
+  }
+  _wkPhotoPage = Math.max(0, Math.floor((_wkPhotos.length - 1) / WK_PHOTOS_PER_PAGE));
+  wkRenderPhotoGallery();
 }
 
 function wkRenderPhotoGallery() {
@@ -475,7 +489,7 @@ function wkRenderPhotoGallery() {
   if (!grid) return;
   const total = _wkPhotos.length;
   if (pager) pager.textContent = total ? total + '장' : '';
-  if (!total) { grid.innerHTML = ''; return; }
+  if (!total) { uiSetHtml(grid, ''); return; }
 
   // 사업소별 그룹핑
   const groups = {};
@@ -485,19 +499,24 @@ function wkRenderPhotoGallery() {
     groups[key].push({ ...p, idx: i });
   });
 
-  grid.innerHTML = Object.entries(groups).map(([inst, photos]) => `
+  uiSetHtml(grid, Object.entries(groups).map(([inst, photos]) => `
     <div>
       <div style="font-size:12px;font-weight:700;color:var(--green-dark);background:var(--green-light);display:inline-block;padding:2px 10px;border-radius:20px;margin-bottom:6px">${escHtml(inst)}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         ${photos.map(p => `
           <div style="position:relative;width:80px;height:80px;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid var(--border);flex-shrink:0"
-            onclick="wkPhotoLightbox(${p.idx})">
-            <img src="${p.dataUrl}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>
-            ${_wkReadOnly ? '' : `<button onclick="event.stopPropagation();wkDeletePhoto(${p.idx})"
+            ${uiAction("click", function (event, uiValues) {
+  wkPhotoLightbox(uiValues[0]);
+}, [p.idx])}>
+            <img src="${securityFiles.imageUrl(p.dataUrl)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>
+            ${_wkReadOnly ? '' : `<button ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  wkDeletePhoto(uiValues[0]);
+}, [p.idx])}
               style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;padding:0">✕</button>`}
           </div>`).join('')}
       </div>
-    </div>`).join('');
+    </div>`).join(''));
 }
 
 function wkDeletePhoto(idx) {
@@ -509,30 +528,29 @@ function wkDeletePhoto(idx) {
 
 function wkPhotoLightbox(idx) {
   const p = _wkPhotos[idx];
-  if (!p) return;
+  if (!p || !securityFiles.imageUrl(p.dataUrl)) return;
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
   ov.onclick = () => ov.remove();
-  ov.innerHTML = `
+  uiSetHtml(ov, `
     <div style="position:relative;display:inline-block">
-      <img src="${p.dataUrl}" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.6);display:block"/>
+      <img src="${securityFiles.imageUrl(p.dataUrl)}" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.6);display:block"/>
       ${p.inst ? `<div style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;font-size:14px;font-weight:700;padding:6px 14px;border-radius:7px;pointer-events:none">${escHtml(p.inst)}</div>` : ""}
     </div>
-    <button onclick="event.stopPropagation();wkPhotoLightbox(${idx-1})" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer" ${idx===0?'disabled':''}>‹</button>
-    <button onclick="event.stopPropagation();wkPhotoLightbox(${idx+1})" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer" ${idx===_wkPhotos.length-1?'disabled':''}>›</button>`;
+    <button ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  wkPhotoLightbox(uiValues[0]);
+}, [idx - 1])} style="position:absolute;left:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer" ${idx === 0 ? 'disabled' : ''}>‹</button>
+    <button ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  wkPhotoLightbox(uiValues[0]);
+}, [idx + 1])} style="position:absolute;right:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer" ${idx === _wkPhotos.length - 1 ? 'disabled' : ''}>›</button>`);
   document.body.appendChild(ov);
 }
 
 // ── 일반 파일 첨부 ──
 function wkNormalizeFile(file) {
-  if (!file || !file.dataUrl || !file.name) return null;
-  return {
-    name: String(file.name || '').slice(0, 160),
-    type: String(file.type || 'application/octet-stream').slice(0, 120),
-    size: parseInt(file.size, 10) || 0,
-    dataUrl: file.dataUrl,
-    addedAt: file.addedAt || new Date().toISOString(),
-  };
+  return securityFiles.attachment(file);
 }
 
 function wkFileTotalBytes(extra = 0) {
@@ -546,49 +564,32 @@ function wkFormatFileSize(bytes) {
   return n + 'B';
 }
 
-function wkAddFiles(input) {
+async function wkAddFiles(input) {
   if (_wkReadOnly) return;
   const files = Array.from(input.files || []);
   if (!files.length) return;
-  let loaded = 0;
   let accepted = 0;
-  const finishOne = () => {
-    loaded++;
-    if (loaded === files.length) {
-      wkRenderFileList();
-      if (accepted) showToast(`첨부파일 ${accepted}개가 추가되었습니다.`, 'success');
-    }
-  };
-  files.forEach(file => {
-    if (file.size > WK_FILE_MAX_BYTES) {
-      showToast(`${file.name} 파일이 1MB를 초과해 제외되었습니다.`, 'error');
-      finishOne();
-      return;
-    }
-    if (wkFileTotalBytes(file.size) > WK_FILE_TOTAL_MAX_BYTES) {
-      showToast('첨부파일 총 용량은 3MB를 넘을 수 없습니다.', 'error');
-      finishOne();
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = e => {
-      _wkFiles.push(wkNormalizeFile({
-        name: file.name,
-        type: file.type || 'application/octet-stream',
-        size: file.size,
-        dataUrl: e.target.result,
-        addedAt: new Date().toISOString(),
-      }));
-      accepted++;
-      finishOne();
-    };
-    reader.onerror = () => {
-      showToast(`${file.name} 파일을 읽지 못했습니다.`, 'error');
-      finishOne();
-    };
-    reader.readAsDataURL(file);
-  });
   input.value = '';
+  for (const file of files) {
+    if (_wkFiles.length >= 30 || file.size > WK_FILE_MAX_BYTES || wkFileTotalBytes(file.size) > WK_FILE_TOTAL_MAX_BYTES) {
+      showToast('파일은 각 1MB, 전체 3MB, 최대 30개까지 첨부할 수 있습니다.', 'error');
+      continue;
+    }
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const clean = wkNormalizeFile({ name: file.name, dataUrl });
+      if (!clean || wkFileTotalBytes(clean.size) > WK_FILE_TOTAL_MAX_BYTES) throw new Error('Invalid attachment');
+      _wkFiles.push(clean);
+      accepted++;
+    } catch (_) { showToast(`${file.name}: 지원하지 않거나 유효하지 않은 파일입니다.`, 'error'); }
+  }
+  wkRenderFileList();
+  if (accepted) showToast(`첨부파일 ${accepted}개가 추가되었습니다.`, 'success');
 }
 
 function wkDeleteFile(idx) {
@@ -601,16 +602,18 @@ function wkRenderFileList() {
   const list = document.getElementById('wk-file-list');
   if (!list) return;
   if (!_wkFiles.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">첨부된 파일이 없습니다.</div>';
+    uiSetHtml(list, '<div style="font-size:12px;color:var(--text3);padding:8px 0">첨부된 파일이 없습니다.</div>');
     return;
   }
-  list.innerHTML = _wkFiles.map((f, idx) => `
+  uiSetHtml(list, _wkFiles.map((f, idx) => `
     <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:8px 10px;min-width:0">
       <span style="font-size:15px">📄</span>
-      <a href="${f.dataUrl}" download="${escHtml(f.name)}" style="flex:1;min-width:0;color:var(--text);font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none" title="${escHtml(f.name)}">${escHtml(f.name)}</a>
+      <button type="button" ${uiAction('click', () => securityFiles.download(f))} style="flex:1;min-width:0;color:var(--text);font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;border:0;background:transparent;cursor:pointer" title="${escHtml(f.name)}">${escHtml(f.name)}</button>
       <span style="font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap">${wkFormatFileSize(f.size)}</span>
-      ${_wkReadOnly ? '' : `<button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--red);font-size:12px" onclick="wkDeleteFile(${idx})">삭제</button>`}
-    </div>`).join('');
+      ${_wkReadOnly ? '' : `<button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--red);font-size:12px" ${uiAction("click", function (event, uiValues) {
+  wkDeleteFile(uiValues[0]);
+}, [idx])}>삭제</button>`}
+    </div>`).join(''));
 }
 
 // ── 사업소별 주요사항 ──
@@ -624,11 +627,17 @@ function wkHlSearch(q) {
   if (!q) { drop.style.display='none'; return; }
   const names = wkHlGetNames().filter(n => n.includes(q));
   if (!names.length) { drop.style.display='none'; return; }
-  drop.innerHTML = names.slice(0,30).map(n =>
-    `<div style="padding:7px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
-      onmousedown="wkHlAddRow('${n.replace(/'/g,"\\'")}');document.getElementById('wk-hl-search').value='';wkHlCloseDrop()"
-      onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">${n}</div>`
-  ).join('');
+  uiSetHtml(drop, names.slice(0, 30).map(n => `<div style="padding:7px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
+      ${uiAction("mousedown", function (event, uiValues) {
+  wkHlAddRow(String(uiValues[0]));
+  document.getElementById('wk-hl-search').value = '';
+  wkHlCloseDrop();
+}, [n])}
+      ${uiAction("mouseover", function (event, uiValues) {
+  this.style.background = 'var(--hover)';
+}, [])} ${uiAction("mouseout", function (event, uiValues) {
+  this.style.background = '';
+}, [])}>${escHtml(n)}</div>`).join(''));
   drop.style.display = 'block';
 }
 function wkHlCloseDrop() {
@@ -642,11 +651,13 @@ function wkHlAddRow(name) {
   const id = 'hl-' + Date.now();
   const div = document.createElement('div');
   div.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px';
-  div.innerHTML = `
+  uiSetHtml(div, `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <span style="font-size:12px;font-weight:700;color:var(--green-dark);background:var(--green-light);padding:3px 10px;border-radius:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%" title="${name}">${name}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--green-dark);background:var(--green-light);padding:3px 10px;border-radius:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%" title="${escHtml(name)}">${escHtml(name)}</span>
       <div style="display:flex;gap:6px;align-items:center">
-        <select class="ss-select" data-hlf="status" onchange="wkHlSync()" style="font-size:12px;padding:3px 6px;min-width:64px">
+        <select class="ss-select" data-hlf="status" ${uiAction("change", function (event, uiValues) {
+  wkHlSync();
+}, [])} style="font-size:12px;padding:3px 6px;min-width:64px">
           <option value="">상태</option>
           <option value="진행">진행</option>
           <option value="해결">해결</option>
@@ -654,14 +665,23 @@ function wkHlAddRow(name) {
         </select>
         <label style="cursor:pointer;padding:3px 8px;border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--text2);white-space:nowrap" title="사진 첨부">
           사진첨부
-          <input type="file" multiple style="display:none" onchange="wkHlAddPhotos(this)"/>
+          <input type="file" multiple style="display:none" ${uiAction("change", function (event, uiValues) {
+  wkHlAddPhotos(this);
+}, [])}/>
         </label>
-        <button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--text3);font-size:12px" onclick="this.closest('[data-inst]').remove();wkHlSync()">✕</button>
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;color:var(--text3);font-size:12px" ${uiAction("click", function (event, uiValues) {
+  this.closest('[data-inst]').remove();
+  wkHlSync();
+}, [])}>✕</button>
       </div>
     </div>
-    <textarea class="form-textarea" placeholder="이슈 및 요청사항 입력..." style="width:100%;min-height:36px;font-size:13px;resize:none;overflow:hidden;box-sizing:border-box;margin:0" data-auto-min="36" data-hlf="issue" oninput="wkHlSync()"></textarea>
-    <textarea class="form-textarea" placeholder="대응..." style="width:100%;min-height:36px;font-size:13px;resize:none;overflow:hidden;background:var(--bg2);box-sizing:border-box;margin:0" data-auto-min="36" data-hlf="response" oninput="wkHlSync()"></textarea>
-`;
+    <textarea class="form-textarea" placeholder="이슈 및 요청사항 입력..." style="width:100%;min-height:36px;font-size:13px;resize:none;overflow:hidden;box-sizing:border-box;margin:0" data-auto-min="36" data-hlf="issue" ${uiAction("input", function (event, uiValues) {
+  wkHlSync();
+}, [])}></textarea>
+    <textarea class="form-textarea" placeholder="대응..." style="width:100%;min-height:36px;font-size:13px;resize:none;overflow:hidden;background:var(--bg2);box-sizing:border-box;margin:0" data-auto-min="36" data-hlf="response" ${uiAction("input", function (event, uiValues) {
+  wkHlSync();
+}, [])}></textarea>
+`);
   div.dataset.inst = name;
   container.appendChild(div);
   wkAutoResizeTextareas(div);
@@ -686,7 +706,7 @@ function wkHlSerialize() {
 function wkHlDeserialize(str) {
   wkHlClearSearch();
   const container = document.getElementById('wk-hl-rows');
-  container.innerHTML = '';
+  uiSetHtml(container, '');
   if (!str) return;
   str.split('||').forEach(part => {
     const idx = part.indexOf('::');

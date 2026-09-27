@@ -30,3 +30,7 @@ downloads/**/*.xls
 
 # Local helper state
 .local-server.pid
+
+# Development dependencies and browser security test reports
+node_modules/
+security-test-results/

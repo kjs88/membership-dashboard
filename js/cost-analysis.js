@@ -7,7 +7,8 @@ const costAnalysis = (() => {
   ];
   const VIEW_MAP = new Map(VIEW_GROUPS.flatMap(group => group.views.map(([key, label]) => [key, { key, label, tab: group.tab }])));
   const DEFAULT_VIEW = 'mgmt-customer-class';
-  const state = { month: '', view: DEFAULT_VIEW, query: '', sort: { key: 'sales', dir: 'desc' }, years: new Map(), loading: false, error: '', request: 0, controller: null, chart: null };
+  const DEFAULT_FILTERS = { span: false, from: '', to: '', profit: 'all', rateMin: '', rateMax: '', minSales: '', limit: '' };
+  const state = { month: '', view: DEFAULT_VIEW, query: '', sort: { key: 'sales', dir: 'desc' }, years: new Map(), loading: false, error: '', request: 0, controller: null, chart: null, filters: { ...DEFAULT_FILTERS } };
   const money = value => Math.round(value).toLocaleString('ko-KR');
   const rate = (profit, sales) => sales === 0 ? null : profit / sales * 100;
   const rateText = value => value === null ? '-' : `${value.toFixed(3)}%`;
@@ -25,11 +26,86 @@ const costAnalysis = (() => {
     if (view) return Array.isArray(view.rows) ? view.rows : [];
     return state.view === DEFAULT_VIEW ? data.rows || [] : [];
   };
+  // 구간 조회: from~to 사이의 달을 코드 기준으로 합산한다. 매익률은 합계로 다시 계산한다.
+  const rangeBounds = () => {
+    const f = state.filters;
+    if (!f.span) return { from: state.month, to: state.month };
+    const from = f.from || state.month;
+    const to = f.to || state.month;
+    return from <= to ? { from, to } : { from: to, to: from };
+  };
+  const monthsInRange = () => {
+    const { from, to } = rangeBounds();
+    if (!/^\d{4}-\d{2}$/.test(from) || !/^\d{4}-\d{2}$/.test(to)) return [state.month];
+    const out = [];
+    let [y, m] = from.split('-').map(Number);
+    const [ey, em] = to.split('-').map(Number);
+    while (y < ey || (y === ey && m <= em)) {
+      out.push(`${y}-${String(m).padStart(2, '0')}`);
+      m += 1; if (m > 12) { m = 1; y += 1; }
+      if (out.length > 120) break;
+    }
+    return out;
+  };
+  const yearsInRange = () => [...new Set(monthsInRange().map(m => m.slice(0, 4)))];
+  const monthData = month => (state.years.get(month.slice(0, 4)) || {})[month] || null;
+  const rangeData = () => {
+    const list = monthsInRange().map(monthData).filter(Boolean);
+    return { list, missing: monthsInRange().filter(m => !monthData(m)) };
+  };
+  // 구간이면 합산 행, 단월이면 그 달의 행
+  const activeRows = () => {
+    const months = monthsInRange();
+    if (months.length <= 1) return rowsFor(monthData(months[0] || state.month));
+    const map = new Map();
+    months.forEach(m => {
+      rowsFor(monthData(m)).forEach(row => {
+        const key = row.code || row.name || '';
+        const acc = map.get(key) || { code: row.code, name: row.name, sales: 0, cost: 0, profit: 0 };
+        acc.sales += row.sales; acc.cost += row.cost; acc.profit += row.profit;
+        if (row.name) acc.name = row.name;
+        map.set(key, acc);
+      });
+    });
+    return [...map.values()];
+  };
+  // 빈 값은 '조건 없음'이어야 한다. Number('')는 0이라 그대로 쓰면 전부 걸러진다.
+  const num = value => {
+    const raw = String(value === null || value === undefined ? '' : value).replace(/[^0-9.-]/g, '');
+    if (raw === '' || raw === '-' || raw === '.') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  const activeFilterChips = () => {
+    const f = state.filters, chips = [];
+    if (f.span) { const b = rangeBounds(); chips.push({ key: 'span', label: `기간 ${b.from} ~ ${b.to}` }); }
+    if (f.profit === 'loss') chips.push({ key: 'profit', label: '적자만' });
+    if (f.profit === 'plus') chips.push({ key: 'profit', label: '흑자만' });
+    if (num(f.rateMin) !== null) chips.push({ key: 'rateMin', label: `매익률 ${num(f.rateMin)}% 이상` });
+    if (num(f.rateMax) !== null) chips.push({ key: 'rateMax', label: `매익률 ${num(f.rateMax)}% 이하` });
+    if (num(f.minSales)) chips.push({ key: 'minSales', label: `매출 ${money(num(f.minSales))}원 이상` });
+    if (num(f.limit)) chips.push({ key: 'limit', label: `상위 ${num(f.limit)}개` });
+    if (state.query.trim()) chips.push({ key: 'query', label: `검색 "${state.query.trim()}"` });
+    return chips;
+  };
   const rowRate = row => rate(row.profit, row.sales);
   const filterRows = rows => {
+    const f = state.filters;
     const query = state.query.trim().toLowerCase();
-    if (!query) return [...rows];
-    return rows.filter(row => `${row.name || ''} ${row.code || ''}`.toLowerCase().includes(query));
+    const rMin = num(f.rateMin), rMax = num(f.rateMax), minS = num(f.minSales);
+    return rows.filter(row => {
+      if (query && !`${row.name || ''} ${row.code || ''}`.toLowerCase().includes(query)) return false;
+      if (f.profit === 'loss' && !(row.profit < 0)) return false;
+      if (f.profit === 'plus' && !(row.profit > 0)) return false;
+      if (minS !== null && row.sales < minS) return false;
+      if (rMin !== null || rMax !== null) {
+        const r = rowRate(row);
+        if (r === null) return false;                 // 매출 0은 매익률을 정의할 수 없다
+        if (rMin !== null && r < rMin) return false;
+        if (rMax !== null && r > rMax) return false;
+      }
+      return true;
+    });
   };
   const sortedRows = rows => {
     const { key, dir } = state.sort;
@@ -43,7 +119,11 @@ const costAnalysis = (() => {
       return sign * (an - bn) || (a.name || '').localeCompare(b.name || '', 'ko');
     });
   };
-  const displayRows = rows => sortedRows(filterRows(rows));
+  const displayRows = rows => {
+    const out = sortedRows(filterRows(rows));
+    const limit = num(state.filters.limit);
+    return limit && limit > 0 ? out.slice(0, limit) : out;
+  };
   const sortMark = key => state.sort.key === key ? (state.sort.dir === 'asc' ? '▲' : '▼') : '';
   const sortableTh = (key, label, scope = 'col') => `<th scope="${scope}" class="cost-sortable ${state.sort.key === key ? 'active' : ''}" data-cost-sort="${key}"><button type="button">${escHtml(label)} <span>${sortMark(key)}</span></button></th>`;
 
@@ -81,11 +161,12 @@ const costAnalysis = (() => {
   async function load(force = false) {
     if (!currentUser || !userCanOpenPage('cost')) return;
     if (!state.month) state.month = currentMonth();
-    const year = state.month.slice(0, 4);
+    const years = yearsInRange();
     state.controller?.abort();
     const request = ++state.request;
     state.error = '';
-    if (!force && state.years.has(year)) { state.loading = false; draw(); return; }
+    const need = force ? years : years.filter(y => !state.years.has(y));
+    if (!need.length) { state.loading = false; draw(); return; }
     const userId = currentUser.id;
     const controller = new AbortController();
     state.controller = controller;
@@ -94,11 +175,14 @@ const costAnalysis = (() => {
     draw();
     const timeout = setTimeout(() => controller.abort(), 30000);
     try {
-      const response = await fetch(`${DB_URL.replace(/\/+$/, '')}/erp/costAnalysis/${year}.json`, { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error('원가분석 데이터를 불러오지 못했습니다.');
-      const data = validate(await response.json(), year);
+      const base = DB_URL.replace(/\/+$/, '');
+      const loaded = await Promise.all(need.map(async y => {
+        const response = await fetch(`${base}/erp/costAnalysis/${y}.json`, { cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error('원가분석 데이터를 불러오지 못했습니다.');
+        return [y, validate(await response.json(), y)];
+      }));
       if (request !== state.request || currentUser?.id !== userId) return;
-      state.years.set(year, data);
+      loaded.forEach(([y, data]) => state.years.set(y, data));
     } catch (error) {
       if (request !== state.request) return;
       state.error = error.name === 'AbortError' ? '조회 시간이 초과되었습니다. 다시 시도해 주세요.' : error.message;
@@ -112,27 +196,34 @@ const costAnalysis = (() => {
     const root = document.getElementById('cost-analysis-root');
     if (!root || !currentUser) return;
     const months = state.years.get(state.month.slice(0, 4)) || {};
-    const data = months[state.month];
+    const rangeInfo = rangeData();
+    const data = rangeInfo.list.length ? (monthData(state.month) || rangeInfo.list[0]) : null;
+    const hasData = rangeInfo.list.length > 0;
     const meta = viewMeta();
     const group = activeGroup();
-    const viewRows = rowsFor(data);
-    const sum = data ? total(viewRows) : null;
-    const rows = data ? displayRows(viewRows) : [];
-    const filteredSum = data ? total(rows) : null;
+    const viewRows = hasData ? activeRows() : [];
+    const sum = hasData ? total(viewRows) : null;
+    const rows = hasData ? displayRows(viewRows) : [];
+    const filteredSum = hasData ? total(rows) : null;
+    const chips = activeFilterChips();
+    const span = monthsInRange();
+    const periodLabel = span.length > 1 ? `${span[0]} ~ ${span[span.length - 1]} (${span.length}개월 합산)` : state.month.replace('-', '년 ') + '월';
     const unavailable = state.loading ? '불러오는 중입니다.' : state.error || '이 월의 마감기준 데이터가 아직 수집되지 않았습니다.';
     state.chart?.destroy();
     state.chart = null;
-    root.innerHTML = `
+    uiSetHtml(root, `
       <div class="cost-toolbar">
-        <div><h2>원가분석현황(마감기준)</h2><p>${escHtml(meta.tab)} · ${escHtml(meta.label)} · 품목군 상품 · 고객분류 도매 전체</p></div>
+        <div><h2>원가분석현황(마감기준)</h2><p>${escHtml(meta.tab)} · ${escHtml(meta.label)} · ${escHtml(periodLabel)} · 품목군 상품 · 고객분류 도매 전체</p></div>
         <div class="cost-controls"><div class="cost-month-nav">
           <button type="button" data-cost-action="previous" aria-label="이전 월" title="이전 월">‹</button>
           <input id="cost-month" type="month" aria-label="조회 월" value="${state.month}" max="${currentMonth()}">
           <button type="button" data-cost-action="next" aria-label="다음 월" title="다음 월" ${state.month >= currentMonth() ? 'disabled' : ''}>›</button>
         </div><button type="button" class="btn-sm" data-cost-action="refresh" title="데이터 새로고침" aria-label="데이터 새로고침" ${state.loading ? 'disabled' : ''}>↻</button>
-        <button type="button" class="btn-sm" data-cost-action="export" ${!data || state.loading ? 'disabled' : ''}>엑셀</button></div>
+        <button type="button" class="btn-sm" data-cost-action="export" ${!hasData || state.loading ? 'disabled' : ''}>엑셀</button></div>
       </div>
-      <div class="cost-sync" role="status">${state.loading ? '불러오는 중' : state.error ? escHtml(state.error) : data ? `데이터 업데이트 ${escHtml(new Date(data.syncedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }))}` : '데이터 수집 대기'}</div>
+      <div class="cost-sync" role="status">${state.loading ? '불러오는 중' : state.error ? escHtml(state.error) : hasData ? `데이터 업데이트 ${escHtml(new Date(rangeInfo.list[rangeInfo.list.length - 1].syncedAt).toLocaleString('ko-KR', {
+  timeZone: 'Asia/Seoul'
+}))}${rangeInfo.missing.length ? ` · 미수집 ${escHtml(rangeInfo.missing.join(', '))}` : ''}` : '데이터 수집 대기'}</div>
       <div class="cost-tabs" role="tablist" aria-label="원가분석 기준">
         ${VIEW_GROUPS.map(item => `<button type="button" role="tab" data-cost-tab="${escHtml(item.tab)}" class="${item.tab === group.tab ? 'active' : ''}">${escHtml(item.tab)}</button>`).join('')}
       </div>
@@ -143,17 +234,54 @@ const costAnalysis = (() => {
         ${[['매출', 'sales'], ['원가', 'cost'], ['매익', 'profit'], ['매익률', 'rate']].map(([label, key]) => `<div class="cost-metric"><span>${label}</span><strong class="${key === 'profit' && sum?.profit < 0 ? 'cost-negative' : ''}">${sum ? key === 'rate' ? rateText(rate(sum.profit, sum.sales)) : money(sum[key]) + '<small>원</small>' : '-'}</strong></div>`).join('')}
       </div>
       <section class="cost-trend"><h3>${state.month.slice(0, 4)}년 월별 매출 · 매익</h3><div class="cost-chart">${Object.keys(months).length ? '<canvas id="cost-monthly-chart" aria-label="월별 매출과 매익 추이" role="img"></canvas>' : `<div class="cost-empty">${escHtml(unavailable)}</div>`}</div></section>
-      <section class="cost-detail"><div class="cost-table-heading"><h3>${state.month.replace('-', '년 ')}월 ${escHtml(meta.label)}별 현황</h3><span>${data ? `표시 ${rows.length} / 전체 ${viewRows.length}개 · 단위 원` : '단위 원'}</span></div>
-        <div class="cost-table-tools">
-          <input type="search" id="cost-row-filter" value="${escHtml(state.query)}" placeholder="${escHtml(meta.label)}명 또는 코드 검색" aria-label="${escHtml(meta.label)} 필터">
-          <select id="cost-row-sort" aria-label="정렬 기준">
-            ${[['sales:desc', '매출 높은순'], ['profit:desc', '매익 높은순'], ['rate:desc', '매익률 높은순'], ['cost:desc', '원가 높은순'], ['name:asc', `${meta.label} 가나다순`]].map(([value, label]) => `<option value="${value}"${`${state.sort.key}:${state.sort.dir}` === value ? ' selected' : ''}>${escHtml(label)}</option>`).join('')}
-          </select>
+      <section class="cost-detail"><div class="cost-table-heading"><h3>${escHtml(periodLabel)} ${escHtml(meta.label)}별 현황</h3><span>${hasData ? `표시 ${rows.length} / 전체 ${viewRows.length}개 · 단위 원` : '단위 원'}</span></div>
+        <div class="cost-filters">
+          <div class="cost-frow">
+            <label class="cost-f">기간
+              <select id="cf-span">
+                <option value="single"${state.filters.span ? '' : ' selected'}>단월</option>
+                <option value="span"${state.filters.span ? ' selected' : ''}>구간 합산</option>
+              </select>
+            </label>
+            ${state.filters.span ? `<label class="cost-f">시작<input type="month" id="cf-from" value="${escHtml(rangeBounds().from)}" max="${currentMonth()}"></label>
+            <label class="cost-f">끝<input type="month" id="cf-to" value="${escHtml(rangeBounds().to)}" max="${currentMonth()}"></label>` : ''}
+            <label class="cost-f">매익
+              <select id="cf-profit">
+                <option value="all"${state.filters.profit === 'all' ? ' selected' : ''}>전체</option>
+                <option value="plus"${state.filters.profit === 'plus' ? ' selected' : ''}>흑자만</option>
+                <option value="loss"${state.filters.profit === 'loss' ? ' selected' : ''}>적자만</option>
+              </select>
+            </label>
+            <label class="cost-f">매익률
+              <input type="number" id="cf-rate-min" value="${escHtml(state.filters.rateMin)}" placeholder="최소" step="0.1" inputmode="decimal">
+              <span class="cost-tilde">~</span>
+              <input type="number" id="cf-rate-max" value="${escHtml(state.filters.rateMax)}" placeholder="최대" step="0.1" inputmode="decimal"><span class="cost-unit">%</span>
+            </label>
+          </div>
+          <div class="cost-frow">
+            <label class="cost-f">최소 매출
+              <select id="cf-minsales">
+                ${[['', '전체'], ['100000', '10만 이상'], ['1000000', '100만 이상'], ['10000000', '1,000만 이상'], ['100000000', '1억 이상']].map(([v, l]) => `<option value="${v}"${String(state.filters.minSales) === v ? ' selected' : ''}>${l}</option>`).join('')}
+              </select>
+            </label>
+            <label class="cost-f">표시
+              <select id="cf-limit">
+                ${[['', '전체'], ['10', '상위 10'], ['20', '상위 20'], ['50', '상위 50'], ['100', '상위 100']].map(([v, l]) => `<option value="${v}"${String(state.filters.limit) === v ? ' selected' : ''}>${l}</option>`).join('')}
+              </select>
+            </label>
+            <label class="cost-f">정렬
+              <select id="cost-row-sort" aria-label="정렬 기준">
+                ${[['sales:desc', '매출 높은순'], ['profit:desc', '매익 높은순'], ['profit:asc', '매익 낮은순'], ['rate:desc', '매익률 높은순'], ['rate:asc', '매익률 낮은순'], ['cost:desc', '원가 높은순'], ['name:asc', `${meta.label} 가나다순`]].map(([value, label]) => `<option value="${value}"${`${state.sort.key}:${state.sort.dir}` === value ? ' selected' : ''}>${escHtml(label)}</option>`).join('')}
+              </select>
+            </label>
+            <input type="search" id="cost-row-filter" value="${escHtml(state.query)}" placeholder="${escHtml(meta.label)}명 또는 코드 검색" aria-label="${escHtml(meta.label)} 필터">
+          </div>
+          ${chips.length ? `<div class="cost-chips">${chips.map(c => `<button type="button" class="cost-chip" data-cost-clear="${c.key}" title="이 조건 지우기">${escHtml(c.label)} <span>&times;</span></button>`).join('')}<button type="button" class="cost-chip reset" data-cost-clear="all">전체 초기화</button></div>` : ''}
         </div>
         <table><thead><tr>${sortableTh('name', meta.label)}${sortableTh('sales', '매출')}${sortableTh('cost', '원가')}${sortableTh('profit', '매익')}${sortableTh('rate', '매익률')}</tr></thead>
-        <tbody>${!data ? `<tr><td colspan="5" class="cost-empty">${escHtml(unavailable)}</td></tr>` : !rows.length ? '<tr><td colspan="5" class="cost-empty">조회 조건에 해당하는 마감 내역이 없습니다.</td></tr>' : rows.map(row => `<tr><th scope="row">${escHtml(row.name || '미지정')}</th><td>${money(row.sales)}</td><td>${money(row.cost)}</td><td class="${row.profit < 0 ? 'cost-negative' : 'cost-profit'}">${money(row.profit)}</td><td>${rateText(rate(row.profit, row.sales))}</td></tr>`).join('')}</tbody>
+        <tbody>${!hasData ? `<tr><td colspan="5" class="cost-empty">${escHtml(unavailable)}</td></tr>` : !rows.length ? '<tr><td colspan="5" class="cost-empty">조회 조건에 해당하는 마감 내역이 없습니다.</td></tr>' : rows.map(row => `<tr><th scope="row">${escHtml(row.name || '미지정')}</th><td>${money(row.sales)}</td><td>${money(row.cost)}</td><td class="${row.profit < 0 ? 'cost-negative' : 'cost-profit'}">${money(row.profit)}</td><td>${rateText(rate(row.profit, row.sales))}</td></tr>`).join('')}</tbody>
         ${filteredSum ? `<tfoot><tr><th scope="row">${state.query ? '필터 합계' : '합계'}</th><td>${money(filteredSum.sales)}</td><td>${money(filteredSum.cost)}</td><td class="${filteredSum.profit < 0 ? 'cost-negative' : 'cost-profit'}">${money(filteredSum.profit)}</td><td>${rateText(rate(filteredSum.profit, filteredSum.sales))}</td></tr></tfoot>` : ''}</table>
-      </section>`;
+      </section>`);
     const canvas = document.getElementById('cost-monthly-chart');
     if (canvas && typeof Chart !== 'undefined') {
       const year = state.month.slice(0, 4);
@@ -177,7 +305,7 @@ const costAnalysis = (() => {
     root.querySelectorAll('[data-cost-action]').forEach(button => button.addEventListener('click', () => {
       const action = button.dataset.costAction;
       if (action === 'refresh') return load(true);
-      if (action === 'export') return exportExcel(data);
+      if (action === 'export') return exportExcel(hasData);
       const [year, month] = state.month.split('-').map(Number);
       const date = new Date(Date.UTC(year, month - 1 + (action === 'previous' ? -1 : 1), 1));
       const next = date.toISOString().slice(0, 7);
@@ -203,6 +331,36 @@ const costAnalysis = (() => {
       draw();
       document.getElementById('cost-row-filter')?.focus();
     });
+    // ── 상세 필터 ──
+    const setF = (patch, reload) => {
+      Object.assign(state.filters, patch);
+      if (reload) load(); else draw();
+    };
+    root.querySelector('#cf-span')?.addEventListener('change', event => {
+      const span = event.target.value === 'span';
+      setF(span ? { span: true, from: state.filters.from || state.month, to: state.filters.to || state.month }
+                : { span: false }, span);
+    });
+    root.querySelector('#cf-from')?.addEventListener('change', event => setF({ from: event.target.value }, true));
+    root.querySelector('#cf-to')?.addEventListener('change', event => setF({ to: event.target.value }, true));
+    root.querySelector('#cf-profit')?.addEventListener('change', event => setF({ profit: event.target.value }));
+    root.querySelector('#cf-minsales')?.addEventListener('change', event => setF({ minSales: event.target.value }));
+    root.querySelector('#cf-limit')?.addEventListener('change', event => setF({ limit: event.target.value }));
+    ['cf-rate-min', 'cf-rate-max'].forEach(id => {
+      // change(포커스를 잃을 때)만 듣는다 — 입력 중 draw()가 돌면 커서가 튄다
+      root.querySelector('#' + id)?.addEventListener('change', event => {
+        setF(id === 'cf-rate-min' ? { rateMin: event.target.value } : { rateMax: event.target.value });
+      });
+    });
+    root.querySelectorAll('[data-cost-clear]').forEach(button => button.addEventListener('click', () => {
+      const key = button.dataset.costClear;
+      if (key === 'all') { state.filters = { ...DEFAULT_FILTERS }; state.query = ''; return load(); }
+      if (key === 'query') { state.query = ''; return draw(); }
+      if (key === 'span') { state.filters.span = false; return load(); }
+      if (key === 'profit') { state.filters.profit = 'all'; return draw(); }
+      state.filters[key] = '';
+      draw();
+    }));
     root.querySelector('#cost-row-sort')?.addEventListener('change', event => {
       const [key, dir] = event.target.value.split(':');
       state.sort = { key, dir };
@@ -215,17 +373,19 @@ const costAnalysis = (() => {
     }));
   }
 
-  function exportExcel(data) {
-    if (!data || !currentUser || !userCanOpenPage('cost')) return;
+  function exportExcel(hasData) {
+    if (!hasData || !currentUser || !userCanOpenPage('cost')) return;
     const meta = viewMeta();
-    const rows = displayRows(rowsFor(data));
+    const rows = displayRows(activeRows());
     const sum = total(rows);
     const values = row => [row.name, row.sales, row.cost, row.profit, rateValue(row.profit, row.sales)];
     const sheet = XLSX.utils.aoa_to_sheet([[meta.label, '매출', '원가', '매익', '매익률(%)'], ...rows.map(values), values({ name: '합계', ...sum })]);
     sheet['!cols'] = [{ wch: 28 }, ...Array(4).fill({ wch: 19 })];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, meta.label.slice(0, 31));
-    XLSX.writeFile(workbook, `원가분석현황_마감기준_${meta.label}_${state.month}.xlsx`);
+    const span = monthsInRange();
+    const tag = span.length > 1 ? `${span[0]}_${span[span.length - 1]}` : state.month;
+    XLSX.writeFile(workbook, `원가분석현황_마감기준_${meta.label}_${tag}.xlsx`);
   }
 
   function clear() {
@@ -235,6 +395,8 @@ const costAnalysis = (() => {
     state.chart = null;
     state.years.clear();
     state.month = '';
+    state.query = '';
+    state.filters = { ...DEFAULT_FILTERS };
     state.loading = false;
     state.error = '';
     document.getElementById('cost-analysis-root')?.replaceChildren();

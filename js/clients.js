@@ -21,6 +21,7 @@ function processUploadFile(file) {
   const errEl = document.getElementById('upload-err');
   errEl.style.display = 'none';
   const name = file.name.toLowerCase();
+  if (file.size > 10 * 1024 * 1024) { showUploadErr('10MB 이하 파일만 업로드할 수 있습니다.'); return; }
 
   if (name.endsWith('.csv')) {
     const reader = new FileReader();
@@ -42,7 +43,7 @@ function parseCSVUpload(text) {
   const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
   const rows = lines.slice(1).map(line => {
     const cols = line.split(',').map(c => c.replace(/"/g,'').trim());
-    const obj = {};
+    const obj = Object.create(null);
     headers.forEach((h, i) => { obj[h] = cols[i] || ''; });
     return obj;
   }).filter(r => Object.values(r).some(v => v));
@@ -77,6 +78,7 @@ function showUploadErr(msg) {
 
 function showUploadPreview(rows, headers) {
   if (!rows.length) { showUploadErr('데이터 행이 없습니다.'); return; }
+  if (rows.length > 10000 || headers.length > 100) { showUploadErr('파일은 10,000행, 100열 이하여야 합니다.'); return; }
   pendingUploadData = rows;
 
   // 헤더 자동 매핑
@@ -86,12 +88,11 @@ function showUploadPreview(rows, headers) {
 
   const previewRows = rows.slice(0, 5);
   const dispCols = ['거래처코드','거래처명','지역','거래처유형','연락처'];
-  document.getElementById('upload-preview-table').innerHTML =
-    `<thead><tr style="background:var(--surface2)">${dispCols.map(c=>`<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${c}</th>`).join('')}</tr></thead>
-    <tbody>${previewRows.map(r=>`<tr style="border-bottom:1px solid var(--border)">${dispCols.map(c=>{
-      const key = colMap[c] || c;
-      return `<td style="padding:6px 10px;font-size:11px;color:var(--text2)">${r[key]||'-'}</td>`;
-    }).join('')}</tr>`).join('')}</tbody>`;
+  uiSetHtml(document.getElementById('upload-preview-table'), `<thead><tr style="background:var(--surface2)">${dispCols.map(c => `<th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${c}</th>`).join('')}</tr></thead>
+    <tbody>${previewRows.map(r => `<tr style="border-bottom:1px solid var(--border)">${dispCols.map(c => {
+  const key = colMap[c] || c;
+  return `<td style="padding:6px 10px;font-size:11px;color:var(--text2)">${r[key] || '-'}</td>`;
+}).join('')}</tr>`).join('')}</tbody>`);
 
   document.getElementById('upload-preview-wrap').style.display = 'block';
   document.getElementById('upload-confirm-btn').style.display = 'inline-flex';
@@ -277,7 +278,7 @@ function openAddClientModal() {
 
   // 담당자 목록 채우기
   const sel = document.getElementById('cf-person');
-  sel.innerHTML = '<option value="">선택</option>' + allUsers.filter(isSalesUserAccount).map(u=>`<option value="${escHtml(u.id)}">${escHtml(u.name)}</option>`).join('');
+  uiSetHtml(sel, '<option value="">선택</option>' + allUsers.filter(isSalesUserAccount).map(u => `<option value="${escHtml(u.id)}">${escHtml(u.name)}</option>`).join(''));
   openModal('modal-client-form');
 }
 
@@ -301,7 +302,7 @@ function openEditClientModal(id) {
   document.getElementById('cf-exp').value = c.experience||'';
   document.getElementById('cf-memo').value = c.memo||'';
   const sel = document.getElementById('cf-person');
-  sel.innerHTML = '<option value="">선택</option>' + allUsers.filter(isSalesUserAccount).map(u=>`<option value="${escHtml(u.id)}"${u.id===c.assignedPersonId?' selected':''}>${escHtml(u.name)}</option>`).join('');
+  uiSetHtml(sel, '<option value="">선택</option>' + allUsers.filter(isSalesUserAccount).map(u => `<option value="${escHtml(u.id)}"${u.id === c.assignedPersonId ? ' selected' : ''}>${escHtml(u.name)}</option>`).join(''));
   openModal('modal-client-form');
 }
 
@@ -374,7 +375,7 @@ function renderClientErpPanel(c) {
   const meta = (typeof getOrderBasisMeta === 'function') ? getOrderBasisMeta() : { label: '출고기준' };
   const rows = (typeof allOrders !== 'undefined' ? allOrders : []).filter(o => o.client === c.name);
   if (!rows.length) {
-    el.innerHTML = emptyState('이 거래처의 ERP 매출이 없습니다', `${meta.label} 기준 · ERP 거래처명이 정확히 일치할 때 표시됩니다`, '🏢');
+    uiSetHtml(el, emptyState('이 거래처의 ERP 매출이 없습니다', `${meta.label} 기준 · ERP 거래처명이 정확히 일치할 때 표시됩니다`, '🏢'));
     return;
   }
   const totSales = sumSupply(rows);
@@ -404,7 +405,7 @@ function renderClientErpPanel(c) {
     <td style="padding:7px 10px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--green-dark);font-weight:600">${Math.round(p.sales).toLocaleString()}</td>
     <td style="padding:7px 10px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--blue)">${totSales?Math.round(p.sales/totSales*100):0}%</td>
   </tr>`).join('');
-  el.innerHTML = `
+  uiSetHtml(el, `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
       <div class="detail-chip"><div class="detail-label">${escHtml(meta.label)} 총 매출</div><div class="detail-value" style="font-size:14px;color:var(--green-dark);font-weight:700">${Math.round(totSales).toLocaleString()}원</div></div>
       <div class="detail-chip"><div class="detail-label">총 수량</div><div class="detail-value" style="font-size:14px">${totQty.toLocaleString()}개</div></div>
@@ -414,9 +415,9 @@ function renderClientErpPanel(c) {
     <div style="display:flex;align-items:flex-end;gap:4px;height:92px;margin-bottom:18px;padding:0 4px">${barChart}</div>
     <div class="detail-label" style="margin-bottom:6px">품목별 매출 TOP 10</div>
     <table style="width:100%;border-collapse:collapse">
-      <thead><tr>${['품목','수량','매출(원)','비중'].map((h,i)=>`<th style="padding:7px 10px;text-align:${i?'right':'left'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+      <thead><tr>${['품목', '수량', '매출(원)', '비중'].map((h, i) => `<th style="padding:7px 10px;text-align:${i ? 'right' : 'left'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
       <tbody>${prodTable}</tbody>
-    </table>`;
+    </table>`);
 }
 
 function openClientDetail(id) {
@@ -427,40 +428,66 @@ function openClientDetail(id) {
   const dc={'○':'do','△':'dd','×':'dx'};
   const tc={'기존 거래처':'te','신규거래처':'tn','휴면거래처':'td2','거래 재개':'tr2'};
   // 기본정보 탭
-  document.getElementById('cd-panel-info').innerHTML = `
+  uiSetHtml(document.getElementById('cd-panel-info'), `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      ${[
-        {l:'거래처 코드', v:`<span style="font-family:var(--mono);font-weight:700;color:var(--green-dark)">${escHtml(c.code||'-')}</span>`},
-        {l:'거래처 유형', v:c.clientType?`<span class="type-badge ${tc[c.clientType]||''}">${escHtml(c.clientType)}</span>`:'-'},
-        {l:'거래 가능성', v:c.dealPossibility?`<span class="deal-badge ${dc[c.dealPossibility]||''}">${escHtml(c.dealPossibility)}</span>`:'-'},
-        {l:'담당 영업사원', v:escHtml(c.assignedPerson||'-')},
-        {l:'지역', v:escHtml(c.region||'-')},
-        {l:'연락처', v:escHtml(c.contact||'-')},
-        {l:'병행업종', v:escHtml(c.sideBusiness||'-')},
-        {l:'업력', v:escHtml(c.experience||'-')},
-        {l:'당사 월 구매액', v:c.ourPurchase?c.ourPurchase.toLocaleString()+'원':'-'},
-        {l:'첫 방문일', v:escHtml(c.firstVisit||'-')},
-        {l:'최근 방문일', v:escHtml(c.lastVisit||'-')},
-        {l:'총 방문 횟수', v:`<strong style="color:var(--green-dark)">${c.visitCount||0}회</strong>`},
-        {l:'성별/연령', v:escHtml((c.gender||'-')+'/'+(c.age||'-'))},
-      ].map(({l,v})=>`<div class="detail-chip"><div class="detail-label">${l}</div><div class="detail-value" style="font-size:12px">${v}</div></div>`).join('')}
+      ${[{
+  l: '거래처 코드',
+  v: `<span style="font-family:var(--mono);font-weight:700;color:var(--green-dark)">${escHtml(c.code || '-')}</span>`
+}, {
+  l: '거래처 유형',
+  v: c.clientType ? `<span class="type-badge ${tc[c.clientType] || ''}">${escHtml(c.clientType)}</span>` : '-'
+}, {
+  l: '거래 가능성',
+  v: c.dealPossibility ? `<span class="deal-badge ${dc[c.dealPossibility] || ''}">${escHtml(c.dealPossibility)}</span>` : '-'
+}, {
+  l: '담당 영업사원',
+  v: escHtml(c.assignedPerson || '-')
+}, {
+  l: '지역',
+  v: escHtml(c.region || '-')
+}, {
+  l: '연락처',
+  v: escHtml(c.contact || '-')
+}, {
+  l: '병행업종',
+  v: escHtml(c.sideBusiness || '-')
+}, {
+  l: '업력',
+  v: escHtml(c.experience || '-')
+}, {
+  l: '당사 월 구매액',
+  v: c.ourPurchase ? c.ourPurchase.toLocaleString() + '원' : '-'
+}, {
+  l: '첫 방문일',
+  v: escHtml(c.firstVisit || '-')
+}, {
+  l: '최근 방문일',
+  v: escHtml(c.lastVisit || '-')
+}, {
+  l: '총 방문 횟수',
+  v: `<strong style="color:var(--green-dark)">${c.visitCount || 0}회</strong>`
+}, {
+  l: '성별/연령',
+  v: escHtml((c.gender || '-') + '/' + (c.age || '-'))
+}].map(({
+  l,
+  v
+}) => `<div class="detail-chip"><div class="detail-label">${l}</div><div class="detail-value" style="font-size:12px">${v}</div></div>`).join('')}
     </div>
-    ${c.memo?`<div class="detail-section"><div class="detail-label">메모</div><div class="detail-value">${escHtml(c.memo)}</div></div>`:''}
-  `;
+    ${c.memo ? `<div class="detail-section"><div class="detail-label">메모</div><div class="detail-value">${escHtml(c.memo)}</div></div>` : ''}
+  `);
   // 방문이력 탭
   const visits = allEntries.filter(e=>e.institution===c.name).sort((a,b)=>new Date(b.date)-new Date(a.date));
-  document.getElementById('cd-panel-visits').innerHTML = visits.length===0
-    ? '<div style="padding:24px;text-align:center;color:var(--text3)">방문 이력이 없습니다</div>'
-    : `<table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr>${['날짜','영업사원','거래가능성','구매액','미팅요약'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
-        <tbody>${visits.map(e=>`<tr style="border-bottom:1px solid var(--border)">
+  uiSetHtml(document.getElementById('cd-panel-visits'), visits.length === 0 ? '<div style="padding:24px;text-align:center;color:var(--text3)">방문 이력이 없습니다</div>' : `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr>${['날짜', '영업사원', '거래가능성', '구매액', '미팅요약'].map(h => `<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+        <tbody>${visits.map(e => `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:9px 10px;font-family:var(--mono);font-size:11px;color:var(--text3)">${escHtml(e.date)}</td>
-          <td style="padding:9px 10px;font-weight:500;color:var(--text)">${escHtml(e.person||'-')}</td>
-          <td style="padding:9px 10px"><span class="deal-badge ${dc[e.dealPossibility]||''}">${escHtml(e.dealPossibility||'-')}</span></td>
-          <td style="padding:9px 10px;font-family:var(--mono);font-size:11px;color:var(--green-dark)">${e.ourPurchase?e.ourPurchase.toLocaleString()+'만':'-'}</td>
-          <td style="padding:9px 10px;font-size:11px;color:var(--text2);max-width:180px">${escHtml((e.meeting||'').substring(0,40))}${e.meeting?.length>40?'…':''}</td>
+          <td style="padding:9px 10px;font-weight:500;color:var(--text)">${escHtml(e.person || '-')}</td>
+          <td style="padding:9px 10px"><span class="deal-badge ${dc[e.dealPossibility] || ''}">${escHtml(e.dealPossibility || '-')}</span></td>
+          <td style="padding:9px 10px;font-family:var(--mono);font-size:11px;color:var(--green-dark)">${e.ourPurchase ? e.ourPurchase.toLocaleString() + '만' : '-'}</td>
+          <td style="padding:9px 10px;font-size:11px;color:var(--text2);max-width:180px">${escHtml((e.meeting || '').substring(0, 40))}${e.meeting?.length > 40 ? '…' : ''}</td>
         </tr>`).join('')}</tbody>
-      </table>`;
+      </table>`);
   // ERP 매출 탭
   renderClientErpPanel(c);
   // 탭 초기화
@@ -492,10 +519,10 @@ var _clientPage = 1;
 var _clientPageSize = 30;
 // _prodSortCol/_prodPage/_prodList/_gradePage/_gradeList → products-grades-erp.js로 이동
 
-function renderPageBtns(cur, total, fnName) {
+function renderPageBtns(cur, total, onPage) {
   if (total <= 1) return '';
   const btn = (n, label, disabled, active) =>
-    `<button onclick="${fnName}(${n})" style="min-width:32px;height:30px;padding:0 8px;border-radius:5px;border:1px solid ${active?'var(--green)':'var(--border)'};background:${active?'var(--green)':'var(--surface)'};color:${active?'#fff':'var(--text2)'};font-size:12px;cursor:${disabled?'default':'pointer'};opacity:${disabled?0.4:1};font-family:var(--font)">${label}</button>`;
+    `<button ${uiAction('click', () => onPage(n))} ${disabled?'disabled':''} style="min-width:32px;height:30px;padding:0 8px;border-radius:5px;border:1px solid ${active?'var(--green)':'var(--border)'};background:${active?'var(--green)':'var(--surface)'};color:${active?'#fff':'var(--text2)'};font-size:12px;cursor:${disabled?'default':'pointer'};opacity:${disabled?0.4:1};font-family:var(--font)">${label}</button>`;
   let html = '';
   html += btn(cur-1, '‹', cur===1, false);
   const range = [];
@@ -551,7 +578,7 @@ function renderClients(resetPage) {
   if (!grid) return;
 
   if (list.length === 0) {
-    grid.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text3)">거래처가 없습니다.</div>';
+    uiSetHtml(grid, '<div style="padding:48px;text-align:center;color:var(--text3)">거래처가 없습니다.</div>');
     updateClientActionBar();
     return;
   }
@@ -572,7 +599,11 @@ function renderClients(resetPage) {
   let html = `<table class="client-table">
     <thead><tr>
       <th style="width:36px;text-align:center">
-        <input type="checkbox" id="cb-all" title="전체 선택" ${allPageSelected?'checked':''} onclick="event.stopPropagation()" onchange="toggleAllClients(this.checked)" />
+        <input type="checkbox" id="cb-all" title="전체 선택" ${allPageSelected ? 'checked' : ''} ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+}, [])} ${uiAction("change", function (event, uiValues) {
+  toggleAllClients(this.checked);
+}, [])} />
       </th>
       <th>코드</th><th>거래처명</th><th>지역</th><th>유형</th>
       <th>거래가능성</th><th>담당자</th><th>당사구매액</th><th>방문횟수</th><th>최근방문</th><th>연락처</th>
@@ -582,18 +613,25 @@ function renderClients(resetPage) {
     const cid = String(c.id);
     const clientId = escInlineJs(cid);
     const chk = _clientSelectedIds.has(cid) ? 'checked' : '';
-    html += `<tr onclick="if(event.target.type==='checkbox')return;openClientDetail('${clientId}')">
-      <td style="text-align:center"><input type="checkbox" class="client-row-cb" data-id="${escHtml(cid)}" ${chk} onclick="event.stopPropagation()" onchange="onClientCbChange('${clientId}',this.checked)" /></td>
-      <td><span class="client-code-badge">${escHtml(c.code||'-')}</span></td>
-      <td class="tm">${escHtml(c.name||'-')}</td>
-      <td>${escHtml(c.region||'-')}</td>
-      <td>${c.clientType?`<span class="type-badge ${tc[c.clientType]||''}">${escHtml(c.clientType)}</span>`:'-'}</td>
-      <td>${c.dealPossibility?`<span class="deal-badge ${dc[c.dealPossibility]||''}">${escHtml(c.dealPossibility)}</span>`:'-'}</td>
-      <td>${escHtml(c.assignedPerson||'-')}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--green-dark)">${c.ourPurchase?c.ourPurchase.toLocaleString()+'만':'-'}</td>
-      <td style="font-family:var(--mono);text-align:center">${c.visitCount||0}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text3)">${escHtml(c.lastVisit||'-')}</td>
-      <td style="font-size:11px">${escHtml(c.contact||'-')}</td>
+    html += `<tr ${uiAction("click", function (event, uiValues) {
+  if (event.target.type === 'checkbox') return;
+  openClientDetail(String(uiValues[0]));
+}, [cid])}>
+      <td style="text-align:center"><input type="checkbox" class="client-row-cb" data-id="${escHtml(cid)}" ${chk} ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+}, [])} ${uiAction("change", function (event, uiValues) {
+  onClientCbChange(String(uiValues[0]), this.checked);
+}, [cid])} /></td>
+      <td><span class="client-code-badge">${escHtml(c.code || '-')}</span></td>
+      <td class="tm">${escHtml(c.name || '-')}</td>
+      <td>${escHtml(c.region || '-')}</td>
+      <td>${c.clientType ? `<span class="type-badge ${tc[c.clientType] || ''}">${escHtml(c.clientType)}</span>` : '-'}</td>
+      <td>${c.dealPossibility ? `<span class="deal-badge ${dc[c.dealPossibility] || ''}">${escHtml(c.dealPossibility)}</span>` : '-'}</td>
+      <td>${escHtml(c.assignedPerson || '-')}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--green-dark)">${c.ourPurchase ? c.ourPurchase.toLocaleString() + '만' : '-'}</td>
+      <td style="font-family:var(--mono);text-align:center">${c.visitCount || 0}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text3)">${escHtml(c.lastVisit || '-')}</td>
+      <td style="font-size:11px">${escHtml(c.contact || '-')}</td>
     </tr>`;
   }
   html += '</tbody></table>';
@@ -601,22 +639,37 @@ function renderClients(resetPage) {
   // 페이지네이션 바
   if (totalPages > 1) {
     html += `<div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0;font-size:13px;">`;
-    html += `<button class="btn-sm btn-ghost" onclick="_clientPage=1;renderClients(false)" ${_clientPage<=1?'disabled':''} style="padding:5px 8px">«</button>`;
-    html += `<button class="btn-sm btn-ghost" onclick="_clientPage--;renderClients(false)" ${_clientPage<=1?'disabled':''} style="padding:5px 8px">‹</button>`;
+    html += `<button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  _clientPage = 1;
+  renderClients(false);
+}, [])} ${_clientPage <= 1 ? 'disabled' : ''} style="padding:5px 8px">«</button>`;
+    html += `<button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  _clientPage--;
+  renderClients(false);
+}, [])} ${_clientPage <= 1 ? 'disabled' : ''} style="padding:5px 8px">‹</button>`;
     // 페이지 번호
     let ps = Math.max(1, _clientPage-2), pe = Math.min(totalPages, _clientPage+2);
     if (ps > 1) html += `<span style="color:var(--text3)">…</span>`;
     for (let p=ps; p<=pe; p++) {
-      html += `<button class="btn-sm ${p===_clientPage?'btn-primary':'btn-ghost'}" onclick="_clientPage=${p};renderClients(false)" style="padding:5px 10px;min-width:32px">${p}</button>`;
+      html += `<button class="btn-sm ${p === _clientPage ? 'btn-primary' : 'btn-ghost'}" ${uiAction("click", function (event, uiValues) {
+  _clientPage = uiValues[0];
+  renderClients(false);
+}, [p])} style="padding:5px 10px;min-width:32px">${p}</button>`;
     }
     if (pe < totalPages) html += `<span style="color:var(--text3)">…</span>`;
-    html += `<button class="btn-sm btn-ghost" onclick="_clientPage++;renderClients(false)" ${_clientPage>=totalPages?'disabled':''} style="padding:5px 8px">›</button>`;
-    html += `<button class="btn-sm btn-ghost" onclick="_clientPage=${totalPages};renderClients(false)" ${_clientPage>=totalPages?'disabled':''} style="padding:5px 8px">»</button>`;
+    html += `<button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  _clientPage++;
+  renderClients(false);
+}, [])} ${_clientPage >= totalPages ? 'disabled' : ''} style="padding:5px 8px">›</button>`;
+    html += `<button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  _clientPage = uiValues[0];
+  renderClients(false);
+}, [totalPages])} ${_clientPage >= totalPages ? 'disabled' : ''} style="padding:5px 8px">»</button>`;
     html += `<span style="margin-left:10px;color:var(--text3);font-size:11px">${start+1}-${Math.min(start+_clientPageSize,list.length)} / ${list.length}</span>`;
     html += `</div>`;
   }
 
-  grid.innerHTML = html;
+  uiSetHtml(grid, html);
   // indeterminate 상태는 JS로만 설정 가능
   const cbAll = document.getElementById('cb-all');
   if (cbAll) cbAll.indeterminate = !allPageSelected && somePageSelected;

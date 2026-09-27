@@ -173,9 +173,9 @@ function renderProductPersonFilter() {
     productPersonId = 'all';
   }
   const btns = [{id:'all', name:'전체'}, ...personNames.map(n=>({id:n, name:n}))];
-  filterEl.innerHTML = btns.map(b =>
-    `<button type="button" class="stats-person-btn${productPersonId===b.id?' active':''}" onclick="setProductPerson('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
-  ).join('');
+  uiSetHtml(filterEl, btns.map(b => `<button type="button" class="stats-person-btn${productPersonId === b.id ? ' active' : ''}" ${uiAction("click", function (event, uiValues) {
+  setProductPerson(String(uiValues[0]));
+}, [b.id])}>${escHtml(b.name)}</button>`).join(''));
 }
 
 function setProductPerson(id) {
@@ -220,9 +220,9 @@ function renderProductCategoryFilter(categories) {
     ...categories.filter(c => !PRODUCT_CATEGORY_ORDER.includes(c)),
   ];
   const btns = ordered.map(c=>({id:c, name:PRODUCT_CATEGORY_LABELS[c] || c, title:c}));
-  filterEl.innerHTML = btns.map(b =>
-    `<button type="button" class="stats-person-btn${productCategoryId===b.id?' active':''}" title="${escHtml(b.title)}" onclick="setProductCategory('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
-  ).join('');
+  uiSetHtml(filterEl, btns.map(b => `<button type="button" class="stats-person-btn${productCategoryId === b.id ? ' active' : ''}" title="${escHtml(b.title)}" ${uiAction("click", function (event, uiValues) {
+  setProductCategory(String(uiValues[0]));
+}, [b.id])}>${escHtml(b.name)}</button>`).join(''));
 }
 
 function setProductCategory(id) {
@@ -250,7 +250,7 @@ function renderProducts() {
   if (empty) empty.textContent = `${getOrderBasisMeta().label} ERP 데이터를 먼저 업로드하세요. (사이드바 → ERP 자료 업로드)`;
 
   if (!allOrders || allOrders.length === 0) {
-    tbody.innerHTML = '';
+    uiSetHtml(tbody, '');
     empty.style.display = '';
     document.getElementById('prod-pagination').style.display = 'none';
     document.getElementById('prod-sum-items').textContent = '0';
@@ -327,7 +327,7 @@ function renderProducts() {
   document.getElementById('prod-sum-avg').textContent   = avgPrice.toLocaleString();
 
   if (!list.length) {
-    tbody.innerHTML = ''; empty.style.display = '';
+    uiSetHtml(tbody, ''); empty.style.display = '';
     document.getElementById('prod-pagination').style.display = 'none';
     _prodList = [];
     return;
@@ -399,10 +399,10 @@ function renderProdAbc() {
 
   if (charts['chart-prod-abc']) { charts['chart-prod-abc'].destroy(); delete charts['chart-prod-abc']; }
   if (!allOrders || !allOrders.length) {
-    summaryEl.innerHTML = '<div style="color:var(--text3);padding:12px">ERP 데이터가 없습니다.</div>';
-    tableEl.innerHTML = '';
+    uiSetHtml(summaryEl, '<div style="color:var(--text3);padding:12px">ERP 데이터가 없습니다.</div>');
+    uiSetHtml(tableEl, '');
     if (subEl) subEl.textContent = '';
-    if (insightEl) insightEl.innerHTML = '';
+    if (insightEl) uiSetHtml(insightEl, '');
     return;
   }
 
@@ -421,9 +421,9 @@ function renderProdAbc() {
   if (subEl) subEl.textContent = `${periodLabel} · ${basisMeta.label} 기준 · ${catF==='all' ? '전체 품목군' : catF} · 총 ${items.length}개 품목`;
 
   if (!items.length || total <= 0) {
-    summaryEl.innerHTML = '<div style="color:var(--text3);padding:12px">선택한 기간에 해당 데이터가 없습니다.</div>';
-    tableEl.innerHTML = '';
-    if (insightEl) insightEl.innerHTML = '';
+    uiSetHtml(summaryEl, '<div style="color:var(--text3);padding:12px">선택한 기간에 해당 데이터가 없습니다.</div>');
+    uiSetHtml(tableEl, '');
+    if (insightEl) uiSetHtml(insightEl, '');
     return;
   }
 
@@ -432,16 +432,20 @@ function renderProdAbc() {
     {g:'B', label:'B등급 (80~95%)', color:'#E8900A'},
     {g:'C', label:'C등급 (95~100%)', color:'#43A047'},
   ];
-  summaryEl.innerHTML = grades.map(({g,label,color}) => {
-    const arr = items.filter(i => i.grade===g);
-    const sum = arr.reduce((s,i)=>s+i.supply, 0);
-    const pct = total ? (sum/total*100) : 0;
-    return `<div style="flex:1;min-width:170px;border:1px solid var(--border);border-left:4px solid ${color};border-radius:6px;padding:10px 12px;background:var(--surface)">
+  uiSetHtml(summaryEl, grades.map(({
+  g,
+  label,
+  color
+}) => {
+  const arr = items.filter(i => i.grade === g);
+  const sum = arr.reduce((s, i) => s + i.supply, 0);
+  const pct = total ? sum / total * 100 : 0;
+  return `<div style="flex:1;min-width:170px;border:1px solid var(--border);border-left:4px solid ${color};border-radius:6px;padding:10px 12px;background:var(--surface)">
       <div style="font-size:11px;color:var(--text2);font-weight:600">${label}</div>
       <div style="font-size:18px;font-weight:700;color:${color};margin:2px 0">${arr.length}개 품목</div>
       <div style="font-size:12px;color:var(--text2)">${Math.round(sum).toLocaleString()}원 (${pct.toFixed(1)}%)</div>
     </div>`;
-  }).join('');
+}).join(''));
 
   if (insightEl) {
     const insights = [];
@@ -542,12 +546,12 @@ function renderProdAbc() {
         </div>
       </div>`;
 
-    insightEl.innerHTML = `
+    uiSetHtml(insightEl, `
       <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px">
         <span>💡</span><span>인사이트 & 영업 전략</span>
       </div>
       ${insightHtml}
-      ${actionGridHtml}`;
+      ${actionGridHtml}`);
   }
 
   const shown = limit > 0 ? items.slice(0, limit) : items;
@@ -595,17 +599,17 @@ function renderProdAbc() {
   const leadTime = Math.max(1, parseInt(document.getElementById('prod-abc-leadtime')?.value || '7', 10));
   const stockParams = { A: { safetyDays:10, orderCycle:7 }, B: { safetyDays:5, orderCycle:14 }, C: { safetyDays:3, orderCycle:30 } };
 
-  tableEl.innerHTML = shown.map((it, i) => {
-    const gColor = it.grade==='A'?'#D94040':it.grade==='B'?'#E8900A':'#43A047';
-    const p = stockParams[it.grade];
-    const avgDaily = it.qty / daysInPeriod;
-    const safetyStock = Math.ceil(avgDaily * p.safetyDays);
-    const orderQty = Math.ceil(avgDaily * p.orderCycle);
-    const reorderPt = Math.ceil(avgDaily * leadTime + safetyStock);
-    return `<tr style="border-top:1px solid var(--border);text-align:center">
-      <td style="padding:6px 4px;font-family:var(--mono)">${i+1}</td>
+  uiSetHtml(tableEl, shown.map((it, i) => {
+  const gColor = it.grade === 'A' ? '#D94040' : it.grade === 'B' ? '#E8900A' : '#43A047';
+  const p = stockParams[it.grade];
+  const avgDaily = it.qty / daysInPeriod;
+  const safetyStock = Math.ceil(avgDaily * p.safetyDays);
+  const orderQty = Math.ceil(avgDaily * p.orderCycle);
+  const reorderPt = Math.ceil(avgDaily * leadTime + safetyStock);
+  return `<tr style="border-top:1px solid var(--border);text-align:center">
+      <td style="padding:6px 4px;font-family:var(--mono)">${i + 1}</td>
       <td style="padding:6px 8px;text-align:left">${escHtml(it.name)}</td>
-      <td style="padding:6px 4px;color:var(--text2);font-size:11px">${escHtml(it.category||'-')}</td>
+      <td style="padding:6px 4px;color:var(--text2);font-size:11px">${escHtml(it.category || '-')}</td>
       <td style="padding:6px 4px;text-align:right;font-family:var(--mono)">${avgDaily.toFixed(1)}</td>
       <td style="padding:6px 4px;text-align:right;font-family:var(--mono);background:#FEF2F2;color:#D94040;font-weight:700">${safetyStock.toLocaleString()}</td>
       <td style="padding:6px 4px;text-align:right;font-family:var(--mono);background:#FEF2F2">${orderQty.toLocaleString()}</td>
@@ -613,7 +617,7 @@ function renderProdAbc() {
       <td style="padding:6px 8px;text-align:right;font-family:var(--mono);color:var(--text2);font-size:11px">${Math.round(it.supply).toLocaleString()}</td>
       <td style="padding:6px 4px;color:${gColor};font-weight:700">${it.grade}</td>
     </tr>`;
-  }).join('');
+}).join(''));
 }
 
 // 전기간 대비 증감 셀 (전월 동일 일자 구간 매출 대비)
@@ -638,11 +642,11 @@ function prodRenderPage() {
   const startIdx = (p-1)*PAGE;
 
   const tbody = document.getElementById('prod-tbody');
-  tbody.innerHTML = slice.map((r, i) => {
-    const ratio = totalSales ? Math.round(r.sales / totalSales * 100) : 0;
-    const gi = startIdx + i;
-    return `<tr style="border-bottom:1px solid var(--border);${gi%2?'background:var(--surface2)':''}">
-      <td style="padding:9px 14px;color:var(--text3);font-size:12px">${gi+1}</td>
+  uiSetHtml(tbody, slice.map((r, i) => {
+  const ratio = totalSales ? Math.round(r.sales / totalSales * 100) : 0;
+  const gi = startIdx + i;
+  return `<tr style="border-bottom:1px solid var(--border);${gi % 2 ? 'background:var(--surface2)' : ''}">
+      <td style="padding:9px 14px;color:var(--text3);font-size:12px">${gi + 1}</td>
       <td style="padding:9px 14px;font-weight:500">${escHtml(r.name)}</td>
       <td style="padding:9px 14px;font-size:12px;color:var(--text2)">${escHtml(r.category)}</td>
       <td style="padding:9px 14px;text-align:right;font-family:var(--mono)">${r.qty.toLocaleString()}</td>
@@ -658,12 +662,12 @@ function prodRenderPage() {
       </td>
       <td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:var(--text2)">${r.clientCount}</td>
     </tr>`;
-  }).join('');
+}).join(''));
 
   const pgEl = document.getElementById('prod-pagination');
   pgEl.style.display = 'flex';
   document.getElementById('prod-page-info').textContent = `${list.length}개 품목 중 ${(p-1)*PAGE+1}~${Math.min(p*PAGE,list.length)}번`;
-  document.getElementById('prod-page-btns').innerHTML = renderPageBtns(p, totalPages, 'prodGoPage');
+  uiSetHtml(document.getElementById('prod-page-btns'), renderPageBtns(p, totalPages, prodGoPage));
 }
 
 function prodSortBy(col) {
@@ -687,15 +691,19 @@ function addGradeTier() {
 function renderGradeSettings() {
   const el = document.getElementById('grade-settings-list');
   if (!el) return;
-  el.innerHTML = gradeTiers.map((t,i) => `
+  uiSetHtml(el, gradeTiers.map((t, i) => `
     <div class="grade-tier-row" style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
       <input type="color" class="gt-color" value="${safeColor(t.color)}" style="width:32px;height:32px;border:none;border-radius:4px;cursor:pointer;padding:0;background:none" />
       <input class="gt-name form-input" value="${escHtml(t.name)}" placeholder="등급명" style="width:100px;font-weight:600" />
       <span style="font-size:12px;color:var(--text2);white-space:nowrap">월 매출</span>
-      <input class="gt-min form-input" type="text" inputmode="numeric" value="${Number(t.min||0).toLocaleString()}" placeholder="0" oninput="fmtComma(this)" style="width:150px;font-family:var(--mono);text-align:right" />
+      <input class="gt-min form-input" type="text" inputmode="numeric" value="${Number(t.min || 0).toLocaleString()}" placeholder="0" ${uiAction("input", function (event, uiValues) {
+  fmtComma(this);
+}, [])} style="width:150px;font-family:var(--mono);text-align:right" />
       <span style="font-size:12px;color:var(--text2)">원 이상</span>
-      <button class="btn-sm btn-danger" onclick="removeGradeTier(${i})" style="margin-left:auto;padding:4px 10px">삭제</button>
-    </div>`).join('');
+      <button class="btn-sm btn-danger" ${uiAction("click", function (event, uiValues) {
+  removeGradeTier(uiValues[0]);
+}, [i])} style="margin-left:auto;padding:4px 10px">삭제</button>
+    </div>`).join(''));
 }
 
 function removeGradeTier(i) {
@@ -800,15 +808,21 @@ function renderChurnRisk() {
   _churnPage = 1;
   const floorLabel = Math.round(settings.floor).toLocaleString();
   card.style.display = 'block';
-  card.innerHTML = `
+  uiSetHtml(card, `
     <div style="display:flex;align-items:center;gap:8px;user-select:none">
-      <div onclick="toggleChurnBody()" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
+      <div ${uiAction("click", function (event, uiValues) {
+  toggleChurnBody();
+}, [])} style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
         <span style="font-size:15px">⚠️</span>
         <span style="font-size:14px;font-weight:700;color:var(--red)">이탈위험 거래처 ${risk.length}곳</span>
         <span style="font-size:11px;color:var(--text2)">거래중단 ${lostCnt}곳 · 급감 ${risk.length - lostCnt}곳</span>
       </div>
-      <button type="button" class="btn-sm btn-ghost" onclick="downloadGradeChurnExcel()" style="background:#fff">↓ 엑셀</button>
-      <span id="grade-churn-arrow" onclick="toggleChurnBody()" style="font-size:13px;color:var(--red);transition:transform .2s;font-weight:700;cursor:pointer">▼</span>
+      <button type="button" class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  downloadGradeChurnExcel();
+}, [])} style="background:#fff">↓ 엑셀</button>
+      <span id="grade-churn-arrow" ${uiAction("click", function (event, uiValues) {
+  toggleChurnBody();
+}, [])} style="font-size:13px;color:var(--red);transition:transform .2s;font-weight:700;cursor:pointer">▼</span>
     </div>
     <div id="grade-churn-collapse">
       <div style="font-size:11px;color:var(--text3);margin:8px 0 10px;line-height:1.5">
@@ -816,23 +830,34 @@ function renderChurnRisk() {
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px">
         <span style="font-size:12px;font-weight:700;color:var(--text)">급감사업소 기준</span>
-        <select id="churn-compare-mode" class="form-select" style="width:190px;font-size:12px;padding:6px 10px" onclick="event.stopPropagation()">
+        <select id="churn-compare-mode" class="form-select" style="width:190px;font-size:12px;padding:6px 10px" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+}, [])}>
           <option value="prev"${settings.compareMode === 'prev' ? ' selected' : ''}>전월 대비</option>
           <option value="prev2"${settings.compareMode === 'prev2' ? ' selected' : ''}>전전월 대비</option>
           <option value="avg2"${settings.compareMode === 'avg2' ? ' selected' : ''}>최근 2개월 평균 대비</option>
           <option value="avg3"${settings.compareMode === 'avg3' ? ' selected' : ''}>최근 3개월 평균 대비</option>
         </select>
         <span style="font-size:12px;color:var(--text2)">기준매출</span>
-        <input id="churn-floor" class="form-input" type="text" inputmode="numeric" value="${floorLabel}" oninput="fmtComma(this)" onclick="event.stopPropagation()" style="width:130px;font-size:12px;padding:6px 10px;text-align:right;font-family:var(--mono)" />
+        <input id="churn-floor" class="form-input" type="text" inputmode="numeric" value="${floorLabel}" ${uiAction("input", function (event, uiValues) {
+  fmtComma(this);
+}, [])} ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+}, [])} style="width:130px;font-size:12px;padding:6px 10px;text-align:right;font-family:var(--mono)" />
         <span style="font-size:12px;color:var(--text2)">원 이상</span>
         <span style="font-size:12px;color:var(--text2)">감소율</span>
-        <input id="churn-drop-rate" class="form-input" type="number" min="1" max="99" value="${settings.dropRate}" onclick="event.stopPropagation()" style="width:74px;font-size:12px;padding:6px 10px;text-align:right;font-family:var(--mono)" />
+        <input id="churn-drop-rate" class="form-input" type="number" min="1" max="99" value="${settings.dropRate}" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+}, [])} style="width:74px;font-size:12px;padding:6px 10px;text-align:right;font-family:var(--mono)" />
         <span style="font-size:12px;color:var(--text2)">% 이상</span>
-        <button type="button" class="btn-sm btn-primary" onclick="event.stopPropagation();saveChurnSettings()" style="margin-left:auto">적용</button>
+        <button type="button" class="btn-sm btn-primary" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  saveChurnSettings();
+}, [])} style="margin-left:auto">적용</button>
       </div>
       <div id="grade-churn-filters"></div>
       <div id="grade-churn-body"></div>
-    </div>`;
+    </div>`);
   churnRenderPage();
   applyChurnCollapse();
 }
@@ -862,20 +887,24 @@ function renderChurnFilters() {
   const lostCount = managerScoped.filter(r => r.lost).length;
   const dropCount = managerScoped.length - lostCount;
   const filteredCount = churnFilteredList().length;
-  el.innerHTML = `
+  uiSetHtml(el, `
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px">
       <span style="font-size:12px;font-weight:700;color:var(--text)">목록 필터</span>
-      <select id="churn-status-filter" class="form-select" style="width:140px;font-size:12px;padding:6px 10px" onchange="setChurnFilters()">
+      <select id="churn-status-filter" class="form-select" style="width:140px;font-size:12px;padding:6px 10px" ${uiAction("change", function (event, uiValues) {
+  setChurnFilters();
+}, [])}>
         <option value="all"${_churnStatusFilter === 'all' ? ' selected' : ''}>전체 상태</option>
         <option value="lost"${_churnStatusFilter === 'lost' ? ' selected' : ''}>거래중단</option>
         <option value="drop"${_churnStatusFilter === 'drop' ? ' selected' : ''}>급감</option>
       </select>
-      <select id="churn-manager-filter" class="form-select" style="width:150px;font-size:12px;padding:6px 10px" onchange="setChurnFilters()">
+      <select id="churn-manager-filter" class="form-select" style="width:150px;font-size:12px;padding:6px 10px" ${uiAction("change", function (event, uiValues) {
+  setChurnFilters();
+}, [])}>
         <option value="all"${_churnManagerFilter === 'all' ? ' selected' : ''}>담당자 전체</option>
         ${managers.map(m => `<option value="${escHtml(m)}"${_churnManagerFilter === m ? ' selected' : ''}>${escHtml(m)}</option>`).join('')}
       </select>
       <span style="font-size:11px;color:var(--text3);margin-left:auto">표시 ${filteredCount}곳 · 거래중단 ${lostCount}곳 · 급감 ${dropCount}곳</span>
-    </div>`;
+    </div>`);
 }
 
 function setChurnFilters() {
@@ -896,30 +925,30 @@ function churnRenderPage() {
   _churnPage = p;
   const slice = list.slice((p - 1) * PAGE, p * PAGE);
   if (!list.length) {
-    body.innerHTML = `
+    uiSetHtml(body, `
       <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;color:var(--text3);font-size:12px">
         현재 필터에 해당하는 이탈위험 거래처가 없습니다.
-      </div>`;
+      </div>`);
     return;
   }
-  body.innerHTML = `
+  uiSetHtml(body, `
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px">
-      <thead><tr>${['거래처',_churnPeriodLabels.prev2,_churnPeriodLabels.prev,_churnPeriodLabels.current,'비교기준','감소율','상태','담당자'].map((h,i)=>`<th style="padding:7px 10px;text-align:${i===0?'left':i>=6?'center':'right'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap">${h}</th>`).join('')}</tr></thead>
-      <tbody>${slice.map(r=>`<tr style="border-bottom:1px solid var(--border)">
+      <thead><tr>${['거래처', _churnPeriodLabels.prev2, _churnPeriodLabels.prev, _churnPeriodLabels.current, '비교기준', '감소율', '상태', '담당자'].map((h, i) => `<th style="padding:7px 10px;text-align:${i === 0 ? 'left' : i >= 6 ? 'center' : 'right'};font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap">${h}</th>`).join('')}</tr></thead>
+      <tbody>${slice.map(r => `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:7px 10px;font-weight:500">${escHtml(r.name)}</td>
         <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text3);white-space:nowrap">${Math.round(r.prev2).toLocaleString()}원</td>
         <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text2);white-space:nowrap">${Math.round(r.prev).toLocaleString()}원</td>
-        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${r.current?'var(--text)':'var(--red)'};font-weight:600;white-space:nowrap">${Math.round(r.current).toLocaleString()}원</td>
+        <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${r.current ? 'var(--text)' : 'var(--red)'};font-weight:600;white-space:nowrap">${Math.round(r.current).toLocaleString()}원</td>
         <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--text2);white-space:nowrap">${Math.round(r.basis).toLocaleString()}원</td>
         <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:var(--red);font-weight:700">▼${r.drop}%</td>
-        <td style="padding:7px 10px;text-align:center">${r.lost?'<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">거래중단</span>':'<span style="background:var(--amber-l);color:var(--amber);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">급감</span>'}</td>
+        <td style="padding:7px 10px;text-align:center">${r.lost ? '<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">거래중단</span>' : '<span style="background:var(--amber-l);color:var(--amber);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">급감</span>'}</td>
         <td style="padding:7px 10px;text-align:center;color:var(--text2);font-weight:600">${escHtml(r.manager || '-')}</td>
       </tr>`).join('')}</tbody>
     </table></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px">
-      <span style="font-size:11px;color:var(--text3)">${(p-1)*PAGE+1}–${Math.min(p*PAGE,list.length)} / 총 ${list.length}곳 (비교기준 매출 큰 순)</span>
-      <div style="display:flex;gap:4px">${renderPageBtns(p, totalPages, 'churnGoPage')}</div>
-    </div>`;
+      <span style="font-size:11px;color:var(--text3)">${(p - 1) * PAGE + 1}–${Math.min(p * PAGE, list.length)} / 총 ${list.length}곳 (비교기준 매출 큰 순)</span>
+      <div style="display:flex;gap:4px">${renderPageBtns(p, totalPages, churnGoPage)}</div>
+    </div>`);
 }
 function churnGoPage(p) { _churnPage = p; churnRenderPage(); }
 function applyChurnCollapse() {
@@ -1009,8 +1038,7 @@ function renderGrade() {
   const gSel = document.getElementById('grade-filter-grade');
   const curGf = gSel?.value || 'all';
   if (gSel) {
-    gSel.innerHTML = '<option value="all">전체 등급</option>' +
-      gradeTiers.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
+    uiSetHtml(gSel, '<option value="all">전체 등급</option>' + gradeTiers.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join(''));
     gSel.value = curGf;
   }
 
@@ -1083,22 +1111,20 @@ function renderGrade() {
     if (!summary[r.finalGrade.name]) summary[r.finalGrade.name] = { count: 0, color: r.finalGrade.color };
     summary[r.finalGrade.name].count++;
   });
-  document.getElementById('grade-summary-row').innerHTML = Object.entries(summary)
-    .filter(([, v]) => v.count > 0)
-    .map(([name, v]) => {
-      const color = safeColor(v.color);
-      return `<div style="background:${color}22;border:1px solid ${color}44;border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px">
+  uiSetHtml(document.getElementById('grade-summary-row'), Object.entries(summary).filter(([, v]) => v.count > 0).map(([name, v]) => {
+  const color = safeColor(v.color);
+  return `<div style="background:${color}22;border:1px solid ${color}44;border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px">
       <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block"></span>
       <span style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(name)}</span>
       <span style="font-size:13px;font-family:var(--mono);color:${color};font-weight:700">${v.count}개</span>
     </div>`;
-    }).join('');
+}).join(''));
 
   document.getElementById('grade-count-label').textContent = `총 ${list.length}개 거래처`;
 
   const tbody = document.getElementById('grade-tbody');
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text3)">${useErp ? '조건에 맞는 거래처가 없습니다.' : `${getOrderBasisMeta().label} ERP 데이터를 업로드하거나 기간을 조정해보세요.`}</td></tr>`;
+    uiSetHtml(tbody, `<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text3)">${useErp ? '조건에 맞는 거래처가 없습니다.' : `${getOrderBasisMeta().label} ERP 데이터를 업로드하거나 기간을 조정해보세요.`}</td></tr>`);
     document.getElementById('grade-pagination').style.display = 'none';
     return;
   }
@@ -1118,14 +1144,12 @@ function gradeRenderPage() {
 
   const tbody = document.getElementById('grade-tbody');
   const startIdx = (p-1)*PAGE;
-  tbody.innerHTML = slice.map((r, i) => {
-    const gi = startIdx + i;
-    const opts = gradeTiers.map(t =>
-      `<option value="${escHtml(t.name)}" ${r.manualGradeName === t.name ? 'selected' : ''}>${escHtml(t.name)}</option>`
-    ).join('');
-    const autoColor = safeColor(r.autoGrade?.color);
-    const finalColor = safeColor(r.finalGrade?.color);
-    return `<tr style="border-bottom:1px solid var(--border);${gi%2?'background:var(--surface2)':''}">
+  uiSetHtml(tbody, slice.map((r, i) => {
+  const gi = startIdx + i;
+  const opts = gradeTiers.map(t => `<option value="${escHtml(t.name)}" ${r.manualGradeName === t.name ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
+  const autoColor = safeColor(r.autoGrade?.color);
+  const finalColor = safeColor(r.finalGrade?.color);
+  return `<tr style="border-bottom:1px solid var(--border);${gi % 2 ? 'background:var(--surface2)' : ''}">
       <td style="padding:9px 14px;font-weight:500">${escHtml(r.name)}</td>
       <td style="padding:9px 14px;font-size:12px;color:var(--text2)">${escHtml(r.region || '-')}</td>
       <td style="padding:9px 14px;text-align:right;font-family:var(--mono);color:var(--green-dark);font-weight:600">${r.sales.toLocaleString()}</td>
@@ -1133,7 +1157,9 @@ function gradeRenderPage() {
         <span style="background:${autoColor}22;color:${autoColor};font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">${escHtml(r.autoGrade?.name || '-')}</span>
       </td>
       <td style="padding:9px 14px;text-align:center">
-        <select class="form-select" style="font-size:11px;padding:3px 6px;width:90px" onchange="setManualGrade('${escInlineJs(r.name)}',this.value)">
+        <select class="form-select" style="font-size:11px;padding:3px 6px;width:90px" ${uiAction("change", function (event, uiValues) {
+    setManualGrade(String(uiValues[0]), this.value);
+  }, [r.name])}>
           <option value="">자동</option>${opts}
         </select>
       </td>
@@ -1142,12 +1168,12 @@ function gradeRenderPage() {
       </td>
       <td style="padding:9px 14px;font-size:12px;color:var(--text2)">-</td>
     </tr>`;
-  }).join('');
+}).join(''));
 
   const pgEl = document.getElementById('grade-pagination');
   pgEl.style.display = 'flex';
   document.getElementById('grade-page-info').textContent = `${list.length}개 거래처 중 ${(p-1)*PAGE+1}~${Math.min(p*PAGE,list.length)}번`;
-  document.getElementById('grade-page-btns').innerHTML = renderPageBtns(p, totalPages, 'gradeGoPage');
+  uiSetHtml(document.getElementById('grade-page-btns'), renderPageBtns(p, totalPages, gradeGoPage));
 }
 
 function setManualGrade(name, grade) {
@@ -1282,20 +1308,18 @@ function erpUpdateUploadPreview() {
     statusEl.style.display = 'block';
     statusEl.style.background = hasBoth ? 'var(--green-light)' : 'var(--amber-l)';
     statusEl.style.color = hasBoth ? 'var(--green-dark)' : 'var(--amber)';
-    statusEl.innerHTML = hasBoth
-      ? `✓ 주문현황 <strong>${orderCount.toLocaleString()}건</strong>, 출고현황 <strong>${shipCount.toLocaleString()}건</strong> 파싱 완료`
-      : `주문현황과 출고현황 파일을 모두 선택해야 저장할 수 있습니다.`;
+    uiSetHtml(statusEl, hasBoth ? `✓ 주문현황 <strong>${orderCount.toLocaleString()}건</strong>, 출고현황 <strong>${shipCount.toLocaleString()}건</strong> 파싱 완료` : `주문현황과 출고현황 파일을 모두 선택해야 저장할 수 있습니다.`);
   }
 
   if (previewLabel) previewLabel.textContent = '업로드 미리보기';
   if (previewList) {
-    previewList.innerHTML = ['order','ship'].map(basis => {
-      const meta = getOrderBasisMeta(basis);
-      const list = erpParsedByBasis[basis] || [];
-      if (!list.length) return `<div style="padding:7px 0;color:var(--text3)">${meta.label}: 파일 미선택</div>`;
-      const s = erpSummarize(list);
-      const range = s.dates.length ? `${s.dates[0]} ~ ${s.dates[s.dates.length-1]} (${s.dates.length}일)` : '-';
-      return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+    uiSetHtml(previewList, ['order', 'ship'].map(basis => {
+  const meta = getOrderBasisMeta(basis);
+  const list = erpParsedByBasis[basis] || [];
+  if (!list.length) return `<div style="padding:7px 0;color:var(--text3)">${meta.label}: 파일 미선택</div>`;
+  const s = erpSummarize(list);
+  const range = s.dates.length ? `${s.dates[0]} ~ ${s.dates[s.dates.length - 1]} (${s.dates.length}일)` : '-';
+  return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
         <div style="font-weight:700;color:var(--text);margin-bottom:4px">${meta.label}</div>
         <div style="display:grid;grid-template-columns:1.4fr .7fr .8fr 1fr;gap:8px;color:var(--text2)">
           <span>${range}</span>
@@ -1304,7 +1328,7 @@ function erpUpdateUploadPreview() {
           <span style="font-family:var(--mono);color:var(--green-dark);text-align:right">${s.totalAmt.toLocaleString()}원</span>
         </div>
       </div>`;
-    }).join('');
+}).join(''));
   }
   if (preview) preview.style.display = 'block';
   if (totalLabel) totalLabel.textContent = hasBoth ? `총 ${(orderCount + shipCount).toLocaleString()}건` : '두 파일 필요';
@@ -1314,6 +1338,11 @@ function erpUpdateUploadPreview() {
 function erpHandleFile(input, basis = 'ship') {
   const file = input.files[0];
   if (!file) return;
+  if (!/\.xlsx$/i.test(file.name) || file.size > 20 * 1024 * 1024) {
+    input.value = '';
+    showToast('20MB 이하 XLSX 파일만 업로드할 수 있습니다.', 'error');
+    return;
+  }
   const meta = getOrderBasisMeta(basis);
   const stateEl = document.getElementById(`erp-${basis}-state`);
   const reader = new FileReader();
@@ -1487,7 +1516,7 @@ function erpSetStatus(kind, message) {
   statusEl.style.display = 'block';
   statusEl.style.background = bg;
   statusEl.style.color = color;
-  statusEl.innerHTML = message;
+  uiSetHtml(statusEl, message);
 }
 
 function erpReadSyncMeta() {

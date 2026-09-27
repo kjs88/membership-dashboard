@@ -147,7 +147,7 @@ function staffColor(name){
 function firstStaff(){return staff[0]?.name || 'Admin';}
 function initial(name){return esc((String(name||'-').trim()[0]||'-').toUpperCase());}
 function fillSelect(el, rows, value){
-  el.innerHTML = rows.map(r=>`<option value="${esc(r.value)}">${esc(r.label)}</option>`).join('');
+  uiSetHtml(el, rows.map(r => `<option value="${esc(r.value)}">${esc(r.label)}</option>`).join(''));
   if(value !== undefined) el.value = value;
 }
 function fillCommonSelects(){
@@ -156,8 +156,8 @@ function fillCommonSelects(){
     const el=document.getElementById(id);
     if(!el) return;
     const cur=el.value;
-    if(id==='filterOwner') el.innerHTML='<option value="">담당자 전체</option>';
-    else el.innerHTML='';
+    if(id==='filterOwner') uiSetHtml(el, '<option value="">담당자 전체</option>');
+    else uiSetHtml(el, '');
     ownerRows.forEach(r=>el.add(new Option(r.label,r.value)));
     if([...el.options].some(o=>o.value===cur)) el.value=cur;
   });
@@ -173,7 +173,7 @@ function fillCommonSelects(){
   if(filterSprint){
     const cur=filterSprint.value;
     const sprintValues=[...new Set([...SPRINTS, ...tasks.map(t=>t.sprint).filter(Boolean)])];
-    filterSprint.innerHTML='<option value="">스프린트 전체</option>'+sprintValues.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    uiSetHtml(filterSprint, '<option value="">스프린트 전체</option>' + sprintValues.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join(''));
     filterSprint.value=sprintValues.includes(cur)?cur:'';
   }
   const bulkStatus=document.getElementById('bulkStatus');
@@ -181,17 +181,17 @@ function fillCommonSelects(){
   const bulkPriority=document.getElementById('bulkPriority');
   if(bulkStatus){
     const current=bulkStatus.value;
-    bulkStatus.innerHTML='<option value="">상태 변경</option>'+Object.entries(STATUS).map(([value,s])=>`<option value="${esc(value)}">${esc(s.label)}</option>`).join('');
+    uiSetHtml(bulkStatus, '<option value="">상태 변경</option>' + Object.entries(STATUS).map(([value, s]) => `<option value="${esc(value)}">${esc(s.label)}</option>`).join(''));
     bulkStatus.value=current;
   }
   if(bulkOwner){
     const current=bulkOwner.value;
-    bulkOwner.innerHTML='<option value="">담당 변경</option>'+staff.map(u=>`<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
+    uiSetHtml(bulkOwner, '<option value="">담당 변경</option>' + staff.map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join(''));
     bulkOwner.value=current;
   }
   if(bulkPriority){
     const current=bulkPriority.value;
-    bulkPriority.innerHTML='<option value="">우선순위 변경</option>'+Object.entries(PRIORITY).map(([value,p])=>`<option value="${esc(value)}">${esc(p.label)}</option>`).join('');
+    uiSetHtml(bulkPriority, '<option value="">우선순위 변경</option>' + Object.entries(PRIORITY).map(([value, p]) => `<option value="${esc(value)}">${esc(p.label)}</option>`).join(''));
     bulkPriority.value=current;
   }
 }
@@ -436,14 +436,14 @@ function fillQuickProjectOptions(){
   const el=document.getElementById('quickTaskProject');
   if(!el) return;
   const cur=el.value;
-  el.innerHTML=projects.filter(p=>!p.archived).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  uiSetHtml(el, projects.filter(p => !p.archived).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join(''));
   el.value=[...el.options].some(o=>o.value===cur) ? cur : (selectedProjectId==='all' ? (projects.find(p=>!p.fixed&&!p.archived)?.id || projects[0]?.id || '') : selectedProjectId);
 }
 function fillIntakeProjectOptions(){
   const el=document.getElementById('intakeProject');
   if(!el) return;
   const cur=el.value;
-  el.innerHTML=projects.filter(p=>!p.archived).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  uiSetHtml(el, projects.filter(p => !p.archived).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join(''));
   el.value=[...el.options].some(o=>o.value===cur) ? cur : (selectedProjectId==='all' ? (projects.find(p=>!p.fixed&&!p.archived)?.id || projects[0]?.id || '') : selectedProjectId);
 }
 function renderProjects(){
@@ -457,26 +457,36 @@ function renderProjects(){
   document.getElementById('projectCount').textContent=`${rows.length}개`;
   document.getElementById('trashCount').textContent=trash.length;
   const all=calcProject('all');
-  let html=`<div class="project-item ${selectedProjectId==='all'?'active':''}" onclick="selectProject('all')">
+  let html=`<div class="project-item ${selectedProjectId === 'all' ? 'active' : ''}" ${uiAction("click", function (event, uiValues) {
+  selectProject('all');
+}, [])}>
     <div class="project-name">전체 태스크</div>
     <div class="project-meta"><span>${all.done}/${all.total} 완료</span><span>${all.progress}%</span></div>
     <div class="progress-line"><i style="width:${all.progress}%"></i></div>
   </div>`;
   html+=rows.map(p=>{
     const pr=calcProject(p.id);
-    return `<div class="project-item ${selectedProjectId===p.id?'active':''} ${p.archived?'archived':''}" onclick="selectProject('${esc(p.id)}')">
+    return `<div class="project-item ${selectedProjectId === p.id ? 'active' : ''} ${p.archived ? 'archived' : ''}" ${uiAction("click", function (event, uiValues) {
+  selectProject(String(uiValues[0]));
+}, [p.id])}>
       <div class="project-item-top">
-        <div class="project-name">${p.favorite?'<span class="star-on">★</span> ':''}${esc(p.name)}</div>
+        <div class="project-name">${p.favorite ? '<span class="star-on">★</span> ' : ''}${esc(p.name)}</div>
         <div class="project-actions">
-          ${p.fixed?'':`<button class="mini-btn ${p.favorite?'star-on':''}" title="즐겨찾기" onclick="event.stopPropagation();toggleProjectFavorite('${esc(p.id)}')">★</button>`}
-          ${p.fixed?'':`<button class="mini-btn" title="${p.archived?'보관 해제':'보관'}" onclick="event.stopPropagation();toggleProjectArchive('${esc(p.id)}')">${p.archived?'↩':'보관'}</button>`}
+          ${p.fixed ? '' : `<button class="mini-btn ${p.favorite ? 'star-on' : ''}" title="즐겨찾기" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  toggleProjectFavorite(String(uiValues[0]));
+}, [p.id])}>★</button>`}
+          ${p.fixed ? '' : `<button class="mini-btn" title="${p.archived ? '보관 해제' : '보관'}" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  toggleProjectArchive(String(uiValues[0]));
+}, [p.id])}>${p.archived ? '↩' : '보관'}</button>`}
         </div>
       </div>
-      <div class="project-meta"><span>${esc(p.owner)}</span><span>${pr.done}/${pr.total}</span><span>${pr.progress}%</span>${pr.overdue?`<span style="color:var(--danger)">지연 ${pr.overdue}</span>`:''}</div>
+      <div class="project-meta"><span>${esc(p.owner)}</span><span>${pr.done}/${pr.total}</span><span>${pr.progress}%</span>${pr.overdue ? `<span style="color:var(--danger)">지연 ${pr.overdue}</span>` : ''}</div>
       <div class="progress-line"><i style="width:${pr.progress}%"></i></div>
     </div>`;
   }).join('');
-  list.innerHTML=html;
+  uiSetHtml(list, html);
 }
 function renderHero(){
   const host=document.getElementById('projectHero');
@@ -484,16 +494,22 @@ function renderHero(){
   const pr=calcProject(selectedProjectId);
   const title=p ? p.name : '전체 태스크';
   const desc=p ? (p.desc || '프로젝트 설명이 없습니다.') : '모든 프로젝트의 태스크를 한 번에 봅니다.';
-  host.innerHTML=`
+  uiSetHtml(host, `
     <div class="hero-top">
       <div>
         <div class="hero-title">${esc(title)}</div>
         <div class="hero-desc">${esc(desc)}</div>
       </div>
         <div class="hero-actions">
-        <button class="btn-ghost" onclick="openProjectUpdate()">상태 업데이트</button>
-        ${p ? `<button class="btn-ghost" onclick="openProjectDrawer('${esc(p.id)}')">프로젝트 수정</button>` : ''}
-        <button class="btn-ghost" onclick="openTaskDrawer()">태스크 추가</button>
+        <button class="btn-ghost" ${uiAction("click", function (event, uiValues) {
+  openProjectUpdate();
+}, [])}>상태 업데이트</button>
+        ${p ? `<button class="btn-ghost" ${uiAction("click", function (event, uiValues) {
+  openProjectDrawer(String(uiValues[0]));
+}, [p.id])}>프로젝트 수정</button>` : ''}
+        <button class="btn-ghost" ${uiAction("click", function (event, uiValues) {
+  openTaskDrawer();
+}, [])}>태스크 추가</button>
       </div>
     </div>
     <div class="stats">
@@ -509,7 +525,7 @@ function renderHero(){
       <div class="stat"><b>${pr.pinned}</b><span>핀</span></div>
       <div class="stat"><b>${pr.effort}h</b><span>예상 공수</span></div>
       <div class="stat"><b>${pr.milestones}</b><span>마일스톤</span></div>
-    </div>`;
+    </div>`);
 }
 function renderWorkspace(){
   renderHero();
@@ -536,18 +552,22 @@ function renderFocusPanel(){
     {label:'핀', value:rows.filter(t=>t.pinned).length, filter:'pinned'},
     {label:'내 담당', value:rows.filter(t=>t.owner===currentOwner()).length, filter:'mine'}
   ];
-  host.innerHTML=`<div class="focus-card-wrap">
+  uiSetHtml(host, `<div class="focus-card-wrap">
     <div class="focus-card-title"><span>업무 인박스</span><span class="panel-sub">누르면 바로 필터</span></div>
-    <div class="focus-cards">${cards.map(c=>`<button class="focus-card" onclick="setQuickFilter('${c.filter}')"><b>${c.value}</b><span>${c.label}</span></button>`).join('')}</div>
+    <div class="focus-cards">${cards.map(c => `<button class="focus-card" ${uiAction("click", function (event, uiValues) {
+  setQuickFilter(String(uiValues[0]));
+}, [c.filter])}><b>${c.value}</b><span>${c.label}</span></button>`).join('')}</div>
   </div>
   <div class="focus-card-wrap">
-    <div class="focus-card-title"><span>오늘 집중</span><button class="mini-btn" onclick="setQuickFilter('today')">전체 보기</button></div>
+    <div class="focus-card-title"><span>오늘 집중</span><button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  setQuickFilter('today');
+}, [])}>전체 보기</button></div>
     <div class="focus-list">${todayRows.map(focusItem).join('') || '<div class="empty" style="padding:18px">오늘 집중할 태스크가 없습니다.</div>'}</div>
   </div>
   <div class="focus-card-wrap">
     <div class="focus-card-title"><span>최근 열람</span><span class="panel-sub">빠른 재진입</span></div>
     <div class="focus-list">${recentRows.map(focusItem).join('') || '<div class="empty" style="padding:18px">최근 열람 기록이 없습니다.</div>'}</div>
-  </div>`;
+  </div>`);
 }
 function taskUrgencySort(a,b){
   if(a.pinned!==b.pinned) return a.pinned?-1:1;
@@ -556,10 +576,14 @@ function taskUrgencySort(a,b){
 }
 function focusItem(t){
   return `<div class="focus-item">
-    <button class="task-pin ${t.pinned?'on':''}" onclick="toggleTaskPinned('${esc(t.id)}')">${t.pinned?'★':'☆'}</button>
-    <div style="min-width:0;flex:1"><strong onclick="openTaskDrawer('${esc(t.id)}')">${esc(t.name)}</strong><small>${esc(projectName(t.pid))} · ${esc(t.owner)} · ${fmtDate(t.end)}</small></div>
-    ${isOverdue(t)?'<span class="chip priority-high">지연</span>':''}
-    ${t.next?`<span class="chip">${esc(t.next)}</span>`:''}
+    <button class="task-pin ${t.pinned ? 'on' : ''}" ${uiAction("click", function (event, uiValues) {
+  toggleTaskPinned(String(uiValues[0]));
+}, [t.id])}>${t.pinned ? '★' : '☆'}</button>
+    <div style="min-width:0;flex:1"><strong ${uiAction("click", function (event, uiValues) {
+  openTaskDrawer(String(uiValues[0]));
+}, [t.id])}>${esc(t.name)}</strong><small>${esc(projectName(t.pid))} · ${esc(t.owner)} · ${fmtDate(t.end)}</small></div>
+    ${isOverdue(t) ? '<span class="chip priority-high">지연</span>' : ''}
+    ${t.next ? `<span class="chip">${esc(t.next)}</span>` : ''}
   </div>`;
 }
 function setView(view){
@@ -570,7 +594,7 @@ function renderSavedViews(){
   const select=document.getElementById('savedViewSelect');
   if(!select) return;
   const current=select.value;
-  select.innerHTML='<option value="">저장된 뷰</option>'+savedViews.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('');
+  uiSetHtml(select, '<option value="">저장된 뷰</option>' + savedViews.map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join(''));
   if(savedViews.some(v=>v.id===current)) select.value=current;
 }
 function captureViewState(){
@@ -664,14 +688,16 @@ function toggleProjectArchive(id){
 function renderTable(){
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
-  if(!rows.length){host.innerHTML='<div class="empty">조건에 맞는 태스크가 없습니다.</div>';return;}
+  if(!rows.length){uiSetHtml(host, '<div class="empty">조건에 맞는 태스크가 없습니다.</div>');return;}
   const bodyHtml=groupedRowsHtml(rows);
-  host.innerHTML=`<div class="table-wrap"><table>
+  uiSetHtml(host, `<div class="table-wrap"><table>
     <thead><tr>
-      <th><input class="row-check" type="checkbox" onchange="toggleAllVisible(this.checked)"></th><th>태스크</th><th>다음 액션</th><th>프로젝트</th><th>상태</th><th>담당</th><th>우선순위</th><th>리스크</th><th>승인</th><th>기간</th><th>후속</th><th>진행률</th><th>공수</th><th>체크</th><th></th>
+      <th><input class="row-check" type="checkbox" ${uiAction("change", function (event, uiValues) {
+  toggleAllVisible(this.checked);
+}, [])}></th><th>태스크</th><th>다음 액션</th><th>프로젝트</th><th>상태</th><th>담당</th><th>우선순위</th><th>리스크</th><th>승인</th><th>기간</th><th>후속</th><th>진행률</th><th>공수</th><th>체크</th><th></th>
     </tr></thead>
     <tbody>${bodyHtml}</tbody>
-  </table></div>`;
+  </table></div>`);
   renderBulkBar();
 }
 function groupedRowsHtml(rows){
@@ -696,21 +722,34 @@ function groupLabel(t,groupBy){
 function taskRow(t){
   const hasParent=!!t.parentId;
   return `<tr>
-    <td><input class="row-check" type="checkbox" ${selectedTaskIds.has(t.id)?'checked':''} onchange="toggleTaskSelection('${esc(t.id)}',this.checked)"></td>
-    <td><button class="task-pin ${t.pinned?'on':''}" onclick="toggleTaskPinned('${esc(t.id)}')">${t.pinned?'★':'☆'}</button> <span class="${hasParent?'indent':''}"></span><span class="task-title" onclick="openTaskDrawer('${esc(t.id)}')">${hasParent?'↳ ':''}${t.milestone?'◆ ':''}${t.plannedToday?'☑ ':''}${esc(t.name)}</span> ${depText(t)}</td>
-    <td><div class="task-next">${esc(t.next||'-')}</div></td>
-    <td><div>${esc(projectName(t.pid))}</div><div class="panel-sub">${esc(t.sprint||'백로그')}</div></td>
-    <td><select onchange="quickStatus('${esc(t.id)}',this.value)">${Object.entries(STATUS).map(([k,s])=>`<option value="${k}" ${t.status===k?'selected':''}>${s.label}</option>`).join('')}</select></td>
+    <td><input class="row-check" type="checkbox" ${selectedTaskIds.has(t.id) ? 'checked' : ''} ${uiAction("change", function (event, uiValues) {
+  toggleTaskSelection(String(uiValues[0]), this.checked);
+}, [t.id])}></td>
+    <td><button class="task-pin ${t.pinned ? 'on' : ''}" ${uiAction("click", function (event, uiValues) {
+  toggleTaskPinned(String(uiValues[0]));
+}, [t.id])}>${t.pinned ? '★' : '☆'}</button> <span class="${hasParent ? 'indent' : ''}"></span><span class="task-title" ${uiAction("click", function (event, uiValues) {
+  openTaskDrawer(String(uiValues[0]));
+}, [t.id])}>${hasParent ? '↳ ' : ''}${t.milestone ? '◆ ' : ''}${t.plannedToday ? '☑ ' : ''}${esc(t.name)}</span> ${depText(t)}</td>
+    <td><div class="task-next">${esc(t.next || '-')}</div></td>
+    <td><div>${esc(projectName(t.pid))}</div><div class="panel-sub">${esc(t.sprint || '백로그')}</div></td>
+    <td><select ${uiAction("change", function (event, uiValues) {
+  quickStatus(String(uiValues[0]), this.value);
+}, [t.id])}>${Object.entries(STATUS).map(([k, s]) => `<option value="${k}" ${t.status === k ? 'selected' : ''}>${s.label}</option>`).join('')}</select></td>
     <td>${ownerAvatar(t.owner)}</td>
     <td>${priorityChip(t.priority)}</td>
-    <td><span class="chip ${RISK[t.risk]?.cls||'risk-low'}">${esc(RISK[t.risk]?.label || '낮음')}</span></td>
+    <td><span class="chip ${RISK[t.risk]?.cls || 'risk-low'}">${esc(RISK[t.risk]?.label || '낮음')}</span></td>
     <td><span class="chip">${esc(APPROVAL[t.approval]?.label || '없음')}</span></td>
     <td>${fmtDate(t.start)} ~ ${fmtDate(t.end)}</td>
     <td>${dateChip(t.followup)}</td>
-    <td><input type="number" min="0" max="100" value="${Number(t.progress)||0}" style="width:74px" onchange="quickProgress('${esc(t.id)}',this.value)">%</td>
-    <td>${Number(t.effort)||0}h</td>
+    <td><input type="number" min="0" max="100" value="${Number(t.progress) || 0}" style="width:74px" ${uiAction("change", function (event, uiValues) {
+  quickProgress(String(uiValues[0]), this.value);
+}, [t.id])}>%</td>
+    <td>${Number(t.effort) || 0}h</td>
     <td>${checklistProgress(t)}</td>
-    <td class="actions"><select class="task-action-select" aria-label="태스크 작업" onchange="quickTaskAction('${esc(t.id)}',this.value);this.value=''">
+    <td class="actions"><select class="task-action-select" aria-label="태스크 작업" ${uiAction("change", function (event, uiValues) {
+  quickTaskAction(String(uiValues[0]), this.value);
+  this.value = '';
+}, [t.id])}>
       <option value="">작업</option>
       <option value="today">오늘 집중</option>
       <option value="bump">마감 +1일</option>
@@ -723,25 +762,40 @@ function taskRow(t){
 function renderBoard(){
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
-  host.innerHTML=`<div class="board">${Object.entries(STATUS).map(([key,s])=>{
-    const col=rows.filter(t=>t.status===key);
-    const over=col.length>(WIP_LIMITS[key]||999);
-    return `<div class="board-col ${over?'over-limit':''}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('drop-on')" ondrop="dropTask(event,'${key}')">
-      <div class="board-head"><span>${s.label}</span><span>${col.length}${WIP_LIMITS[key]&&WIP_LIMITS[key]<999?` / ${WIP_LIMITS[key]}`:''}</span></div>
+  uiSetHtml(host, `<div class="board">${Object.entries(STATUS).map(([key, s]) => {
+  const col = rows.filter(t => t.status === key);
+  const over = col.length > (WIP_LIMITS[key] || 999);
+  return `<div class="board-col ${over ? 'over-limit' : ''}" ${uiAction("dragover", function (event, uiValues) {
+    allowDrop(event);
+  }, [])} ${uiAction("dragleave", function (event, uiValues) {
+    this.classList.remove('drop-on');
+  }, [])} ${uiAction("drop", function (event, uiValues) {
+    dropTask(event, String(uiValues[0]));
+  }, [key])}>
+      <div class="board-head"><span>${s.label}</span><span>${col.length}${WIP_LIMITS[key] && WIP_LIMITS[key] < 999 ? ` / ${WIP_LIMITS[key]}` : ''}</span></div>
       <div class="board-body">${col.map(boardCard).join('') || '<div class="empty" style="padding:18px 8px">태스크 없음</div>'}</div>
     </div>`;
-  }).join('')}</div>`;
+}).join('')}</div>`);
 }
 function boardCard(t){
   const checks=(t.checklist||[]);
   const doneChecks=checks.filter(c=>c.done).length;
-  return `<div class="task-card" draggable="true" ondragstart="dragTask(event,'${esc(t.id)}')" ondragend="this.classList.remove('dragging')" onclick="openTaskDrawer('${esc(t.id)}')">
-    <div class="task-card-title"><button class="task-pin ${t.pinned?'on':''}" onclick="event.stopPropagation();toggleTaskPinned('${esc(t.id)}')">${t.pinned?'★':'☆'}</button> ${t.milestone?'◆ ':''}${t.plannedToday?'☑ ':''}${esc(t.name)}</div>
-    <div>${priorityChip(t.priority)} <span class="chip ${RISK[t.risk]?.cls||'risk-low'}">${esc(RISK[t.risk]?.label||'낮음')}</span> ${depText(t)}</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:8px">${esc(projectName(t.pid))} · ${esc(t.sprint||'백로그')} · ${esc(TYPE[t.type]?.label || '태스크')}${t.effort?` · ${t.effort}h`:''}${checks.length?` · 체크 ${doneChecks}/${checks.length}`:''}</div>
-    ${t.next?`<div class="panel-sub" style="margin-top:6px">다음: ${esc(t.next)}</div>`:''}
-    <div class="progress-line"><i style="width:${Number(t.progress)||0}%"></i></div>
-    <div class="task-card-foot"><span style="font-size:11px;color:var(--muted)">마감 ${fmtDate(t.end)}${t.followup?` · 후속 ${fmtDate(t.followup)}`:''}</span><span>${ownerAvatarIcon(t.owner)}</span></div>
+  return `<div class="task-card" draggable="true" ${uiAction("dragstart", function (event, uiValues) {
+  dragTask(event, String(uiValues[0]));
+}, [t.id])} ${uiAction("dragend", function (event, uiValues) {
+  this.classList.remove('dragging');
+}, [])} ${uiAction("click", function (event, uiValues) {
+  openTaskDrawer(String(uiValues[0]));
+}, [t.id])}>
+    <div class="task-card-title"><button class="task-pin ${t.pinned ? 'on' : ''}" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  toggleTaskPinned(String(uiValues[0]));
+}, [t.id])}>${t.pinned ? '★' : '☆'}</button> ${t.milestone ? '◆ ' : ''}${t.plannedToday ? '☑ ' : ''}${esc(t.name)}</div>
+    <div>${priorityChip(t.priority)} <span class="chip ${RISK[t.risk]?.cls || 'risk-low'}">${esc(RISK[t.risk]?.label || '낮음')}</span> ${depText(t)}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">${esc(projectName(t.pid))} · ${esc(t.sprint || '백로그')} · ${esc(TYPE[t.type]?.label || '태스크')}${t.effort ? ` · ${t.effort}h` : ''}${checks.length ? ` · 체크 ${doneChecks}/${checks.length}` : ''}</div>
+    ${t.next ? `<div class="panel-sub" style="margin-top:6px">다음: ${esc(t.next)}</div>` : ''}
+    <div class="progress-line"><i style="width:${Number(t.progress) || 0}%"></i></div>
+    <div class="task-card-foot"><span style="font-size:11px;color:var(--muted)">마감 ${fmtDate(t.end)}${t.followup ? ` · 후속 ${fmtDate(t.followup)}` : ''}</span><span>${ownerAvatarIcon(t.owner)}</span></div>
   </div>`;
 }
 function dragTask(e,id){draggedTaskId=id;e.currentTarget.classList.add('dragging');}
@@ -757,7 +811,7 @@ function renderTimeline(){
   // Gantt-style timeline. Calendar view only marks start/end days; this view shows task duration.
   const rows=getFilteredTasks();
   const host=document.getElementById('viewHost');
-  if(!rows.length){host.innerHTML='<div class="empty">표시할 태스크가 없습니다.</div>';return;}
+  if(!rows.length){uiSetHtml(host, '<div class="empty">표시할 태스크가 없습니다.</div>');return;}
   const startMonth=timelineQuarter ? (timelineQuarter-1)*3 : 0;
   const endMonth=timelineQuarter ? startMonth+3 : 12;
   const rangeStart=new Date(YEAR,startMonth,1);
@@ -765,33 +819,41 @@ function renderTimeline(){
   const rangeDays=(rangeEnd-rangeStart)/MS_DAY;
   const months=Array.from({length:endMonth-startMonth},(_,i)=>startMonth+i);
   const title=timelineQuarter ? `${YEAR}년 ${timelineQuarter}분기` : `${YEAR}년 전체`;
-  host.innerHTML=`<div class="view-nav"><div class="view-nav-title">${title}</div><div class="view-nav-actions">
-      <button class="mini-btn" onclick="shiftTimeline(-1)">‹</button>
-      <button class="mini-btn" onclick="setTimelineQuarter(0)">전체</button>
-      <button class="mini-btn" onclick="shiftTimeline(1)">›</button>
+  uiSetHtml(host, `<div class="view-nav"><div class="view-nav-title">${title}</div><div class="view-nav-actions">
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  shiftTimeline(-1);
+}, [])}>‹</button>
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  setTimelineQuarter(0);
+}, [])}>전체</button>
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  shiftTimeline(1);
+}, [])}>›</button>
     </div></div>
     <div class="timeline"><div class="timeline-grid">
     <div class="timeline-left-head">태스크</div>
-    <div class="timeline-months" style="grid-template-columns:repeat(${months.length},1fr)">${months.map(i=>`<div>${i+1}월</div>`).join('')}</div>
-    ${rows.map(t=>{
-      let bar='<span style="color:var(--soft);font-size:11px">일정 없음</span>';
-      if(t.start && t.end){
-        const rawS=(new Date(t.start)-rangeStart)/MS_DAY;
-        const rawE=(new Date(t.end)-rangeStart)/MS_DAY+1;
-        if(rawE<0 || rawS>rangeDays){
-          bar='<span style="color:var(--soft);font-size:11px">범위 밖</span>';
-        }else{
-          const s=Math.max(0,rawS);
-          const e=Math.min(rangeDays,rawE);
-          const left=Math.max(0,s/rangeDays*100);
-          const width=Math.max(2,(e-s)/rangeDays*100);
-          const color=t.status==='done'?'var(--green)':t.status==='review'?'var(--warn)':t.status==='todo'?'#60756F':staffColor(t.owner);
-          bar=`<div class="timeline-bar" style="left:${left}%;width:${width}%;background:${color}">${esc(STATUS[t.status]?.short||'')} · ${Number(t.progress)||0}%</div>`;
-        }
-      }
-      return `<div class="timeline-row-name" onclick="openTaskDrawer('${esc(t.id)}')">${esc(t.name)}</div><div class="timeline-row" style="background-size:${100/months.length}% 100%">${bar}</div>`;
-    }).join('')}
-  </div></div>`;
+    <div class="timeline-months" style="grid-template-columns:repeat(${months.length},1fr)">${months.map(i => `<div>${i + 1}월</div>`).join('')}</div>
+    ${rows.map(t => {
+  let bar = '<span style="color:var(--soft);font-size:11px">일정 없음</span>';
+  if (t.start && t.end) {
+    const rawS = (new Date(t.start) - rangeStart) / MS_DAY;
+    const rawE = (new Date(t.end) - rangeStart) / MS_DAY + 1;
+    if (rawE < 0 || rawS > rangeDays) {
+      bar = '<span style="color:var(--soft);font-size:11px">범위 밖</span>';
+    } else {
+      const s = Math.max(0, rawS);
+      const e = Math.min(rangeDays, rawE);
+      const left = Math.max(0, s / rangeDays * 100);
+      const width = Math.max(2, (e - s) / rangeDays * 100);
+      const color = t.status === 'done' ? 'var(--green)' : t.status === 'review' ? 'var(--warn)' : t.status === 'todo' ? '#60756F' : staffColor(t.owner);
+      bar = `<div class="timeline-bar" style="left:${left}%;width:${width}%;background:${color}">${esc(STATUS[t.status]?.short || '')} · ${Number(t.progress) || 0}%</div>`;
+    }
+  }
+  return `<div class="timeline-row-name" ${uiAction("click", function (event, uiValues) {
+    openTaskDrawer(String(uiValues[0]));
+  }, [t.id])}>${esc(t.name)}</div><div class="timeline-row" style="background-size:${100 / months.length}% 100%">${bar}</div>`;
+}).join('')}
+  </div></div>`);
 }
 function setTimelineQuarter(q){
   timelineQuarter=q;
@@ -819,14 +881,22 @@ function renderCalendar(){
     else if(day>days){label=day-days;dim=true;}
     else{label=day;date=`${YEAR}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;}
     const items=date ? rows.filter(t=>t.start===date || t.end===date) : [];
-    cells.push(`<div class="cal-cell"><div class="cal-day ${dim?'dim':''}">${label}</div>${items.map(t=>`<div class="cal-task" onclick="openTaskDrawer('${esc(t.id)}')">${esc(t.name)}</div>`).join('')}</div>`);
+    cells.push(`<div class="cal-cell"><div class="cal-day ${dim?'dim':''}">${label}</div>${items.map(t=>`<div class="cal-task" ${uiAction("click", function (event, uiValues) {
+  openTaskDrawer(String(uiValues[0]));
+}, [t.id])}>${esc(t.name)}</div>`).join('')}</div>`);
   }
-  host.innerHTML=`<div class="view-nav"><div><div class="view-nav-title">${YEAR}년 ${String(month+1).padStart(2,'0')}월 일정</div><div class="panel-sub">시작일과 마감일 기준</div></div><div class="view-nav-actions">
-      <button class="mini-btn" onclick="shiftCalendar(-1)">‹</button>
-      <button class="mini-btn" onclick="goCalendarThisMonth()">이번달</button>
-      <button class="mini-btn" onclick="shiftCalendar(1)">›</button>
+  uiSetHtml(host, `<div class="view-nav"><div><div class="view-nav-title">${YEAR}년 ${String(month + 1).padStart(2, '0')}월 일정</div><div class="panel-sub">시작일과 마감일 기준</div></div><div class="view-nav-actions">
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  shiftCalendar(-1);
+}, [])}>‹</button>
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  goCalendarThisMonth();
+}, [])}>이번달</button>
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  shiftCalendar(1);
+}, [])}>›</button>
     </div></div>
-    <div class="calendar">${['일','월','화','수','목','금','토'].map(d=>`<div class="cal-head">${d}</div>`).join('')}${cells.join('')}</div>`;
+    <div class="calendar">${['일', '월', '화', '수', '목', '금', '토'].map(d => `<div class="cal-head">${d}</div>`).join('')}${cells.join('')}</div>`);
 }
 function shiftCalendar(delta){
   calendarMonth=Math.max(0,Math.min(11,calendarMonth+delta));
@@ -950,7 +1020,7 @@ function openTaskDrawer(id){
 function closeTaskDrawer(){setMaskOpen('taskMask', false);editingTaskId=null;}
 function fillTaskProjectOptions(value){
   const el=document.getElementById('tProject');
-  el.innerHTML=projects.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  uiSetHtml(el, projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join(''));
   el.value=value || projects[0]?.id || '';
   el.onchange=()=>fillTaskRelationOptions(editingTaskId||'', document.getElementById('tParent').value, selectedMulti('tDeps'));
 }
@@ -958,10 +1028,10 @@ function fillTaskRelationOptions(currentId,parentId,deps){
   const pid=document.getElementById('tProject').value;
   const candidates=tasks.filter(t=>t.pid===pid && t.id!==currentId);
   const parent=document.getElementById('tParent');
-  parent.innerHTML='<option value="">없음</option>'+candidates.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('');
+  uiSetHtml(parent, '<option value="">없음</option>' + candidates.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join(''));
   parent.value=parentId || '';
   const dep=document.getElementById('tDeps');
-  dep.innerHTML=candidates.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('');
+  uiSetHtml(dep, candidates.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join(''));
   [...dep.options].forEach(o=>o.selected=(deps||[]).includes(o.value));
 }
 function selectedMulti(id){return [...document.getElementById(id).selectedOptions].map(o=>o.value);}
@@ -975,18 +1045,20 @@ function checklistFromInput(existing=[]){
 function renderActivity(t){
   const box=document.getElementById('activityList');
   const logs=t?.logs||[];
-  box.innerHTML=logs.length ? logs.slice().reverse().map(l=>`<div class="log"><small>${esc(l.date||l.d||'')} · ${esc(l.owner||l.who||'')}</small>${esc(l.text||l.txt||'')}</div>`).join('') : '<div class="empty" style="padding:18px">기록이 없습니다.</div>';
+  uiSetHtml(box, logs.length ? logs.slice().reverse().map(l => `<div class="log"><small>${esc(l.date || l.d || '')} · ${esc(l.owner || l.who || '')}</small>${esc(l.text || l.txt || '')}</div>`).join('') : '<div class="empty" style="padding:18px">기록이 없습니다.</div>');
   document.getElementById('activityInput').value='';
 }
 function renderComments(t){
   const box=document.getElementById('commentList');
   if(!box) return;
   const rows=t?.comments||[];
-  box.innerHTML=rows.length ? rows.slice().reverse().map(c=>`<div class="comment-item ${c.resolved?'resolved':''}">
-    <div class="comment-top"><b>${esc(c.owner)}</b><span class="comment-meta">${esc((c.at||'').replace('T',' ').slice(0,16))}</span></div>
+  uiSetHtml(box, rows.length ? rows.slice().reverse().map(c => `<div class="comment-item ${c.resolved ? 'resolved' : ''}">
+    <div class="comment-top"><b>${esc(c.owner)}</b><span class="comment-meta">${esc((c.at || '').replace('T', ' ').slice(0, 16))}</span></div>
     <div class="comment-text">${formatMentions(c.text)}</div>
-    <div style="margin-top:7px"><button class="mini-btn" onclick="toggleCommentResolved('${esc(t.id)}','${esc(c.id)}')">${c.resolved?'다시 열기':'해결'}</button></div>
-  </div>`).join('') : '<div class="empty" style="padding:18px">댓글이 없습니다.</div>';
+    <div style="margin-top:7px"><button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  toggleCommentResolved(String(uiValues[0]), String(uiValues[1]));
+}, [t.id, c.id])}>${c.resolved ? '다시 열기' : '해결'}</button></div>
+  </div>`).join('') : '<div class="empty" style="padding:18px">댓글이 없습니다.</div>');
   document.getElementById('commentInput').value='';
 }
 function formatMentions(text){
@@ -1014,9 +1086,11 @@ function toggleCommentResolved(taskId,commentId){
 }
 function renderSubtasks(t){
   const box=document.getElementById('subtaskList');
-  if(!t){box.innerHTML='<div class="subtask-row">저장 후 하위 태스크를 연결할 수 있습니다.</div>';return;}
+  if(!t){uiSetHtml(box, '<div class="subtask-row">저장 후 하위 태스크를 연결할 수 있습니다.</div>');return;}
   const rows=tasks.filter(x=>x.parentId===t.id);
-  box.innerHTML=rows.length ? rows.map(st=>`<div class="subtask-row"><span>${statusChip(st.status)}</span><span class="task-title" onclick="openTaskDrawer('${esc(st.id)}')">${esc(st.name)}</span></div>`).join('') : '<div class="subtask-row">하위 태스크가 없습니다.</div>';
+  uiSetHtml(box, rows.length ? rows.map(st => `<div class="subtask-row"><span>${statusChip(st.status)}</span><span class="task-title" ${uiAction("click", function (event, uiValues) {
+  openTaskDrawer(String(uiValues[0]));
+}, [st.id])}>${esc(st.name)}</span></div>`).join('') : '<div class="subtask-row">하위 태스크가 없습니다.</div>');
 }
 function saveTask(){
   const name=document.getElementById('tName').value.trim();
@@ -1271,16 +1345,20 @@ function openTrash(){
 function closeTrash(){setMaskOpen('trashMask', false);}
 function renderTrash(){
   const box=document.getElementById('trashBody');
-  if(!trash.length){box.innerHTML='<div class="empty">휴지통이 비어 있습니다.</div>';return;}
-  box.innerHTML=trash.map((item,i)=>{
-    const title=item.type==='project' ? item.project?.name : item.task?.name;
-    const sub=item.type==='project' ? `태스크 ${(item.tasks||[]).length}개 포함` : projectName(item.task?.pid);
-    return `<div class="subtask-row">
-      <div style="flex:1"><b>${esc(title)}</b><div class="panel-sub">${esc(sub)} · ${esc((item.deletedAt||'').slice(0,10))}</div></div>
-      <button class="mini-btn" onclick="restoreTrash(${i})">복원</button>
-      <button class="mini-btn" onclick="purgeTrash(${i})">삭제</button>
+  if(!trash.length){uiSetHtml(box, '<div class="empty">휴지통이 비어 있습니다.</div>');return;}
+  uiSetHtml(box, trash.map((item, i) => {
+  const title = item.type === 'project' ? item.project?.name : item.task?.name;
+  const sub = item.type === 'project' ? `태스크 ${(item.tasks || []).length}개 포함` : projectName(item.task?.pid);
+  return `<div class="subtask-row">
+      <div style="flex:1"><b>${esc(title)}</b><div class="panel-sub">${esc(sub)} · ${esc((item.deletedAt || '').slice(0, 10))}</div></div>
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+    restoreTrash(uiValues[0]);
+  }, [i])}>복원</button>
+      <button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+    purgeTrash(uiValues[0]);
+  }, [i])}>삭제</button>
     </div>`;
-  }).join('');
+}).join(''));
 }
 function restoreTrash(i){
   const item=trash[i];
@@ -1329,7 +1407,7 @@ function exportCsv(){
   const header=['프로젝트','태스크','상태','담당자','우선순위','리스크','승인','유형','시작일','마감일','진행률','공수','태그','메모'];
   const csv=[header, ...rows.map(t=>[
     projectName(t.pid), t.name, STATUS[t.status]?.label||'', t.owner, PRIORITY[t.priority]?.label||'', RISK[t.risk]?.label||'', APPROVAL[t.approval]?.label||'', TYPE[t.type]?.label||'', t.start, t.end, t.progress, t.effort||0, (t.tags||[]).join('|'), t.notes||''
-  ])].map(row=>row.map(cell=>`"${String(cell??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  ])].map(row=>row.map(cell=>securityFiles.csvCell(cell)).join(',')).join('\r\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1342,10 +1420,11 @@ function importWorkspace(event){
   const file=event.target.files?.[0];
   event.target.value='';
   if(!file) return;
+  if(!/\.json$/i.test(file.name) || file.size > 5*1024*1024){alert('5MB 이하 JSON 백업 파일만 복원할 수 있습니다.');return;}
   const reader=new FileReader();
   reader.onload=()=>{
     try{
-      const data=JSON.parse(String(reader.result||'{}'));
+      const data=securityFiles.parseBackup(String(reader.result||'{}'));
       if(!Array.isArray(data.projects)||!Array.isArray(data.tasks)) throw new Error('invalid');
       if(!confirm('현재 프로젝트 데이터를 백업 파일 내용으로 교체할까요?')) return;
       projects=data.projects.map(migrateProject);
@@ -1373,8 +1452,8 @@ function openAudit(){
 function closeAudit(){setMaskOpen('auditMask', false);}
 function renderAudit(){
   const box=document.getElementById('auditList');
-  if(!audit.length){box.innerHTML='<div class="empty">활동 기록이 없습니다.</div>';return;}
-  box.innerHTML=audit.slice(0,120).map(a=>`<div class="audit-item"><small>${esc((a.at||'').replace('T',' ').slice(0,16))} · ${esc(a.owner||'-')}</small><b>${esc(a.action||'')}</b> ${esc(a.target||'')}</div>`).join('');
+  if(!audit.length){uiSetHtml(box, '<div class="empty">활동 기록이 없습니다.</div>');return;}
+  uiSetHtml(box, audit.slice(0, 120).map(a => `<div class="audit-item"><small>${esc((a.at || '').replace('T', ' ').slice(0, 16))} · ${esc(a.owner || '-')}</small><b>${esc(a.action || '')}</b> ${esc(a.target || '')}</div>`).join(''));
 }
 function openAnalysis(){
   renderAnalysis();
@@ -1400,14 +1479,14 @@ function renderAnalysis(){
   const highRisk=rows.filter(t=>t.risk==='high'&&t.status!=='done').length;
   const approvals=rows.filter(t=>t.approval==='requested').length;
   const body=document.getElementById('analysisBody');
-  body.innerHTML=`<div class="analysis-grid">
+  uiSetHtml(body, `<div class="analysis-grid">
     <div class="analysis-card"><b>${rows.length}</b><span>분석 대상 태스크</span></div>
     <div class="analysis-card"><b>${totalEffort}h</b><span>총 예상 공수</span></div>
     <div class="analysis-card"><b>${highRisk}</b><span>고위험 미완료</span></div>
     <div class="analysis-card"><b>${approvals}</b><span>승인 대기</span></div>
   </div>
   <div class="table-wrap"><table><thead><tr><th>담당자</th><th>태스크</th><th>완료</th><th>평균 진행률</th><th>공수</th><th>지연</th><th>대기</th></tr></thead>
-  <tbody>${ownerRows.map(r=>`<tr><td>${ownerAvatar(r.owner)}</td><td>${r.total}</td><td>${r.done}</td><td>${r.avg}%</td><td>${r.effort}h</td><td>${r.overdue}</td><td>${r.blocked}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">데이터가 없습니다.</td></tr>'}</tbody></table></div>`;
+  <tbody>${ownerRows.map(r => `<tr><td>${ownerAvatar(r.owner)}</td><td>${r.total}</td><td>${r.done}</td><td>${r.avg}%</td><td>${r.effort}h</td><td>${r.overdue}</td><td>${r.blocked}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">데이터가 없습니다.</td></tr>'}</tbody></table></div>`);
 }
 function openIssues(){
   renderIssues();
@@ -1424,21 +1503,23 @@ function renderIssues(){
     approval:rows.filter(t=>t.approval==='requested').length,
     followup:rows.filter(isFollowupDue).length
   };
-  body.innerHTML=`<div class="analysis-grid">
+  uiSetHtml(body, `<div class="analysis-grid">
     <div class="analysis-card"><b>${counts.overdue}</b><span>지연</span></div>
     <div class="analysis-card"><b>${counts.blocked}</b><span>의존성 대기</span></div>
     <div class="analysis-card"><b>${counts.risk}</b><span>고위험</span></div>
     <div class="analysis-card"><b>${counts.approval}</b><span>승인 요청</span></div>
     <div class="analysis-card"><b>${counts.followup}</b><span>후속 확인</span></div>
   </div>
-  ${rows.map(t=>`<div class="issue-row">
-    <div style="flex:1"><strong onclick="openIssueTask('${esc(t.id)}')" style="cursor:pointer">${esc(t.name)}</strong><div class="issue-meta">${esc(projectName(t.pid))} · ${esc(t.owner)} · ${fmtDate(t.end)}</div></div>
-    ${isOverdue(t)?'<span class="chip priority-high">지연</span>':''}
-    ${isFollowupDue(t)?'<span class="chip status-review">후속</span>':''}
-    ${isBlocked(t)?'<span class="chip priority-high">대기</span>':''}
-    ${t.risk==='high'?'<span class="chip risk-high">고위험</span>':''}
-    ${t.approval==='requested'?'<span class="chip status-review">승인 요청</span>':''}
-  </div>`).join('') || '<div class="empty">관리할 이슈가 없습니다.</div>'}`;
+  ${rows.map(t => `<div class="issue-row">
+    <div style="flex:1"><strong ${uiAction("click", function (event, uiValues) {
+  openIssueTask(String(uiValues[0]));
+}, [t.id])} style="cursor:pointer">${esc(t.name)}</strong><div class="issue-meta">${esc(projectName(t.pid))} · ${esc(t.owner)} · ${fmtDate(t.end)}</div></div>
+    ${isOverdue(t) ? '<span class="chip priority-high">지연</span>' : ''}
+    ${isFollowupDue(t) ? '<span class="chip status-review">후속</span>' : ''}
+    ${isBlocked(t) ? '<span class="chip priority-high">대기</span>' : ''}
+    ${t.risk === 'high' ? '<span class="chip risk-high">고위험</span>' : ''}
+    ${t.approval === 'requested' ? '<span class="chip status-review">승인 요청</span>' : ''}
+  </div>`).join('') || '<div class="empty">관리할 이슈가 없습니다.</div>'}`);
 }
 function openIssueTask(id){
   closeIssues();
@@ -1473,17 +1554,19 @@ function renderInbox(){
   const body=document.getElementById('inboxBody');
   const rows=inboxItems();
   const counts={mention:rows.filter(x=>x.kind==='멘션').length,today:rows.filter(x=>x.kind==='오늘').length,approval:rows.filter(x=>x.kind==='승인').length,followup:rows.filter(x=>x.kind==='후속').length};
-  body.innerHTML=`<div class="health-strip">
+  uiSetHtml(body, `<div class="health-strip">
     <div class="health-cell"><b>${counts.mention}</b><span>멘션</span></div>
     <div class="health-cell"><b>${counts.today}</b><span>오늘</span></div>
     <div class="health-cell"><b>${counts.approval}</b><span>승인</span></div>
     <div class="health-cell"><b>${counts.followup}</b><span>후속</span></div>
   </div>
-  <div class="inbox-list">${rows.map(item=>`<div class="inbox-item">
-    <div class="inbox-top"><b><span class="chip">${esc(item.kind)}</span> ${esc(item.title)}</b><button class="mini-btn" onclick="openInboxTask('${esc(item.task.id)}')">열기</button></div>
-    <div class="inbox-meta">${esc(item.meta||'')}</div>
-    <div class="comment-text">${formatMentions(item.text||'')}</div>
-  </div>`).join('') || '<div class="empty">확인할 항목이 없습니다.</div>'}</div>`;
+  <div class="inbox-list">${rows.map(item => `<div class="inbox-item">
+    <div class="inbox-top"><b><span class="chip">${esc(item.kind)}</span> ${esc(item.title)}</b><button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+  openInboxTask(String(uiValues[0]));
+}, [item.task.id])}>열기</button></div>
+    <div class="inbox-meta">${esc(item.meta || '')}</div>
+    <div class="comment-text">${formatMentions(item.text || '')}</div>
+  </div>`).join('') || '<div class="empty">확인할 항목이 없습니다.</div>'}</div>`);
 }
 function openInboxTask(id){
   closeInbox();
@@ -1495,7 +1578,7 @@ function openIntake(){
   document.getElementById('intakeTitle').value='';
   document.getElementById('intakeRequester').value=currentOwner();
   document.getElementById('intakeOwner').value=currentOwner();
-  document.getElementById('intakePriority').innerHTML=Object.entries(PRIORITY).map(([value,p])=>`<option value="${esc(value)}">${esc(p.label)}</option>`).join('');
+  uiSetHtml(document.getElementById('intakePriority'), Object.entries(PRIORITY).map(([value, p]) => `<option value="${esc(value)}">${esc(p.label)}</option>`).join(''));
   document.getElementById('intakePriority').value='mid';
   document.getElementById('intakeDue').value='';
   document.getElementById('intakeNeed').value='';
@@ -1521,7 +1604,7 @@ function openProjectUpdate(){
 function closeProjectUpdate(){setMaskOpen('updateMask', false);}
 function fillUpdateProjectOptions(){
   const el=document.getElementById('updateProject');
-  el.innerHTML=projects.filter(p=>!p.archived && !p.fixed).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  uiSetHtml(el, projects.filter(p => !p.archived && !p.fixed).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join(''));
   el.value=(selectedProjectId!=='all' && projects.some(p=>p.id===selectedProjectId&&!p.fixed)) ? selectedProjectId : (el.options[0]?.value || '');
 }
 function draftProjectUpdate(){
@@ -1550,7 +1633,7 @@ function renderProjectUpdates(){
   const p=projects.find(x=>x.id===pid);
   const box=document.getElementById('updateList');
   const rows=p?.updates||[];
-  box.innerHTML=rows.map(u=>`<div class="update-item"><div class="update-meta">${esc((u.at||'').replace('T',' ').slice(0,16))} · ${esc(u.owner)}</div><div class="update-text">${esc(u.text)}</div></div>`).join('') || '<div class="empty">저장된 업데이트가 없습니다.</div>';
+  uiSetHtml(box, rows.map(u => `<div class="update-item"><div class="update-meta">${esc((u.at || '').replace('T', ' ').slice(0, 16))} · ${esc(u.owner)}</div><div class="update-text">${esc(u.text)}</div></div>`).join('') || '<div class="empty">저장된 업데이트가 없습니다.</div>');
 }
 
 function openDependencyRadar(){
@@ -1564,20 +1647,22 @@ function renderDependencyRadar(){
   const blockers=[...new Set(blocked.flatMap(t=>(t.deps||[])))].map(id=>tasks.find(t=>t.id===id)).filter(Boolean).filter(t=>t.status!=='done');
   const approvals=rows.filter(t=>t.approval==='requested');
   const body=document.getElementById('dependencyBody');
-  body.innerHTML=`<div class="health-strip">
+  uiSetHtml(body, `<div class="health-strip">
     <div class="health-cell"><b>${blocked.length}</b><span>막힌 태스크</span></div>
     <div class="health-cell"><b>${blockers.length}</b><span>선행 미완료</span></div>
     <div class="health-cell"><b>${approvals.length}</b><span>승인 대기</span></div>
-    <div class="health-cell"><b>${rows.filter(t=>t.risk==='high').length}</b><span>고위험</span></div>
+    <div class="health-cell"><b>${rows.filter(t => t.risk === 'high').length}</b><span>고위험</span></div>
   </div>
-  <div class="dependency-list">${blocked.map(t=>{
-    const deps=(t.deps||[]).map(id=>tasks.find(x=>x.id===id)).filter(Boolean);
-    return `<div class="dependency-item">
-      <div class="dependency-top"><b>${esc(t.name)}</b><button class="mini-btn" onclick="openDependencyTask('${esc(t.id)}')">열기</button></div>
+  <div class="dependency-list">${blocked.map(t => {
+  const deps = (t.deps || []).map(id => tasks.find(x => x.id === id)).filter(Boolean);
+  return `<div class="dependency-item">
+      <div class="dependency-top"><b>${esc(t.name)}</b><button class="mini-btn" ${uiAction("click", function (event, uiValues) {
+    openDependencyTask(String(uiValues[0]));
+  }, [t.id])}>열기</button></div>
       <div class="dependency-meta">${esc(projectName(t.pid))} · ${esc(t.owner)}</div>
-      <div style="margin-top:6px">${deps.map(d=>`<span class="chip ${d.status==='done'?'status-done':'priority-high'}">${esc(d.name)} · ${esc(STATUS[d.status]?.label||'')}</span>`).join(' ')}</div>
+      <div style="margin-top:6px">${deps.map(d => `<span class="chip ${d.status === 'done' ? 'status-done' : 'priority-high'}">${esc(d.name)} · ${esc(STATUS[d.status]?.label || '')}</span>`).join(' ')}</div>
     </div>`;
-  }).join('') || '<div class="empty">막힌 태스크가 없습니다.</div>'}</div>`;
+}).join('') || '<div class="empty">막힌 태스크가 없습니다.</div>'}</div>`);
 }
 function openDependencyTask(id){
   closeDependencyRadar();
@@ -1624,7 +1709,9 @@ function commandItems(){
 function renderCommandPalette(){
   const list=document.getElementById('commandList');
   const rows=commandItems();
-  list.innerHTML=rows.map(item=>`<button class="command-row" onclick="runCommand('${esc(item.type)}','${esc(item.value)}')"><span class="command-kind">${esc(item.kind)}</span><span><b>${esc(item.title)}</b><small>${esc(item.sub)}</small></span></button>`).join('') || '<div class="empty">검색 결과가 없습니다.</div>';
+  uiSetHtml(list, rows.map(item => `<button class="command-row" ${uiAction("click", function (event, uiValues) {
+  runCommand(String(uiValues[0]), String(uiValues[1]));
+}, [item.type, item.value])}><span class="command-kind">${esc(item.kind)}</span><span><b>${esc(item.title)}</b><small>${esc(item.sub)}</small></span></button>`).join('') || '<div class="empty">검색 결과가 없습니다.</div>');
 }
 function handleCommandKey(e){
   if(e.key==='Enter'){

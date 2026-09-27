@@ -161,7 +161,7 @@ function renderRepInsights() {
   const a = riAnalyze();
 
   if (!a.visits.length) {
-    host.innerHTML = emptyState('영업일지 기록이 없습니다', '일간일지에서 방문을 기록하면 활동 분석이 시작됩니다', '📝');
+    uiSetHtml(host, emptyState('영업일지 기록이 없습니다', '일간일지에서 방문을 기록하면 활동 분석이 시작됩니다', '📝'));
     return;
   }
 
@@ -258,7 +258,7 @@ function renderRepInsights() {
       + '입니다. 관리 공백이 있는지 확인해 보세요.</div>'
       + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr>'
       + '<th></th><th>거래처</th><th>담당</th><th class="r">누적 매출</th></tr></thead><tbody>'
-      + top.map((c, i) => '<tr class="ca-clickable" onclick="openClient360(&#39;' + escInlineJs(c.client) + '&#39;)">'
+      + top.map((c, i) => `<tr class="ca-clickable" ${uiAction('click', () => openClient360(c.client))}>`
           + '<td class="ca-rank">' + (i + 1) + '</td>'
           + '<td data-label="거래처">' + escHtml(c.client) + '</td>'
           + '<td data-label="담당">' + escHtml(c.owner) + '</td>'
@@ -283,10 +283,7 @@ function renderRepInsights() {
         : '')
     + '</div></details>';
 
-  host.innerHTML =
-    silentHtml
-    + '<div class="ri-cards">' + cards + '</div>'
-    + calibHtml + gapHtml + unvHtml + diagHtml;
+  uiSetHtml(host, silentHtml + '<div class="ri-cards">' + cards + '</div>' + calibHtml + gapHtml + unvHtml + diagHtml);
 }
 
 // 영업현황 탭 전환

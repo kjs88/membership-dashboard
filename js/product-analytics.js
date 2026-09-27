@@ -111,7 +111,7 @@ const PA_QUAD = {
 function renderProductAnalytics() {
   const rows = paRows();
   const a = paAnalyze(rows);
-  const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html || ''; };
+  const put = (id, html) => { const el = document.getElementById(id); if (el) uiSetHtml(el, html || ''); };
 
   if (!a.items.length) {
     ['pa-portfolio', 'pa-spread', 'pa-risk'].forEach(id =>

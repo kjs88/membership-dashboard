@@ -204,7 +204,7 @@ function caBar(share, color) {
 }
 
 function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel, dateFrom, dateTo) {
-  const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html || ''; };
+  const put = (id, html) => { const el = document.getElementById(id); if (el) uiSetHtml(el, html || ''); };
   const PANES = ['stats-brief','stats-conc','stats-calendar','stats-treemap-mini','stats-treemap',
     'stats-catmix','stats-prodtable','stats-cards','stats-matrix','stats-clients','stats-region','stats-insights'];
   const a = caAnalyze(scopedRows);
@@ -313,7 +313,7 @@ function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel, da
       const sub = isDist ? (m.count.toLocaleString() + '건 · 건당 ' + moneyShort(m.avgOrder) + '원')
                          : ('거래처 ' + m.clientCount + '곳 · 건당 ' + moneyShort(m.avgOrder) + '원');
       const nameCell = isDist
-        ? '<b class="ca-linkname" onclick="openClient360(&#39;' + escInlineJs(m.person) + '&#39;)">' + escHtml(m.person) + '</b><span class="ca-sub2">' + sub + '</span>'
+        ? `<b class="ca-linkname" ${uiAction('click', () => openClient360(m.person))}>` + escHtml(m.person) + '</b><span class="ca-sub2">' + sub + '</span>'
         : '<b>' + escHtml(m.person) + '</b><span class="ca-sub2">' + sub + '</span>';
       return '<tr><td data-label="' + (isDist ? '거래처' : '영업사원') + '">' + nameCell + '</td>'
         + '<td data-label="매출" class="r" title="' + Math.round(m.total).toLocaleString() + '원">' + moneyShort(m.total) + '</td>'
@@ -328,7 +328,7 @@ function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel, da
 
   // ── 거래처 탭 ──
   const clientRows = a.byClient.slice(0, 10).map((c, i) =>
-    '<tr onclick="openClient360(&#39;' + escInlineJs(c.key) + '&#39;)" class="ca-clickable">'
+    `<tr ${uiAction('click', () => openClient360(c.key))} class="ca-clickable">`
     + '<td class="ca-rank">' + (i + 1) + '</td>'
     + '<td data-label="거래처">' + escHtml(c.key) + '</td>'
     + '<td data-label="비중" class="r">' + c.share.toFixed(1) + '%</td>'

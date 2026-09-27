@@ -42,7 +42,9 @@ function dlyRenderCal() {
   const prevDays = new Date(y, m, 0).getDate();
   for (let i = firstDay - 1; i >= 0; i--) {
     const ds = fmt(m===0?y-1:y, m===0?11:m-1, prevDays - i);
-    html += `<div class="dly-cell other-month" onclick="dlyOpenDate('${ds}')">
+    html += `<div class="dly-cell other-month" ${uiAction("click", function (event, uiValues) {
+  dlyOpenDate(String(uiValues[0]));
+}, [ds])}>
       <div class="dly-day-num">${prevDays - i}</div>
     </div>`;
   }
@@ -70,12 +72,17 @@ function dlyRenderCal() {
     });
     const personGroups = Object.values(personMap);
     const summaryLines = personGroups.slice(0,5).map(p =>
-      `<div class="dly-entry-dot" onclick="event.stopPropagation();dlyOpenDate('${ds}','${escInlineJs(p.id)}')">● ${escHtml(p.name)} / ${p.count}처</div>`
+      `<div class="dly-entry-dot" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  dlyOpenDate(String(uiValues[0]), String(uiValues[1]));
+}, [ds, p.id])}>● ${escHtml(p.name)} / ${p.count}처</div>`
     ).join('');
     const dotsHtml = summaryLines;
     const moreHtml = personGroups.length > 5 ? `<div class="dly-more">+${personGroups.length-5}명 더</div>` : '';
 
-    html += `<div class="${cls}" onclick="dlyOpenDate('${ds}')">
+    html += `<div class="${cls}" ${uiAction("click", function (event, uiValues) {
+  dlyOpenDate(String(uiValues[0]));
+}, [ds])}>
       <div class="dly-day-num">${d}</div>
       ${dotsHtml}${moreHtml}
     </div>`;
@@ -87,12 +94,14 @@ function dlyRenderCal() {
   const nextCount = remainder === 0 ? 0 : 7 - remainder;
   for (let d = 1; d <= nextCount; d++) {
     const ds = fmt(m===11?y+1:y, m===11?0:m+1, d);
-    html += `<div class="dly-cell other-month" onclick="dlyOpenDate('${ds}')">
+    html += `<div class="dly-cell other-month" ${uiAction("click", function (event, uiValues) {
+  dlyOpenDate(String(uiValues[0]));
+}, [ds])}>
       <div class="dly-day-num">${d}</div>
     </div>`;
   }
 
-  grid.innerHTML = html;
+  uiSetHtml(grid, html);
 }
 
 function dlyCalMove(dir) {
@@ -142,39 +151,37 @@ function cwRenderSavedList() {
     return true;
   });
   document.getElementById('cw-count-label').textContent = `등록된 거래처 ${dayEntries.length}건`;
-  if (!dayEntries.length) { list.innerHTML = ''; return; }
-  list.innerHTML = dayEntries.map(e => {
-    const typeCls = e.clientType === '신규거래처' ? 'background:var(--amber-l);color:var(--amber)'
-                 : e.clientType === '휴면거래처' ? 'background:var(--red-l);color:var(--red)'
-                 : 'background:var(--green-light);color:var(--green-dark)';
-    const dealCls = e.dealPossibility === '○' ? 'background:var(--green-light);color:var(--green-dark)'
-                  : e.dealPossibility === '×' ? 'background:var(--red-l);color:var(--red)'
-                  : 'background:var(--amber-l);color:var(--amber)';
-    const meeting = (e.meeting||'').length > 60 ? (e.meeting.slice(0,60)+'...') : (e.meeting||'');
-    const entryId = escInlineJs(e.id);
-    const canManage = dlyCanManageEntry(e);
-    const ownerHtml = e.person ? `<span style="font-size:11px;color:var(--text3);margin-left:6px">작성자 ${escHtml(e.person)}</span>` : '';
-    const actionsHtml = canManage
-      ? `<button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:11px" onclick="cwEditEntry('${entryId}')">수정</button>
-        <button class="btn-sm btn-danger" style="padding:4px 10px;font-size:11px" onclick="cwDeleteEntry('${entryId}')">삭제</button>`
-      : `<span style="font-size:11px;color:var(--text3);font-weight:600">읽기 전용</span>`;
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+  if (!dayEntries.length) { uiSetHtml(list, ''); return; }
+  uiSetHtml(list, dayEntries.map(e => {
+  const typeCls = e.clientType === '신규거래처' ? 'background:var(--amber-l);color:var(--amber)' : e.clientType === '휴면거래처' ? 'background:var(--red-l);color:var(--red)' : 'background:var(--green-light);color:var(--green-dark)';
+  const dealCls = e.dealPossibility === '○' ? 'background:var(--green-light);color:var(--green-dark)' : e.dealPossibility === '×' ? 'background:var(--red-l);color:var(--red)' : 'background:var(--amber-l);color:var(--amber)';
+  const meeting = (e.meeting || '').length > 60 ? e.meeting.slice(0, 60) + '...' : e.meeting || '';
+  const entryId = escInlineJs(e.id);
+  const canManage = dlyCanManageEntry(e);
+  const ownerHtml = e.person ? `<span style="font-size:11px;color:var(--text3);margin-left:6px">작성자 ${escHtml(e.person)}</span>` : '';
+  const actionsHtml = canManage ? `<button class="btn-sm btn-ghost" style="padding:4px 10px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+    cwEditEntry(String(uiValues[0]));
+  }, [e.id])}>수정</button>
+        <button class="btn-sm btn-danger" style="padding:4px 10px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+    cwDeleteEntry(String(uiValues[0]));
+  }, [e.id])}>삭제</button>` : `<span style="font-size:11px;color:var(--text3);font-weight:600">읽기 전용</span>`;
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px">
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">
-          ${escHtml(e.institution||'')}
+          ${escHtml(e.institution || '')}
           ${e.clientType ? `<span style="${typeCls};font-size:11px;padding:2px 7px;border-radius:4px;margin-left:6px;font-weight:700">${escHtml(e.clientType)}</span>` : ''}
           ${e.dealPossibility ? `<span style="${dealCls};font-size:11px;padding:2px 7px;border-radius:4px;margin-left:3px;font-weight:700">${escHtml(e.dealPossibility)}</span>` : ''}
           ${ownerHtml}
         </div>
         <div style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${e.attendee ? escHtml(e.attendee)+' · ' : ''}${escHtml(meeting)}
+          ${e.attendee ? escHtml(e.attendee) + ' · ' : ''}${escHtml(meeting)}
         </div>
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0">
         ${actionsHtml}
       </div>
     </div>`;
-  }).join('');
+}).join(''));
 }
 
 function dlyCanManageEntry(entry) {
@@ -337,19 +344,21 @@ function cwAcSearch() {
   const input = document.getElementById('cw-institution');
   const list = document.getElementById('cw-ac-list');
   const q = (input.value||'').trim().toLowerCase();
-  if (!q) { list.classList.remove('open'); list.innerHTML = ''; return; }
+  if (!q) { list.classList.remove('open'); uiSetHtml(list, ''); return; }
   const matches = (allClients||[]).filter(c => (c.name||'').toLowerCase().includes(q)).slice(0, 8);
-  if (!matches.length) { list.classList.remove('open'); list.innerHTML = ''; return; }
+  if (!matches.length) { list.classList.remove('open'); uiSetHtml(list, ''); return; }
   _cwAcIdx = -1;
-  list.innerHTML = matches.map((c,i) => `<div class="ss-ac-item" data-i="${i}" onmousedown="cwAcPick(${i})">
+  uiSetHtml(list, matches.map((c, i) => `<div class="ss-ac-item" data-i="${i}" ${uiAction("mousedown", function (event, uiValues) {
+  cwAcPick(uiValues[0]);
+}, [i])}>
     <span>${escHtml(c.name)}</span>
     ${c.code ? `<span class="ac-code">${escHtml(c.code)}</span>` : ''}
     ${c.region ? `<span class="ac-region">${escHtml(c.region)}</span>` : ''}
-  </div>`).join('');
+  </div>`).join(''));
   list.classList.add('open');
   list._matches = matches;
 }
-function cwAcClose() { const list = document.getElementById('cw-ac-list'); if (list) { list.classList.remove('open'); list.innerHTML = ''; } }
+function cwAcClose() { const list = document.getElementById('cw-ac-list'); if (list) { list.classList.remove('open'); uiSetHtml(list, ''); } }
 function cwAcPick(i) {
   const list = document.getElementById('cw-ac-list');
   const c = list._matches && list._matches[i];
@@ -387,7 +396,7 @@ function dlyBackToCal() {
   if (hasDraft) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
-    ov.innerHTML = `
+    uiSetHtml(ov, `
       <div style="background:#fff;border-radius:10px;padding:28px 32px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.18);min-width:280px">
         <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px">캘린더로 돌아가시겠습니까?</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:22px">입력중인 내용은 저장되지 않습니다.</div>
@@ -395,7 +404,7 @@ function dlyBackToCal() {
           <button class="btn-sm btn-ghost" style="padding:8px 24px" id="dly-back-cancel">취소</button>
           <button class="btn-sm btn-primary" style="padding:8px 24px;background:var(--red);border-color:var(--red)" id="dly-back-confirm">확인</button>
         </div>
-      </div>`;
+      </div>`);
     document.body.appendChild(ov);
     ov.querySelector('#dly-back-cancel').onclick = () => ov.remove();
     ov.querySelector('#dly-back-confirm').onclick = () => { ov.remove(); dlyBackToCalExec(); };
@@ -420,16 +429,34 @@ function openDetail(id) {
   const e = allEntries.find(x=>String(x.id)===String(id)); if(!e)return;
   const dc={'○':'do','△':'dd','×':'dx'};
   const tc={'기존 거래처':'te','신규거래처':'tn','휴면거래처':'td2','거래 재개':'tr2'};
-  document.getElementById('detail-chips').innerHTML = [
-    {l:'날짜', v:escHtml(e.date||'-')},
-    {l:'영업사원', v:escHtml(e.person||'-')},
-    {l:'거래처 유형', v:`<span class="type-badge ${tc[e.clientType]||''}">${escHtml(e.clientType||'-')}</span>`},
-    {l:'거래 가능성', v:`<span class="deal-badge ${dc[e.dealPossibility]||''}">${escHtml(e.dealPossibility||'-')}</span>`},
-    {l:'참석자', v:escHtml(e.attendee||'-')},
-    {l:'지역', v:escHtml(e.region||'-')},
-    {l:'병행업종', v:escHtml(e.sideBusiness||'-')},
-    {l:'연락처', v:escHtml(e.contact||'-')},
-  ].map(({l,v})=>`<div class="detail-chip"><div class="detail-label">${l}</div><div class="detail-value" style="font-size:12px">${v}</div></div>`).join('');
+  uiSetHtml(document.getElementById('detail-chips'), [{
+  l: '날짜',
+  v: escHtml(e.date || '-')
+}, {
+  l: '영업사원',
+  v: escHtml(e.person || '-')
+}, {
+  l: '거래처 유형',
+  v: `<span class="type-badge ${tc[e.clientType] || ''}">${escHtml(e.clientType || '-')}</span>`
+}, {
+  l: '거래 가능성',
+  v: `<span class="deal-badge ${dc[e.dealPossibility] || ''}">${escHtml(e.dealPossibility || '-')}</span>`
+}, {
+  l: '참석자',
+  v: escHtml(e.attendee || '-')
+}, {
+  l: '지역',
+  v: escHtml(e.region || '-')
+}, {
+  l: '병행업종',
+  v: escHtml(e.sideBusiness || '-')
+}, {
+  l: '연락처',
+  v: escHtml(e.contact || '-')
+}].map(({
+  l,
+  v
+}) => `<div class="detail-chip"><div class="detail-label">${l}</div><div class="detail-value" style="font-size:12px">${v}</div></div>`).join(''));
   document.getElementById('detail-meeting').textContent = e.meeting||'-';
   const iw = document.getElementById('detail-issues-wrap');
   if (e.issues) { iw.style.display='block'; document.getElementById('detail-issues').textContent = e.issues; }

@@ -14,9 +14,9 @@ function renderStats() {
       if (statsPersonId !== 'all' && !personNames.includes(statsPersonId)) statsPersonId = 'all';
       const personBtnLabel = channel === 'dist' ? '유통사' : '영업사원';
       const btns = [{id:'all', name:'전체 '+personBtnLabel}, ...personNames.map(n=>({id:n, name:n}))];
-      filterEl.innerHTML = btns.map(b =>
-        `<button type="button" class="stats-person-btn${statsPersonId===b.id?' active':''}" onclick="setStatsPerson('${escInlineJs(b.id)}')">${escHtml(b.name)}</button>`
-      ).join('');
+      uiSetHtml(filterEl, btns.map(b => `<button type="button" class="stats-person-btn${statsPersonId === b.id ? ' active' : ''}" ${uiAction("click", function (event, uiValues) {
+  setStatsPerson(String(uiValues[0]));
+}, [b.id])}>${escHtml(b.name)}</button>`).join(''));
     }
 
     const useErp = baseOrders.length > 0;
@@ -42,12 +42,27 @@ function renderStats() {
     O.forEach(o => { if (o.client) clientSet.add(o.client); });
     const avgOrder = O.length ? Math.round(totalSales/O.length) : 0;
 
-    document.getElementById('stats-kpi-row').innerHTML = [
-      {l:useErp?`매출 합계(${basisMeta.label})`:'당사 구매액', v:totalSales.toLocaleString()+'원', c:'var(--green-dark)'},
-      {l:basisMeta.qtyLabel, v:useErp?totalQty.toLocaleString()+'개':'-', c:'var(--blue)'},
-      {l:'거래처 수', v:clientSet.size+'개', c:'var(--amber)'},
-      {l:`${basisMeta.action}당 평균`, v:useErp?avgOrder.toLocaleString()+'원':'-', c:'var(--green)'},
-    ].map(({l,v,c})=>`<div class="kpi-card"><div class="kpi-accent" style="background:${c}"></div><div class="kpi-label">${l}</div><div class="kpi-value" style="color:${c};font-size:24px">${v}</div></div>`).join('');
+    uiSetHtml(document.getElementById('stats-kpi-row'), [{
+  l: useErp ? `매출 합계(${basisMeta.label})` : '당사 구매액',
+  v: totalSales.toLocaleString() + '원',
+  c: 'var(--green-dark)'
+}, {
+  l: basisMeta.qtyLabel,
+  v: useErp ? totalQty.toLocaleString() + '개' : '-',
+  c: 'var(--blue)'
+}, {
+  l: '거래처 수',
+  v: clientSet.size + '개',
+  c: 'var(--amber)'
+}, {
+  l: `${basisMeta.action}당 평균`,
+  v: useErp ? avgOrder.toLocaleString() + '원' : '-',
+  c: 'var(--green)'
+}].map(({
+  l,
+  v,
+  c
+}) => `<div class="kpi-card"><div class="kpi-accent" style="background:${c}"></div><div class="kpi-label">${l}</div><div class="kpi-value" style="color:${c};font-size:24px">${v}</div></div>`).join(''));
 
     // ── 월별 매출 추이 ──
     const months = [];
@@ -260,18 +275,18 @@ function renderRevisit() {
   document.getElementById('rv-soon-cnt').textContent = allRevisits.filter(r=>!r.done&&r.date>today&&r.date<=d3s).length;
   document.getElementById('rv-month-cnt').textContent = allRevisits.filter(r=>!r.done&&r.date<=eom&&r.date>=today).length;
 
-  document.getElementById('revisit-list').innerHTML = pool.length===0
-    ? '<div style="padding:24px 0;text-align:center;color:var(--text3);font-size:13px">재방문 예정이 없습니다</div>'
-    : pool.map(r=>{
-        const isToday = r.date===today;
-        const isSoon = r.date>today&&r.date<=d3s;
-        const revisitId = escInlineJs(r.id);
-        return `<div class="revisit-item">
-          <div class="revisit-date ${isToday?'today':isSoon?'soon':''}">${escHtml(r.date)}</div>
-          <div style="flex:1"><div class="revisit-inst">${escHtml(r.institution||'-')}</div><div class="revisit-person">${escHtml(r.person||'-')}</div></div>
-          ${r.done?'<span style="font-size:11px;color:var(--text3)">완료</span>':`<button class="revisit-done-btn" onclick="doneRevisit('${revisitId}')">완료</button>`}
+  uiSetHtml(document.getElementById('revisit-list'), pool.length === 0 ? '<div style="padding:24px 0;text-align:center;color:var(--text3);font-size:13px">재방문 예정이 없습니다</div>' : pool.map(r => {
+  const isToday = r.date === today;
+  const isSoon = r.date > today && r.date <= d3s;
+  const revisitId = escInlineJs(r.id);
+  return `<div class="revisit-item">
+          <div class="revisit-date ${isToday ? 'today' : isSoon ? 'soon' : ''}">${escHtml(r.date)}</div>
+          <div style="flex:1"><div class="revisit-inst">${escHtml(r.institution || '-')}</div><div class="revisit-person">${escHtml(r.person || '-')}</div></div>
+          ${r.done ? '<span style="font-size:11px;color:var(--text3)">완료</span>' : `<button class="revisit-done-btn" ${uiAction("click", function (event, uiValues) {
+    doneRevisit(String(uiValues[0]));
+  }, [r.id])}>완료</button>`}
         </div>`;
-      }).join('');
+}).join(''));
 }
 
 function doneRevisit(id) {
@@ -351,38 +366,46 @@ function renderNoticeManage() {
   const sorted = [...pinned, ...normal];
   const isNew = d => d && d.substring(0,10) >= ymdLocal(new Date(Date.now()-3*86400000));
   if (sorted.length === 0) {
-    listEl.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text3)">등록된 공지사항이 없습니다.</div>';
+    uiSetHtml(listEl, '<div style="padding:60px;text-align:center;color:var(--text3)">등록된 공지사항이 없습니다.</div>');
     if (detEl) detEl.classList.remove('active');
     return;
   }
-  listEl.innerHTML = `
+  uiSetHtml(listEl, `
     <table class="board-table">
       <thead><tr>
         <th style="width:60px">번호</th>
         <th>제목</th>
         <th style="width:80px">작성자</th>
         <th style="width:100px">작성일</th>
-        ${isAdmin?'<th style="width:120px">관리</th>':''}
+        ${isAdmin ? '<th style="width:120px">관리</th>' : ''}
       </tr></thead>
       <tbody>
-        ${sorted.map((n,i)=>{
-          const id = escInlineJs(n.id);
-          const title = escHtml(n.title);
-          const author = escHtml(n.author || '관리자');
-          const created = escHtml((n.createdAt||'').substring(0,10));
-          return `<tr>
-          <td style="color:var(--text3)">${n.pin?'<span style="color:var(--green-dark);font-weight:700">공지</span>':(sorted.length-i)}</td>
-          <td onclick="showNoticeDetail('${id}')">${n.pin?'<span class="board-pin">고정</span>':''}${title}${isNew(n.createdAt)?'<span class="board-new">N</span>':''}</td>
+        ${sorted.map((n, i) => {
+  const id = escInlineJs(n.id);
+  const title = escHtml(n.title);
+  const author = escHtml(n.author || '관리자');
+  const created = escHtml((n.createdAt || '').substring(0, 10));
+  return `<tr>
+          <td style="color:var(--text3)">${n.pin ? '<span style="color:var(--green-dark);font-weight:700">공지</span>' : sorted.length - i}</td>
+          <td ${uiAction("click", function (event, uiValues) {
+    showNoticeDetail(String(uiValues[0]));
+  }, [n.id])}>${n.pin ? '<span class="board-pin">고정</span>' : ''}${title}${isNew(n.createdAt) ? '<span class="board-new">N</span>' : ''}</td>
           <td>${author}</td>
           <td>${created}</td>
-          ${isAdmin?`<td>
-            <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();editNotice('${id}')">수정</button>
-            <button class="btn-sm btn-danger" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();deleteNotice('${id}')">삭제</button>
-          </td>`:''}
+          ${isAdmin ? `<td>
+            <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+    event.stopPropagation();
+    editNotice(String(uiValues[0]));
+  }, [n.id])}>수정</button>
+            <button class="btn-sm btn-danger" style="padding:2px 8px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+    event.stopPropagation();
+    deleteNotice(String(uiValues[0]));
+  }, [n.id])}>삭제</button>
+          </td>` : ''}
         </tr>`;
-        }).join('')}
+}).join('')}
       </tbody>
-    </table>`;
+    </table>`);
   if (detEl) detEl.classList.remove('active');
 }
 
@@ -392,15 +415,21 @@ function showNoticeDetail(id) {
   const det = document.getElementById('notice-detail');
   if (!det) return;
   const noticeId = escInlineJs(n.id);
-  det.innerHTML = `
-    <div class="board-detail-title">${n.pin?'<span class="board-pin">고정</span>':''}${escHtml(n.title)}</div>
-    <div class="board-detail-meta">작성자: ${escHtml(n.author||'관리자')} &nbsp;·&nbsp; ${escHtml((n.createdAt||'').substring(0,10))}</div>
+  uiSetHtml(det, `
+    <div class="board-detail-title">${n.pin ? '<span class="board-pin">고정</span>' : ''}${escHtml(n.title)}</div>
+    <div class="board-detail-meta">작성자: ${escHtml(n.author || '관리자')} &nbsp;·&nbsp; ${escHtml((n.createdAt || '').substring(0, 10))}</div>
     <div class="board-detail-body">${escHtml(n.body)}</div>
     <div style="margin-top:20px;display:flex;gap:8px;justify-content:flex-end">
-      ${isAdmin?`<button class="btn-sm btn-ghost" onclick="editNotice('${noticeId}')">수정</button>
-      <button class="btn-sm btn-danger" onclick="deleteNotice('${noticeId}')">삭제</button>`:''}
-      <button class="btn-sm btn-ghost" onclick="this.closest('.board-detail').classList.remove('active')">닫기</button>
-    </div>`;
+      ${isAdmin ? `<button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  editNotice(String(uiValues[0]));
+}, [n.id])}>수정</button>
+      <button class="btn-sm btn-danger" ${uiAction("click", function (event, uiValues) {
+  deleteNotice(String(uiValues[0]));
+}, [n.id])}>삭제</button>` : ''}
+      <button class="btn-sm btn-ghost" ${uiAction("click", function (event, uiValues) {
+  this.closest('.board-detail').classList.remove('active');
+}, [])}>닫기</button>
+    </div>`);
   det.classList.add('active');
   det.scrollIntoView({behavior:'smooth', block:'nearest'});
 }

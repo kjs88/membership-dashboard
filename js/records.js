@@ -10,16 +10,24 @@ function tbl(entries, showActions) {
   entries.map(e=>{
     const entryId = escInlineJs(e.id);
     const meeting = String(e.meeting || '');
-    return `<tr style="cursor:pointer" onclick="openDetail('${entryId}')">
-    <td style="white-space:nowrap;font-family:var(--mono);font-size:11px;color:var(--text3)">${escHtml(e.date||'')}</td>
-    <td class="tm">${escHtml(e.person||'-')}</td>
-    <td class="tm" style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(e.institution||'-')}</td>
-    <td><span class="type-badge ${tc[e.clientType]||''}">${escHtml(e.clientType||'-')}</span></td>
-    <td><span class="deal-badge ${dc[e.dealPossibility]||''}">${escHtml(e.dealPossibility||'-')}</span></td>
-    <td style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green-dark)">${e.ourPurchase?e.ourPurchase.toLocaleString()+'만':'-'}</td>
-    <td>${escHtml(e.region||'-')}</td>
-    <td style="max-width:180px;font-size:11px">${escHtml(meeting.substring(0,50))}${meeting.length>50?'…':''}</td>
-    ${isAdmin&&showActions?`<td><div class="action-btns"><button class="btn-icon" onclick="event.stopPropagation();openEditEntry('${entryId}')">✎</button><button class="btn-icon del" onclick="event.stopPropagation();deleteEntry('${entryId}')">✕</button></div></td>`:''}
+    return `<tr style="cursor:pointer" ${uiAction("click", function (event, uiValues) {
+  openDetail(String(uiValues[0]));
+}, [e.id])}>
+    <td style="white-space:nowrap;font-family:var(--mono);font-size:11px;color:var(--text3)">${escHtml(e.date || '')}</td>
+    <td class="tm">${escHtml(e.person || '-')}</td>
+    <td class="tm" style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(e.institution || '-')}</td>
+    <td><span class="type-badge ${tc[e.clientType] || ''}">${escHtml(e.clientType || '-')}</span></td>
+    <td><span class="deal-badge ${dc[e.dealPossibility] || ''}">${escHtml(e.dealPossibility || '-')}</span></td>
+    <td style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green-dark)">${e.ourPurchase ? e.ourPurchase.toLocaleString() + '만' : '-'}</td>
+    <td>${escHtml(e.region || '-')}</td>
+    <td style="max-width:180px;font-size:11px">${escHtml(meeting.substring(0, 50))}${meeting.length > 50 ? '…' : ''}</td>
+    ${isAdmin && showActions ? `<td><div class="action-btns"><button class="btn-icon" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  openEditEntry(String(uiValues[0]));
+}, [e.id])}>✎</button><button class="btn-icon del" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  deleteEntry(String(uiValues[0]));
+}, [e.id])}>✕</button></div></td>` : ''}
   </tr>`;
   }).join('')+'</tbody></table>';
 }
@@ -44,8 +52,8 @@ function renderRecords() {
 
   const persons = [...new Set(pool.map(e=>e.person).filter(Boolean))];
   const sel = document.getElementById('filter-person'), cur = sel.value;
-  sel.innerHTML = '<option value="">전체 영업사원</option>'+persons.map(p=>`<option value="${escHtml(p)}"${p===cur?' selected':''}>${escHtml(p)}</option>`).join('');
-  document.getElementById('records-table-wrap').innerHTML = tbl(f, true);
+  uiSetHtml(sel, '<option value="">전체 영업사원</option>' + persons.map(p => `<option value="${escHtml(p)}"${p === cur ? ' selected' : ''}>${escHtml(p)}</option>`).join(''));
+  uiSetHtml(document.getElementById('records-table-wrap'), tbl(f, true));
 }
 
 // ════════════════════════════════════

@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://membership-7aef2-default-rtdb.firebaseio.com; frame-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="X-Content-Type-Options" content="nosniff">
 <title>멤버십사업팀 대시보드</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="css/style.css?v=20260822-prod2">
-<link rel="stylesheet" href="css/cost-analysis.css?v=20260927-cost-filter-sort">
+<link rel="stylesheet" href="css/style.css?v=20260927-filter">
+<link rel="stylesheet" href="css/cost-analysis.css?v=20260927-filter">
+<script src="vendor/purify-3.4.16.min.js" integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL" crossorigin="anonymous"></script>
+<script src="js/security-dom.js?v=20260927-security"></script>
+<script src="js/security-files.js?v=20260927-security"></script>
+<script src="vendor/chart-4.4.1.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
+<script src="vendor/xlsx-0.20.3.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -29,7 +31,7 @@
       </div>
       <input class="fb-setup-input" id="fb-url-input" placeholder="https://your-project-default-rtdb.firebaseio.com" />
       <div class="fb-setup-err" id="fb-setup-err">올바른 Firebase URL을 입력해주세요.</div>
-      <button class="fb-setup-btn" onclick="saveFbConfig()">연결하기</button>
+      <button class="fb-setup-btn" data-ui-static-click="s0">연결하기</button>
     </div>
   </div>
 </div>
@@ -52,20 +54,20 @@
         </div>
         <div class="login-group">
           <label class="login-label">아이디</label>
-          <input class="login-input" id="li-id" placeholder="아이디를 입력하세요" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('li-pw').focus()" />
+          <input class="login-input" id="li-id" placeholder="아이디를 입력하세요" autocomplete="username" data-ui-static-keydown="s1" />
         </div>
         <div class="login-group">
           <label class="login-label">비밀번호</label>
-          <input class="login-input" id="li-pw" type="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
+          <input class="login-input" id="li-pw" type="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password" data-ui-static-keydown="s2" />
         </div>
         <label class="login-remember">
           <input type="checkbox" id="li-remember">
           <span>로그인 상태 유지</span>
         </label>
-        <button class="login-btn" onclick="doLogin()">로그인</button>
+        <button class="login-btn" data-ui-static-click="s3">로그인</button>
         <div class="login-err" id="login-err">아이디 또는 비밀번호가 올바르지 않습니다.</div>
         <div class="login-hint">
-          계정이 없으신가요? <button type="button" onclick="switchAuthMode('signup')" style="border:0;background:transparent;color:var(--green);font-weight:700;text-decoration:none;padding:0;cursor:pointer;font-family:var(--font)">회원가입 신청</button>
+          계정이 없으신가요? <button type="button" data-ui-static-click="s4" style="border:0;background:transparent;color:var(--green);font-weight:700;text-decoration:none;padding:0;cursor:pointer;font-family:var(--font)">회원가입 신청</button>
         </div>
         <div class="login-security-notice">
           <div class="login-security-head">
@@ -98,16 +100,16 @@
         </div>
         <div class="login-group">
           <label class="login-label">비밀번호</label>
-          <input class="login-input" id="su-pw" type="password" placeholder="비밀번호" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitSignup()" />
+          <input class="login-input" id="su-pw" type="password" placeholder="비밀번호" autocomplete="new-password" data-ui-static-keydown="s5" />
         </div>
         <div class="login-group">
           <label class="login-label">비밀번호 확인</label>
-          <input class="login-input" id="su-pw-confirm" type="password" placeholder="비밀번호 확인" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitSignup()" />
+          <input class="login-input" id="su-pw-confirm" type="password" placeholder="비밀번호 확인" autocomplete="new-password" data-ui-static-keydown="s6" />
         </div>
-        <button class="login-btn" onclick="submitSignup()">신청하기</button>
+        <button class="login-btn" data-ui-static-click="s7">신청하기</button>
         <div class="login-err" id="signup-err"></div>
         <div class="login-hint">
-          이미 계정이 있으신가요? <button type="button" onclick="switchAuthMode('login')" style="border:0;background:transparent;color:var(--green);font-weight:700;text-decoration:none;padding:0;cursor:pointer;font-family:var(--font)">로그인</button>
+          이미 계정이 있으신가요? <button type="button" data-ui-static-click="s8" style="border:0;background:transparent;color:var(--green);font-weight:700;text-decoration:none;padding:0;cursor:pointer;font-family:var(--font)">로그인</button>
         </div>
       </div>
     </div>
@@ -142,65 +144,65 @@
   <div class="sidebar-sync-stamp is-empty" id="erp-sidebar-updated-at" aria-live="polite">데이터 업데이트 확인 중</div>
   <nav class="nav">
     <div class="basis-toggle" id="order-basis-toggle">
-      <button type="button" id="basis-order-btn" onclick="setOrderBasis('order')">주문기준</button>
-      <button type="button" id="basis-ship-btn" onclick="setOrderBasis('ship')">출고기준</button>
+      <button type="button" id="basis-order-btn" data-ui-static-click="s9">주문기준</button>
+      <button type="button" id="basis-ship-btn" data-ui-static-click="s10">출고기준</button>
     </div>
     <div class="nav-label">매출관리</div>
-    <div class="nav-item active" onclick="showPage('sales',this)" id="nav-sales"><span class="nav-icon">💰</span>대시보드</div>
+    <div class="nav-item active" data-ui-static-click="s11" id="nav-sales"><span class="nav-icon">💰</span>대시보드</div>
     <div class="nav-group" id="nav-stats-group">
-      <div class="nav-group-toggle open" onclick="toggleNavGroup(this)"><span class="nav-icon">📈</span>실적 분석<span class="nav-group-arrow">▶</span></div>
+      <div class="nav-group-toggle open" data-ui-static-click="s12"><span class="nav-icon">📈</span>실적 분석<span class="nav-group-arrow">▶</span></div>
       <div class="nav-sub open">
-        <div class="nav-item" onclick="showStatsChannel('office',this)" id="nav-stats-office"><span class="nav-icon">🏢</span>사업소 분석</div>
-        <div class="nav-item" onclick="showStatsChannel('dist',this)" id="nav-stats-dist"><span class="nav-icon">🚚</span>유통사 분석</div>
+        <div class="nav-item" data-ui-static-click="s13" id="nav-stats-office"><span class="nav-icon">🏢</span>사업소 분석</div>
+        <div class="nav-item" data-ui-static-click="s14" id="nav-stats-dist"><span class="nav-icon">🚚</span>유통사 분석</div>
       </div>
     </div>
-    <div class="nav-item" onclick="showPage('products',this)" id="nav-products"><span class="nav-icon">📦</span>품목별 분석</div>
-    <div class="nav-item" onclick="showPage('cost',this)" id="nav-cost"><span class="nav-icon">₩</span>원가분석현황(마감기준)</div>
-    <div class="nav-item" onclick="showPage('compare',this)" id="nav-compare"><span class="nav-icon">⚖️</span>비교 분석</div>
-    <div class="nav-item" onclick="showPage('deep',this)" id="nav-deep"><span class="nav-icon">🔬</span>심화 분석</div>
-    <div class="nav-item" onclick="showPage('dash',this)" id="nav-dash"><span class="nav-icon">📋</span>영업현황</div>
-    <div class="nav-item" onclick="showPage('field',this)" id="nav-field"><span class="nav-icon">🚗</span>현장 모드</div>
+    <div class="nav-item" data-ui-static-click="s15" id="nav-products"><span class="nav-icon">📦</span>품목별 분석</div>
+    <div class="nav-item" data-ui-static-click="s16" id="nav-cost"><span class="nav-icon">₩</span>원가분석현황(마감기준)</div>
+    <div class="nav-item" data-ui-static-click="s17" id="nav-compare"><span class="nav-icon">⚖️</span>비교 분석</div>
+    <div class="nav-item" data-ui-static-click="s18" id="nav-deep"><span class="nav-icon">🔬</span>심화 분석</div>
+    <div class="nav-item" data-ui-static-click="s19" id="nav-dash"><span class="nav-icon">📋</span>영업현황</div>
+    <div class="nav-item" data-ui-static-click="s20" id="nav-field"><span class="nav-icon">🚗</span>현장 모드</div>
     <div class="nav-label" id="nav-journal-label">영업 일지</div>
     <div class="nav-group" id="nav-journal-group">
-      <div class="nav-group-toggle open" onclick="toggleNavGroup(this)"><span class="nav-icon">✎</span>일지 입력<span class="nav-group-arrow">▶</span></div>
+      <div class="nav-group-toggle open" data-ui-static-click="s21"><span class="nav-icon">✎</span>일지 입력<span class="nav-group-arrow">▶</span></div>
       <div class="nav-sub open">
-        <div class="nav-item" onclick="showPage('input',this)" id="nav-input"><span class="nav-icon">📋</span>일간일지</div>
-        <div class="nav-item" onclick="showPage('weekly',this)" id="nav-weekly"><span class="nav-icon">📊</span>주간일지</div>
-        <div class="nav-item" onclick="showPage('mo-plan',this)" id="nav-mo-plan"><span class="nav-icon">📋</span>영업계획</div>
-        <div class="nav-item" onclick="showPage('mo-settle',this)" id="nav-mo-settle"><span class="nav-icon">📊</span>월간결산</div>
+        <div class="nav-item" data-ui-static-click="s22" id="nav-input"><span class="nav-icon">📋</span>일간일지</div>
+        <div class="nav-item" data-ui-static-click="s23" id="nav-weekly"><span class="nav-icon">📊</span>주간일지</div>
+        <div class="nav-item" data-ui-static-click="s24" id="nav-mo-plan"><span class="nav-icon">📋</span>영업계획</div>
+        <div class="nav-item" data-ui-static-click="s25" id="nav-mo-settle"><span class="nav-icon">📊</span>월간결산</div>
       </div>
     </div>
     <div class="nav-label" id="nav-clients-label">거래처 관리</div>
-    <div class="nav-item" onclick="showPage('grade',this)" id="nav-grade"><span class="nav-icon">⭐</span>거래처 등급</div>
-    <div class="nav-item" onclick="showPage('clients',this)" id="nav-clients" style="display:none"><span class="nav-icon">🏢</span>거래처 DB<span class="nav-badge" id="client-badge">0</span></div>
+    <div class="nav-item" data-ui-static-click="s26" id="nav-grade"><span class="nav-icon">⭐</span>거래처 등급</div>
+    <div class="nav-item" data-ui-static-click="s27" id="nav-clients" style="display:none"><span class="nav-icon">🏢</span>거래처 DB<span class="nav-badge" id="client-badge">0</span></div>
     <div class="nav-label" id="nav-project-label">프로젝트</div>
-    <div class="nav-item" onclick="showPage('project',this)" id="nav-project"><span class="nav-icon">🗂</span>프로젝트 관리</div>
+    <div class="nav-item" data-ui-static-click="s28" id="nav-project"><span class="nav-icon">🗂</span>프로젝트 관리</div>
     <div class="nav-label" id="nav-admin-label" style="display:none">관리/설정</div>
-    <div class="nav-item admin-only" onclick="showPage('users',this)" id="nav-users" style="display:none"><span class="nav-icon">👥</span>계정 관리</div>
-    <div class="nav-item" onclick="showPage('targets',this)" id="nav-targets" style="display:none"><span class="nav-icon">◎</span>목표 설정</div>
+    <div class="nav-item admin-only" data-ui-static-click="s29" id="nav-users" style="display:none"><span class="nav-icon">👥</span>계정 관리</div>
+    <div class="nav-item" data-ui-static-click="s30" id="nav-targets" style="display:none"><span class="nav-icon">◎</span>목표 설정</div>
     <div class="nav-label">계정</div>
-    <div class="nav-item" onclick="openModal('modal-change-pw')"><span class="nav-icon">🔑</span>비밀번호 변경</div>
+    <div class="nav-item" data-ui-static-click="s31"><span class="nav-icon">🔑</span>비밀번호 변경</div>
   </nav>
   <div class="sidebar-footer">
     <div class="status-line"><span class="online-dot"></span>실시간 공유 활성화</div>
-    <button class="logout-btn" onclick="doLogout()" style="margin-bottom:6px">로그아웃</button>
+    <button class="logout-btn" data-ui-static-click="s32" style="margin-bottom:6px">로그아웃</button>
   </div>
 </aside>
 
 <main class="main">
-  <div class="mob-overlay" id="mob-overlay" onclick="closeMobMenu()"></div>
+  <div class="mob-overlay" id="mob-overlay" data-ui-static-click="s33"></div>
   <div class="topbar">
-    <button class="mob-menu-btn" onclick="toggleMobMenu()">☰</button>
+    <button class="mob-menu-btn" data-ui-static-click="s34">☰</button>
     <div class="topbar-title" id="topbar-title">대시보드</div>
     <div class="topbar-notice">
-      <button class="btn-sm btn-ghost" onclick="showPage('notice')">공지사항</button>
-      <span class="topbar-notice-title" id="topbar-latest-notice" title="" role="button" tabindex="0" onclick="openTopbarLatestNotice()" onkeydown="if(event.key==='Enter'||event.key===' ')openTopbarLatestNotice()"></span>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s35">공지사항</button>
+      <span class="topbar-notice-title" id="topbar-latest-notice" title="" role="button" tabindex="0" data-ui-static-click="s36" data-ui-static-keydown="s37"></span>
     </div>
-    <button class="topbar-search" onclick="openGlobalSearch()" title="전체 검색 (Ctrl+K)">
+    <button class="topbar-search" data-ui-static-click="s38" title="전체 검색 (Ctrl+K)">
       <span>🔍</span><span class="tb-s-label">검색</span><kbd>Ctrl K</kbd>
     </button>
     <div class="alert-wrap">
-      <button class="topbar-icon-btn" id="alert-btn" onclick="toggleAlertPanel()" title="알림" aria-label="알림">
+      <button class="topbar-icon-btn" id="alert-btn" data-ui-static-click="s39" title="알림" aria-label="알림">
         🔔<span class="alert-badge" id="alert-badge" style="display:none">0</span>
       </button>
       <div class="alert-panel" id="alert-panel">
@@ -225,9 +227,9 @@
               <strong id="sh-total-title">이번달 합계 매출</strong>
               <span>아마란스기준: 사업소+유통사/상품</span>
               <div class="sales-month-nav" aria-label="매출 조회 월 이동">
-                <button type="button" class="sales-month-arrow" onclick="shiftSalesMonth('summary',-1)" title="이전 달" aria-label="이전 달">‹</button>
+                <button type="button" class="sales-month-arrow" data-ui-static-click="s40" title="이전 달" aria-label="이전 달">‹</button>
                 <span class="sales-month-current" id="sh-month-nav-label">2026년 06월</span>
-                <button type="button" class="sales-month-arrow" id="sh-month-next" onclick="shiftSalesMonth('summary',1)" title="다음 달" aria-label="다음 달">›</button>
+                <button type="button" class="sales-month-arrow" id="sh-month-next" data-ui-static-click="s41" title="다음 달" aria-label="다음 달">›</button>
               </div>
             </div>
           </div>
@@ -270,15 +272,15 @@
           <div class="sales-trend-title-wrap">
             <div class="chart-card-title">📈 일별 매출 추이 <span style="font-weight:600;color:var(--text2);font-size:15px" id="sh-chart-label">이번달</span> <span style="font-weight:400;color:var(--text3);font-size:12px" id="sh-workdays-label"></span></div>
             <div class="sales-month-nav sales-month-nav-light" aria-label="일별 매출 조회 월 이동">
-              <button type="button" class="sales-month-arrow" onclick="shiftSalesMonth('trend',-1)" title="이전 달" aria-label="이전 달">‹</button>
+              <button type="button" class="sales-month-arrow" data-ui-static-click="s42" title="이전 달" aria-label="이전 달">‹</button>
               <span class="sales-month-current" id="sh-chart-month-nav-label">2026년 06월</span>
-              <button type="button" class="sales-month-arrow" id="sh-chart-month-next" onclick="shiftSalesMonth('trend',1)" title="다음 달" aria-label="다음 달">›</button>
+              <button type="button" class="sales-month-arrow" id="sh-chart-month-next" data-ui-static-click="s43" title="다음 달" aria-label="다음 달">›</button>
             </div>
           </div>
           <div class="sales-trend-tabs" aria-label="일별 매출 추이 보기 방식">
-            <button type="button" class="sales-trend-tab active" data-sales-trend-mode="amount" onclick="setSalesTrendMode('amount')">금액</button>
-            <button type="button" class="sales-trend-tab" data-sales-trend-mode="flow" onclick="setSalesTrendMode('flow')">누적률</button>
-            <button type="button" class="sales-trend-tab" data-sales-trend-mode="share" onclick="setSalesTrendMode('share')">비중</button>
+            <button type="button" class="sales-trend-tab active" data-sales-trend-mode="amount" data-ui-static-click="s44">금액</button>
+            <button type="button" class="sales-trend-tab" data-sales-trend-mode="flow" data-ui-static-click="s45">누적률</button>
+            <button type="button" class="sales-trend-tab" data-sales-trend-mode="share" data-ui-static-click="s46">비중</button>
           </div>
         </div>
         <div class="sales-trend-body">
@@ -298,12 +300,12 @@
             <div class="sales-rank-card-title-row">
               <div class="chart-card-title" id="sh-rank-office-title">이번달 사업소 매출 순위</div>
               <div class="sales-month-nav sales-month-nav-light sales-rank-month-nav" aria-label="사업소 매출 순위 조회 월 이동">
-                <button type="button" class="sales-month-arrow" onclick="shiftSalesMonth('office',-1)" title="이전 달" aria-label="이전 달">‹</button>
+                <button type="button" class="sales-month-arrow" data-ui-static-click="s47" title="이전 달" aria-label="이전 달">‹</button>
                 <span class="sales-month-current" id="sh-rank-office-month-label">2026년 06월</span>
-                <button type="button" class="sales-month-arrow" id="sh-rank-office-next" onclick="shiftSalesMonth('office',1)" title="다음 달" aria-label="다음 달">›</button>
+                <button type="button" class="sales-month-arrow" id="sh-rank-office-next" data-ui-static-click="s48" title="다음 달" aria-label="다음 달">›</button>
               </div>
             </div>
-            <button type="button" class="btn-sm btn-ghost" onclick="downloadShRankExcel('office')">↓ 엑셀</button>
+            <button type="button" class="btn-sm btn-ghost" data-ui-static-click="s49">↓ 엑셀</button>
           </div>
           <div class="chart-card-sub" id="sh-rank-office-sub">당사 구매액 기준 (원)</div>
           <div id="sh-rank-office-list" style="padding-top:4px"></div>
@@ -313,9 +315,9 @@
           <div class="sales-rank-card-title-row">
             <div class="chart-card-title" id="sh-rank-dist-title">이번달 유통사 매출 순위</div>
             <div class="sales-month-nav sales-month-nav-light sales-rank-month-nav" aria-label="유통사 매출 순위 조회 월 이동">
-              <button type="button" class="sales-month-arrow" onclick="shiftSalesMonth('dist',-1)" title="이전 달" aria-label="이전 달">‹</button>
+              <button type="button" class="sales-month-arrow" data-ui-static-click="s50" title="이전 달" aria-label="이전 달">‹</button>
               <span class="sales-month-current" id="sh-rank-dist-month-label">2026년 06월</span>
-              <button type="button" class="sales-month-arrow" id="sh-rank-dist-next" onclick="shiftSalesMonth('dist',1)" title="다음 달" aria-label="다음 달">›</button>
+              <button type="button" class="sales-month-arrow" id="sh-rank-dist-next" data-ui-static-click="s51" title="다음 달" aria-label="다음 달">›</button>
             </div>
           </div>
           <div class="chart-card-sub" id="sh-rank-dist-sub">당사 구매액 기준 (원)</div>
@@ -335,9 +337,9 @@
           <div class="sales-person-card-title-row">
             <div class="chart-card-title">영업사원별 매출 현황</div>
             <div class="sales-month-nav sales-month-nav-light sales-person-month-nav" aria-label="영업사원별 매출 현황 조회 월 이동">
-              <button type="button" class="sales-month-arrow" onclick="shiftSalesMonth('person',-1)" title="이전 달" aria-label="이전 달">‹</button>
+              <button type="button" class="sales-month-arrow" data-ui-static-click="s52" title="이전 달" aria-label="이전 달">‹</button>
               <span class="sales-month-current" id="sh-person-month-label">2026년 06월</span>
-              <button type="button" class="sales-month-arrow" id="sh-person-month-next" onclick="shiftSalesMonth('person',1)" title="다음 달" aria-label="다음 달">›</button>
+              <button type="button" class="sales-month-arrow" id="sh-person-month-next" data-ui-static-click="s53" title="다음 달" aria-label="다음 달">›</button>
             </div>
           </div>
           <div class="chart-card-sub" id="sh-person-sub">이번달 당사 구매액 기준 (원)</div>
@@ -355,8 +357,8 @@
 
   <div id="page-dash" class="page">
     <div class="stab-bar" role="tablist">
-      <button class="dtab stab active" data-t="status" onclick="showDashTab('status')">방문 현황</button>
-      <button class="dtab stab" data-t="insight" onclick="showDashTab('insight')">영업사원 인사이트</button>
+      <button class="dtab stab active" data-t="status" data-ui-static-click="s54">방문 현황</button>
+      <button class="dtab stab" data-t="insight" data-ui-static-click="s55">영업사원 인사이트</button>
     </div>
     <div class="dtab-pane" id="dtab-status">
     <!-- ══ 영업현황 ══ -->
@@ -499,10 +501,10 @@
     <div id="dly-cal-view">
       <div class="section-header" style="margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:8px">
-          <button class="btn-sm btn-ghost" onclick="dlyCalMove(-1)" style="padding:4px 10px">‹</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s56" style="padding:4px 10px">‹</button>
           <div id="dly-cal-title" style="font-size:14px;font-weight:700;color:var(--text);min-width:90px;text-align:center"></div>
-          <button class="btn-sm btn-ghost" onclick="dlyCalMove(1)" style="padding:4px 10px">›</button>
-          <button class="btn-sm btn-ghost" onclick="dlyCalToday()" style="margin-left:2px;padding:4px 10px">오늘</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s57" style="padding:4px 10px">›</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s58" style="margin-left:2px;padding:4px 10px">오늘</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:12px">
@@ -536,8 +538,8 @@
           <div id="cw-count-label" style="font-size:12px;color:var(--text3);margin-top:2px">등록된 거래처 0건</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-sm btn-ghost" onclick="dlyBackToCal()" style="padding:8px 18px;font-size:13px">← 캘린더로</button>
-          <button class="submit-btn" onclick="cwFinish()" style="padding:8px 18px;width:auto;font-size:13px">✓ 일지 등록 완료</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s59" style="padding:8px 18px;font-size:13px">← 캘린더로</button>
+          <button class="submit-btn" data-ui-static-click="s60" style="padding:8px 18px;width:auto;font-size:13px">✓ 일지 등록 완료</button>
         </div>
       </div>
 
@@ -562,7 +564,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div style="position:relative">
             <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">기관명 <span style="color:var(--red)">*</span></div>
-            <input id="cw-institution" class="form-input" type="text" placeholder="기관명 입력 (자동완성)" autocomplete="off" style="width:100%" oninput="cwAcSearch()" onfocus="cwAcSearch()" onblur="setTimeout(()=>{cwAcClose()},250)" onkeydown="cwAcKeydown(event)" />
+            <input id="cw-institution" class="form-input" type="text" placeholder="기관명 입력 (자동완성)" autocomplete="off" style="width:100%" data-ui-static-input="s61" data-ui-static-focus="s62" data-ui-static-blur="s63" data-ui-static-keydown="s64" />
             <div class="ss-ac-list" id="cw-ac-list"></div>
           </div>
           <div>
@@ -579,9 +581,9 @@
           <div>
             <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">거래가능성</div>
             <div style="display:flex;gap:6px">
-              <button type="button" class="cw-deal-btn" data-v="○" onclick="cwSetDeal('○')" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">○</button>
-              <button type="button" class="cw-deal-btn" data-v="△" onclick="cwSetDeal('△')" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">△</button>
-              <button type="button" class="cw-deal-btn" data-v="×" onclick="cwSetDeal('×')" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">×</button>
+              <button type="button" class="cw-deal-btn" data-v="○" data-ui-static-click="s65" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">○</button>
+              <button type="button" class="cw-deal-btn" data-v="△" data-ui-static-click="s66" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">△</button>
+              <button type="button" class="cw-deal-btn" data-v="×" data-ui-static-click="s67" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface2);border-radius:var(--r2);cursor:pointer;font-size:15px;font-family:var(--font)">×</button>
             </div>
             <input type="hidden" id="cw-dealPossibility" />
           </div>
@@ -598,8 +600,8 @@
         </div>
 
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn-sm btn-ghost" onclick="cwCancelEdit()" style="padding:8px 20px;font-size:13px" id="cw-cancel-btn">초기화</button>
-          <button class="btn-sm btn-primary" onclick="cwSaveCard()" style="padding:8px 20px;font-size:13px" id="cw-save-btn">이 거래처 저장</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s68" style="padding:8px 20px;font-size:13px" id="cw-cancel-btn">초기화</button>
+          <button class="btn-sm btn-primary" data-ui-static-click="s69" style="padding:8px 20px;font-size:13px" id="cw-save-btn">이 거래처 저장</button>
         </div>
       </div>
      </div>
@@ -617,11 +619,11 @@
           <div class="section-title-lg">📊 주간 영업일지</div>
           <div style="font-size:12px;color:var(--text3);margin-top:4px">주간 업무 요약 보고서 목록</div>
         </div>
-        <button class="submit-btn" style="padding:8px 22px;width:auto" onclick="wkOpenForm()">+ 주간일지 작성</button>
+        <button class="submit-btn" style="padding:8px 22px;width:auto" data-ui-static-click="s70">+ 주간일지 작성</button>
       </div>
       <div class="bbs-wrap">
         <div class="bbs-toolbar bbs-filter">
-          <select id="wk-filter-year" onchange="wkRenderList()"></select>
+          <select id="wk-filter-year" data-ui-static-change="s71"></select>
           <span id="wk-board-count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
         </div>
         <table class="bbs-table">
@@ -656,10 +658,10 @@
           <div style="font-size:12px;color:var(--text3);margin-top:4px" id="wk-form-subtitle"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-sm btn-ghost" id="wk-prev-btn" onclick="wkFormPrev()">← 이전 주</button>
+          <button class="btn-sm btn-ghost" id="wk-prev-btn" data-ui-static-click="s72">← 이전 주</button>
           <span id="wk-form-period" style="font-size:13px;font-weight:600;color:var(--text);padding:7px 12px;background:var(--bg2);border-radius:8px"></span>
-          <button class="btn-sm btn-ghost" id="wk-next-btn" onclick="wkFormNext()">다음 주 →</button>
-          <button class="btn-sm btn-ghost" onclick="wkCloseForm()" style="margin-left:4px">✕ 목록</button>
+          <button class="btn-sm btn-ghost" id="wk-next-btn" data-ui-static-click="s73">다음 주 →</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s74" style="margin-left:4px">✕ 목록</button>
         </div>
       </div>
       <div style="display:flex;gap:10px;align-items:stretch;margin-bottom:10px">
@@ -680,13 +682,13 @@
             <span id="wk-next-target-total" style="color:var(--green-dark);font-weight:800;font-size:16px;margin-right:12px">0</span>
             <span style="color:var(--border2);margin-right:12px">|</span>
             <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">신규</span>
-            <input class="ss-input" id="wk-next-new" type="number" min="0" placeholder="0" oninput="wkCalcNextTarget()" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <input class="ss-input" id="wk-next-new" type="number" min="0" placeholder="0" data-ui-static-input="s75" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
             <span style="color:var(--border2);margin-right:12px">|</span>
             <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">휴면</span>
-            <input class="ss-input" id="wk-next-dormant" type="number" min="0" placeholder="0" oninput="wkCalcNextTarget()" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <input class="ss-input" id="wk-next-dormant" type="number" min="0" placeholder="0" data-ui-static-input="s76" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
             <span style="color:var(--border2);margin-right:12px">|</span>
             <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">기존</span>
-            <input class="ss-input" id="wk-next-existing" type="number" min="0" placeholder="0" oninput="wkCalcNextTarget()" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <input class="ss-input" id="wk-next-existing" type="number" min="0" placeholder="0" data-ui-static-input="s77" style="display:inline-block;text-align:center;width:44px;padding:2px 4px;font-size:13px;margin-right:12px" />
             <span style="font-size:10px;color:var(--text3);white-space:nowrap;margin-left:auto">* 차주 주간일지 작성 시 방문 목표로 자동 반영</span>
           </div>
         </div>
@@ -711,8 +713,8 @@
             <div style="display:flex;gap:6px;align-items:center">
               <input id="wk-hl-search" class="ss-input" placeholder="사업소 검색..." autocomplete="off"
                 style="width:320px;padding:5px 8px;font-size:13px"
-                oninput="wkHlSearch(this.value)" onkeydown="if(event.key==='Escape')wkHlCloseDrop()"/>
-              <button class="btn-sm btn-ghost" onclick="wkHlAddRow(document.getElementById('wk-hl-search').value.trim());document.getElementById('wk-hl-search').value='';wkHlCloseDrop()">+ 추가</button>
+                data-ui-static-input="s78" data-ui-static-keydown="s79"/>
+              <button class="btn-sm btn-ghost" data-ui-static-click="s80">+ 추가</button>
             </div>
             <div id="wk-hl-drop" style="display:none;position:absolute;top:32px;left:0;width:320px;z-index:200;background:#fff;border:1px solid var(--border);border-radius:6px;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:1"></div>
           </div>
@@ -736,7 +738,7 @@
             <div class="form-card-title" style="margin:0">📎 첨부 파일</div>
             <label class="btn-sm btn-ghost" style="cursor:pointer;margin:0">
               + 파일 첨부
-              <input id="wk-file-input" type="file" multiple style="display:none" onchange="wkAddFiles(this)" />
+              <input id="wk-file-input" type="file" multiple style="display:none" data-ui-static-change="s81" />
             </label>
           </div>
           <div id="wk-file-list" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -744,8 +746,8 @@
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:4px">
-        <button class="btn-sm btn-ghost" onclick="wkCloseForm()" style="padding:10px 18px">← 목록으로</button>
-        <button class="submit-btn" id="wk-save-btn" onclick="wkSaveReport()" style="flex:1">✓ 주간일지 저장</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s82" style="padding:10px 18px">← 목록으로</button>
+        <button class="submit-btn" id="wk-save-btn" data-ui-static-click="s83" style="flex:1">✓ 주간일지 저장</button>
       </div>
     </div>
 
@@ -761,11 +763,11 @@
         <div class="section-title-lg">📋 영업계획</div>
         <div style="font-size:12px;color:var(--text3);margin-top:4px">월별 영업계획 목록</div>
       </div>
-      <button class="submit-btn" style="padding:8px 22px;width:auto" onclick="moPlanOpenForm()">+ 영업계획 작성</button>
+      <button class="submit-btn" style="padding:8px 22px;width:auto" data-ui-static-click="s84">+ 영업계획 작성</button>
     </div>
     <div class="bbs-wrap">
       <div class="bbs-toolbar bbs-filter">
-        <select id="mop-filter-year" onchange="moPlanRenderList()"></select>
+        <select id="mop-filter-year" data-ui-static-change="s85"></select>
         <span id="mop-board-count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
       </div>
       <table class="bbs-table">
@@ -795,11 +797,11 @@
   <div id="mop-form-view" style="display:none">
     <div class="section-header" style="margin-bottom:14px">
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn-sm btn-ghost" onclick="moChange(-1)">← 이전 월</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s86">← 이전 월</button>
         <span id="mo-period" style="font-size:13px;font-weight:600;color:var(--text);padding:7px 12px;background:var(--bg2);border-radius:8px"></span>
-        <button class="btn-sm btn-ghost" onclick="moChange(1)">다음 월 →</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s87">다음 월 →</button>
       </div>
-      <button class="btn-sm btn-ghost" onclick="moPlanCloseForm()" style="padding:9px 18px">← 목록</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s88" style="padding:9px 18px">← 목록</button>
     </div>
     <div class="form-card">
       <div class="form-card-title">📋 월간 영업계획</div>
@@ -811,13 +813,13 @@
             <span id="mo-target-visit-total" style="color:var(--green-dark);font-weight:800;font-size:16px;margin-right:12px">0</span>
             <span style="color:var(--border2);margin-right:12px">|</span>
             <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">신규</span>
-            <input class="ss-input" id="mo-target-new" type="number" min="0" placeholder="0" oninput="moCalcTargetVisit()" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <input class="ss-input" id="mo-target-new" type="number" min="0" placeholder="0" data-ui-static-input="s89" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
             <span style="color:var(--border2);margin-right:12px">|</span>
             <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">휴면</span>
-            <input class="ss-input" id="mo-target-dormant" type="number" min="0" placeholder="0" oninput="moCalcTargetVisit()" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <input class="ss-input" id="mo-target-dormant" type="number" min="0" placeholder="0" data-ui-static-input="s90" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
             <span style="color:var(--border2);margin-right:12px">|</span>
             <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:4px">기존</span>
-            <input class="ss-input" id="mo-target-existing" type="number" min="0" placeholder="0" oninput="moCalcTargetVisit()" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
+            <input class="ss-input" id="mo-target-existing" type="number" min="0" placeholder="0" data-ui-static-input="s91" style="display:inline-block;text-align:center;width:50px;padding:2px 4px;font-size:13px;margin-right:12px" />
             <span style="color:var(--border2);margin:0 16px 0 12px">|</span>
             <span style="color:var(--text2);font-weight:600;font-size:13px;margin-right:6px;white-space:nowrap">목표 매출</span>
             <input class="ss-input" id="mo-target-sales" type="number" min="0" placeholder="0" style="display:inline-block;text-align:right;width:90px;padding:2px 6px;font-size:13px;margin-right:4px" />
@@ -837,12 +839,12 @@
           <tbody id="mo-plan-body"></tbody>
         </table>
         <div class="ss-toolbar">
-          <button class="btn-sm btn-ghost" onclick="moAddPlanRow()">+ 행 추가</button>
-          <button class="btn-sm btn-ghost" onclick="moAddPlanRows(5)">+5행</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s92">+ 행 추가</button>
+          <button class="btn-sm btn-ghost" data-ui-static-click="s93">+5행</button>
           <span class="ss-status" id="mo-plan-status">0건</span>
         </div>
       </div>
-      <button class="submit-btn" onclick="moSavePlan()" style="margin-top:14px">✓ 영업계획 저장</button>
+      <button class="submit-btn" data-ui-static-click="s94" style="margin-top:14px">✓ 영업계획 저장</button>
     </div>
   </div>
 </div>
@@ -856,11 +858,11 @@
         <div class="section-title-lg">📊 월간결산</div>
         <div style="font-size:12px;color:var(--text3);margin-top:4px">월별 결산 보고서 목록</div>
       </div>
-      <button class="submit-btn" style="padding:8px 22px;width:auto" onclick="moSettleOpenForm()">+ 월간결산 작성</button>
+      <button class="submit-btn" style="padding:8px 22px;width:auto" data-ui-static-click="s95">+ 월간결산 작성</button>
     </div>
     <div class="bbs-wrap">
       <div class="bbs-toolbar bbs-filter">
-        <select id="mos-filter-year" onchange="moSettleRenderList()"></select>
+        <select id="mos-filter-year" data-ui-static-change="s96"></select>
         <span id="mos-board-count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
       </div>
       <table class="bbs-table">
@@ -891,11 +893,11 @@
   <div id="mos-form-view" style="display:none">
     <div class="section-header" style="margin-bottom:14px">
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn-sm btn-ghost" onclick="moChange(-1)">← 이전 월</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s97">← 이전 월</button>
         <span id="mos-period" style="font-size:13px;font-weight:600;color:var(--text);padding:7px 12px;background:var(--bg2);border-radius:8px"></span>
-        <button class="btn-sm btn-ghost" onclick="moChange(1)">다음 월 →</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s98">다음 월 →</button>
       </div>
-      <button class="btn-sm btn-ghost" onclick="moSettleCloseForm()" style="padding:9px 18px">← 목록</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s99" style="padding:9px 18px">← 목록</button>
     </div>
     <div class="form-card">
       <div class="form-card-title">📊 월간 결산 보고서</div>
@@ -911,7 +913,7 @@
         </tbody>
       </table>
       <div class="form-group"><label class="form-label">월간 총평 / 결과</label><textarea class="form-textarea" id="mo-s-summary" placeholder="이번 달 영업 총평, 성과, 개선점..." style="min-height:100px"></textarea></div>
-      <button class="submit-btn" onclick="moSaveSettle()" style="margin-top:14px">✓ 월간결산 저장</button>
+      <button class="submit-btn" data-ui-static-click="s100" style="margin-top:14px">✓ 월간결산 저장</button>
     </div>
   </div>
 </div>
@@ -921,12 +923,12 @@
     <div class="table-card">
       <div class="table-header">
         <div class="table-header-title">방문 기록</div>
-        <input class="search-input" id="search-input" placeholder="기관명 검색..." oninput="renderRecords()" />
-        <select class="filter-select" id="filter-person" onchange="renderRecords()"><option value="">전체 영업사원</option></select>
-        <select class="filter-select" id="filter-deal" onchange="renderRecords()"><option value="">거래가능성 전체</option><option value="○">○ 긍정적</option><option value="△">△ 보통</option><option value="×">× 어려움</option></select>
-        <select class="filter-select" id="filter-region" onchange="renderRecords()"><option value="">전체 지역</option><option>서울</option><option>경기</option><option>강원</option><option>세종</option><option>대전</option><option>충북</option><option>충남</option><option>인천</option><option>부산</option><option>경남</option><option>전남</option><option>전북</option></select>
+        <input class="search-input" id="search-input" placeholder="기관명 검색..." data-ui-static-input="s101" />
+        <select class="filter-select" id="filter-person" data-ui-static-change="s102"><option value="">전체 영업사원</option></select>
+        <select class="filter-select" id="filter-deal" data-ui-static-change="s103"><option value="">거래가능성 전체</option><option value="○">○ 긍정적</option><option value="△">△ 보통</option><option value="×">× 어려움</option></select>
+        <select class="filter-select" id="filter-region" data-ui-static-change="s104"><option value="">전체 지역</option><option>서울</option><option>경기</option><option>강원</option><option>세종</option><option>대전</option><option>충북</option><option>충남</option><option>인천</option><option>부산</option><option>경남</option><option>전남</option><option>전북</option></select>
         <div class="drp-wrap" id="drp-records">
-          <div class="drp-trigger" onclick="drpOpen('records')">
+          <div class="drp-trigger" data-ui-static-click="s105">
             <span class="drp-trigger-icon">📅</span>
             <span class="drp-trigger-text" id="drp-records-label">기간 선택</span>
           </div>
@@ -943,8 +945,8 @@
     <div class="section-header">
       <div class="section-title-lg">계정 관리</div>
       <div style="display:flex;gap:8px">
-        <button class="btn-sm btn-ghost" onclick="openLoginLogs()">🕐 전체 접속기록</button>
-        <button class="btn-sm btn-primary" onclick="openAddUserModal()">+ 계정 추가</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s106">🕐 전체 접속기록</button>
+        <button class="btn-sm btn-primary" data-ui-static-click="s107">+ 계정 추가</button>
       </div>
     </div>
     <div id="pending-signups-wrap" style="margin-bottom:20px"></div>
@@ -955,21 +957,21 @@
   <div id="page-targets" class="page">
     <div class="section-header">
       <div class="section-title-lg">목표 설정</div>
-      <button class="btn-sm btn-primary" onclick="saveTargets()">저장</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s108">저장</button>
     </div>
     <div class="target-grid">
       <div class="target-card">
         <div class="target-card-title">📊 팀 전체 목표</div>
         <div class="tgt-row">
           <span class="tgt-label">사업소 매출 목표</span>
-          <input class="target-input-sm" id="t-sales-office" type="text" placeholder="0" oninput="fmtComma(this)" />
+          <input class="target-input-sm" id="t-sales-office" type="text" placeholder="0" data-ui-static-input="s109" />
           <span class="tgt-unit">원</span>
           <div class="tgt-bar-wrap"><div class="tgt-bar-fill" id="t-sales-office-bar" style="width:0%;background:var(--green)"></div></div>
           <span class="tgt-pct" id="t-sales-office-pct" style="color:var(--green-dark)">-</span>
         </div>
         <div class="tgt-row">
           <span class="tgt-label">유통사 매출 목표</span>
-          <input class="target-input-sm" id="t-sales-dist" type="text" placeholder="0" oninput="fmtComma(this)" />
+          <input class="target-input-sm" id="t-sales-dist" type="text" placeholder="0" data-ui-static-input="s110" />
           <span class="tgt-unit">원</span>
           <div class="tgt-bar-wrap"><div class="tgt-bar-fill" id="t-sales-dist-bar" style="width:0%;background:var(--amber)"></div></div>
           <span class="tgt-pct" id="t-sales-dist-pct" style="color:var(--amber)">-</span>
@@ -1006,28 +1008,28 @@
     <div class="section-header" style="margin-bottom:16px">
       <div class="section-title-lg">🏢 거래처 관리</div>
       <div style="display:flex;gap:8px">
-        <button class="btn-sm btn-ghost" onclick="exportClients()">↓ 전체 엑셀</button>
-        <button class="btn-sm btn-ghost" onclick="openModal('modal-client-upload')">↑ 일괄 업로드</button>
-        <button class="btn-sm btn-primary" onclick="openAddClientModal()">+ 거래처 추가</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s111">↓ 전체 엑셀</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s112">↑ 일괄 업로드</button>
+        <button class="btn-sm btn-primary" data-ui-static-click="s113">+ 거래처 추가</button>
       </div>
     </div>
     <div class="client-toolbar" style="flex-wrap:wrap;gap:8px">
-      <input class="client-search" id="client-search" placeholder="거래처명, 코드, 지역 검색..." oninput="renderClients()" />
-      <select class="filter-select" id="client-filter-region" onchange="renderClients()">
+      <input class="client-search" id="client-search" placeholder="거래처명, 코드, 지역 검색..." data-ui-static-input="s114" />
+      <select class="filter-select" id="client-filter-region" data-ui-static-change="s115">
         <option value="">전체 지역</option>
         <option>서울</option><option>경기</option><option>강원</option><option>세종</option>
         <option>대전</option><option>충북</option><option>충남</option><option>인천</option>
         <option>부산</option><option>경남</option><option>전남</option><option>전북</option>
       </select>
-      <select class="filter-select" id="client-filter-type" onchange="renderClients()">
+      <select class="filter-select" id="client-filter-type" data-ui-static-change="s116">
         <option value="">전체 유형</option>
         <option>기존 거래처</option><option>신규거래처</option><option>휴면거래처</option><option>거래 재개</option>
       </select>
-      <select class="filter-select" id="client-filter-deal" onchange="renderClients()">
+      <select class="filter-select" id="client-filter-deal" data-ui-static-change="s117">
         <option value="">거래가능성 전체</option>
         <option value="○">○ 긍정적</option><option value="△">△ 보통</option><option value="×">× 어려움</option>
       </select>
-      <select class="filter-select" id="client-sort" onchange="renderClients()" style="min-width:140px">
+      <select class="filter-select" id="client-sort" data-ui-static-change="s118" style="min-width:140px">
         <option value="visits-desc">방문 많은순</option>
         <option value="visits-asc">방문 적은순</option>
         <option value="last-desc">최근 방문 최신순</option>
@@ -1041,9 +1043,9 @@
     <div class="table-card">
       <div class="client-action-bar" id="client-action-bar">
         <span id="client-selected-label">0개 선택됨</span>
-        <button class="btn-sm btn-primary" onclick="exportSelectedClients()">↓ 선택 항목 엑셀 다운로드</button>
-        <button class="btn-sm btn-danger admin-only" onclick="deleteSelectedClients()" id="client-delete-btn" style="display:none">삭제</button>
-        <button class="btn-sm btn-ghost" onclick="clearClientSelection()" style="margin-left:auto">선택 해제</button>
+        <button class="btn-sm btn-primary" data-ui-static-click="s119">↓ 선택 항목 엑셀 다운로드</button>
+        <button class="btn-sm btn-danger admin-only" data-ui-static-click="s120" id="client-delete-btn" style="display:none">삭제</button>
+        <button class="btn-sm btn-ghost" data-ui-static-click="s121" style="margin-left:auto">선택 해제</button>
       </div>
       <div class="client-table-wrap"><div id="client-grid"></div></div>
     </div>
@@ -1058,7 +1060,7 @@
       <div style="display:flex;flex-direction:column;gap:6px">
         <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
         <div class="drp-wrap" id="drp-stats">
-          <div class="drp-trigger" onclick="drpOpen('stats')">
+          <div class="drp-trigger" data-ui-static-click="s122">
             <span class="drp-trigger-icon">📅</span>
             <span class="drp-trigger-text" id="drp-stats-label">기간 선택</span>
           </div>
@@ -1072,10 +1074,10 @@
       </div>
     </div>
     <div class="stab-bar" role="tablist">
-      <button class="stab active" data-t="summary" onclick="showStatsTab('summary')">요약</button>
-      <button class="stab" data-t="product" onclick="showStatsTab('product')">품목</button>
-      <button class="stab" data-t="person" onclick="showStatsTab('person')">사람</button>
-      <button class="stab" data-t="client" onclick="showStatsTab('client')">거래처</button>
+      <button class="stab active" data-t="summary" data-ui-static-click="s123">요약</button>
+      <button class="stab" data-t="product" data-ui-static-click="s124">품목</button>
+      <button class="stab" data-t="person" data-ui-static-click="s125">사람</button>
+      <button class="stab" data-t="client" data-ui-static-click="s126">거래처</button>
     </div>
 
     <div class="stab-pane" id="stab-summary">
@@ -1147,7 +1149,7 @@
     <div class="table-card">
       <div class="table-header">
         <div class="table-header-title">재방문 예정 목록</div>
-        <select class="filter-select" id="rv-filter" onchange="renderRevisit()"><option value="upcoming">예정된 방문</option><option value="all">전체</option><option value="done">완료</option></select>
+        <select class="filter-select" id="rv-filter" data-ui-static-change="s127"><option value="upcoming">예정된 방문</option><option value="all">전체</option><option value="done">완료</option></select>
       </div>
       <div id="revisit-list" style="padding:0 20px 12px"></div>
     </div>
@@ -1157,7 +1159,7 @@
   <div id="page-notice" class="page">
     <div class="section-header" style="margin-bottom:16px">
       <div class="section-title-lg">📢 공지사항</div>
-      <button class="btn-sm btn-primary admin-only" onclick="openModal('modal-add-notice')" style="display:none">+ 공지 작성</button>
+      <button class="btn-sm btn-primary admin-only" data-ui-static-click="s128" style="display:none">+ 공지 작성</button>
     </div>
     <div id="notice-manage-list"></div>
     <div id="notice-detail" class="board-detail"></div>
@@ -1176,7 +1178,7 @@
       <div class="product-period-filter">
         <div style="font-size:11px;font-weight:600;color:var(--text2)">기간</div>
         <div class="drp-wrap" id="drp-prod">
-          <div class="drp-trigger" onclick="drpOpen('prod')">
+          <div class="drp-trigger" data-ui-static-click="s129">
             <span class="drp-trigger-icon">📅</span>
             <span class="drp-trigger-text" id="drp-prod-label">기간 선택</span>
           </div>
@@ -1188,23 +1190,23 @@
         <div style="font-size:11px;font-weight:600;color:var(--text2)">영업사원</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <div id="prod-person-filter" class="stats-person-btns"></div>
-          <input id="prod-search" class="form-input product-search-input" placeholder="상품명 검색..." oninput="renderProducts()" />
+          <input id="prod-search" class="form-input product-search-input" placeholder="상품명 검색..." data-ui-static-input="s130" />
         </div>
       </div>
       <div class="product-category-filter">
         <div class="product-category-left">
           <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px">품목군</div>
-          <button type="button" class="stats-person-btn product-category-all-btn" id="prod-category-all-btn" onclick="setProductCategory('all')">전체</button>
+          <button type="button" class="stats-person-btn product-category-all-btn" id="prod-category-all-btn" data-ui-static-click="s131">전체</button>
         </div>
         <div id="prod-category-filter" class="stats-person-btns product-category-btns"></div>
       </div>
     </div>
     <div class="stab-bar" role="tablist">
-      <button class="ptab stab active" data-t="portfolio" onclick="showProdTab2('portfolio')">포트폴리오</button>
-      <button class="ptab stab" data-t="spread" onclick="showProdTab2('spread')">확산도</button>
-      <button class="ptab stab" data-t="risk" onclick="showProdTab2('risk')">리스크</button>
-      <button class="ptab stab" data-t="inventory" onclick="showProdTab2('inventory')">재고 제안</button>
-      <button class="ptab stab" data-t="list" onclick="showProdTab2('list')">품목 목록</button>
+      <button class="ptab stab active" data-t="portfolio" data-ui-static-click="s132">포트폴리오</button>
+      <button class="ptab stab" data-t="spread" data-ui-static-click="s133">확산도</button>
+      <button class="ptab stab" data-t="risk" data-ui-static-click="s134">리스크</button>
+      <button class="ptab stab" data-t="inventory" data-ui-static-click="s135">재고 제안</button>
+      <button class="ptab stab" data-t="list" data-ui-static-click="s136">품목 목록</button>
     </div>
     <div class="ptab-pane" id="ptab-portfolio"><div id="pa-portfolio"></div></div>
     <div class="ptab-pane" id="ptab-spread" style="display:none"><div id="pa-spread"></div></div>
@@ -1225,13 +1227,13 @@
           <thead id="prod-thead">
             <tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
               <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap">#</th>
-              <th data-col="name"     style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('name')">품목명 <span id="prod-sort-name"></span></th>
-              <th data-col="category" style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('category')">품목군 <span id="prod-sort-category"></span></th>
-              <th data-col="qty" id="prod-qty-header" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('qty')"><span id="prod-qty-header-label">출고수량</span> <span id="prod-sort-qty"></span></th>
-              <th data-col="sales"    style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('sales')">공급가 합계(원) <span id="prod-sort-sales"></span></th>
+              <th data-col="name"     style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" data-ui-static-click="s137">품목명 <span id="prod-sort-name"></span></th>
+              <th data-col="category" style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" data-ui-static-click="s138">품목군 <span id="prod-sort-category"></span></th>
+              <th data-col="qty" id="prod-qty-header" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" data-ui-static-click="s139"><span id="prod-qty-header-label">출고수량</span> <span id="prod-sort-qty"></span></th>
+              <th data-col="sales"    style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" data-ui-static-click="s140">공급가 합계(원) <span id="prod-sort-sales"></span></th>
               <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap" title="전월 같은 일자 구간 대비 매출 증감 (예: 8/1~8/8 → 7/1~7/8)">전월동기比</th>
               <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap">비중</th>
-              <th data-col="clientCount" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" onclick="prodSortBy('clientCount')">거래처 수 <span id="prod-sort-clientCount"></span></th>
+              <th data-col="clientCount" style="padding:10px 14px;text-align:right;font-weight:600;color:var(--text2);white-space:nowrap;cursor:pointer;user-select:none" data-ui-static-click="s141">거래처 수 <span id="prod-sort-clientCount"></span></th>
             </tr>
           </thead>
           <tbody id="prod-tbody"></tbody>
@@ -1252,14 +1254,14 @@
       <div class="chart-card-sub" id="prod-abc-sub">이번달</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 12px">
         <label style="font-size:12px;color:var(--text2);font-weight:600">표시 개수</label>
-        <select id="prod-abc-limit" onchange="renderProdAbc()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px">
+        <select id="prod-abc-limit" data-ui-static-change="s142" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px">
           <option value="30">상위 30</option>
           <option value="50" selected>상위 50</option>
           <option value="100">상위 100</option>
           <option value="0">전체</option>
         </select>
         <label style="font-size:12px;color:var(--text2);font-weight:600;margin-left:6px">리드타임</label>
-        <input type="number" id="prod-abc-leadtime" value="7" min="1" max="60" onchange="renderProdAbc()" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px;text-align:center" title="발주 후 입고까지 걸리는 일수"/>
+        <input type="number" id="prod-abc-leadtime" value="7" min="1" max="60" data-ui-static-change="s143" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px;text-align:center" title="발주 후 입고까지 걸리는 일수"/>
         <span style="font-size:12px;color:var(--text2)">일 (발주 후 입고까지)</span>
         <span style="font-size:11px;color:var(--text3);margin-left:6px">기간·영업사원·품목군·검색은 위 필터를 따릅니다.</span>
       </div>
@@ -1290,7 +1292,7 @@
 
   <!-- ── PROJECT PAGE ── -->
   <div id="page-project" class="page" style="padding:0">
-    <iframe src="project-tracker.html?v=20260723-spaghetti-cleanup" style="width:100%;height:calc(100vh - 100px);min-height:700px;border:none;background:var(--bg);border-radius:8px;display:block"></iframe>
+    <iframe src="project-tracker.html?v=20260927-security" style="width:100%;height:calc(100vh - 100px);min-height:700px;border:none;background:var(--bg);border-radius:8px;display:block"></iframe>
   </div>
 
   <!-- ── GRADE PAGE ── -->
@@ -1299,23 +1301,23 @@
     <div class="section-header" style="margin-bottom:14px">
       <div class="section-title-lg">심화 분석</div>
       <div class="da-chs">
-        <button class="da-ch active" data-ch="office" onclick="setDeepChannel('office')">사업소</button>
-        <button class="da-ch" data-ch="dist" onclick="setDeepChannel('dist')">유통사</button>
+        <button class="da-ch active" data-ch="office" data-ui-static-click="s144">사업소</button>
+        <button class="da-ch" data-ch="dist" data-ui-static-click="s145">유통사</button>
       </div>
     </div>
     <div class="stab-bar" role="tablist">
-      <button class="da-tab stab active" data-t="bridge" onclick="showDeepTab('bridge')">매출 변동 분해</button>
-      <button class="da-tab stab" data-t="cohort" onclick="showDeepTab('cohort')">코호트 유지율</button>
-      <button class="da-tab stab" data-t="rfm" onclick="showDeepTab('rfm')">RFM 세그먼트</button>
-      <button class="da-tab stab" data-t="cross" onclick="showDeepTab('cross')">교차판매</button>
-      <button class="da-tab stab" data-t="price" onclick="showDeepTab('price')">단가 편차</button>
+      <button class="da-tab stab active" data-t="bridge" data-ui-static-click="s146">매출 변동 분해</button>
+      <button class="da-tab stab" data-t="cohort" data-ui-static-click="s147">코호트 유지율</button>
+      <button class="da-tab stab" data-t="rfm" data-ui-static-click="s148">RFM 세그먼트</button>
+      <button class="da-tab stab" data-t="cross" data-ui-static-click="s149">교차판매</button>
+      <button class="da-tab stab" data-t="price" data-ui-static-click="s150">단가 편차</button>
     </div>
     <div id="da-empty"></div>
     <div id="da-body">
       <div class="da-pane" id="da-bridge-pane">
         <div class="da-ctrl">
           <label>기준월</label>
-          <select id="da-bridge-month" onchange="renderDeep()"></select>
+          <select id="da-bridge-month" data-ui-static-change="s151"></select>
           <span class="da-hint">선택한 달과 그 직전 달을 비교합니다</span>
         </div>
         <div id="da-bridge"></div>
@@ -1335,15 +1337,15 @@
     <div class="chart-card" style="margin-bottom:14px">
       <div class="cmp-controls">
         <div class="cmp-tabs">
-          <button class="cmp-tab active" data-m="period" onclick="setCmpMode('period')">기간</button>
-          <button class="cmp-tab" data-m="person" onclick="setCmpMode('person')">영업사원</button>
-          <button class="cmp-tab" data-m="channel" onclick="setCmpMode('channel')">사업소·유통사</button>
+          <button class="cmp-tab active" data-m="period" data-ui-static-click="s152">기간</button>
+          <button class="cmp-tab" data-m="person" data-ui-static-click="s153">영업사원</button>
+          <button class="cmp-tab" data-m="channel" data-ui-static-click="s154">사업소·유통사</button>
         </div>
         <div class="cmp-dates" id="cmp-date-wrap">
           <label>기간</label>
-          <input type="date" id="cmp-date-from" onchange="renderCompare()" />
+          <input type="date" id="cmp-date-from" data-ui-static-change="s155" />
           <span>~</span>
-          <input type="date" id="cmp-date-to" onchange="renderCompare()" />
+          <input type="date" id="cmp-date-to" data-ui-static-change="s156" />
           <span class="cmp-hint">비우면 이번달 · 직전 동일 기간과 비교합니다</span>
         </div>
       </div>
@@ -1355,7 +1357,7 @@
   <div id="page-field" class="page">
     <div class="section-header">
       <div class="section-title-lg">현장 모드</div>
-      <button class="btn-sm btn-ghost" onclick="renderField()">새로고침</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s157">새로고침</button>
     </div>
     <div id="field-body" class="field-wrap"></div>
   </div>
@@ -1369,42 +1371,42 @@
     <!-- 등급 설정 카드 -->
     <div class="chart-card" style="margin-bottom:16px">
       <div class="chart-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px" onclick="toggleGradeSettings()">
+        <div style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px" data-ui-static-click="s158">
           <span>등급 기준 설정</span>
           <span id="grade-settings-arrow" style="font-size:13px;color:var(--green-dark);transition:transform .2s;font-weight:700">▼</span>
         </div>
-        <button class="btn-sm btn-primary" onclick="saveGradeSettings()">저장</button>
+        <button class="btn-sm btn-primary" data-ui-static-click="s159">저장</button>
       </div>
       <div id="grade-settings-body" style="display:none">
         <div style="font-size:12px;color:var(--text3);margin-bottom:14px;margin-top:10px">출고/주문 매출 기준으로 등급을 자동 부여합니다. 기준값은 <strong>원 단위</strong>로 입력하세요. (예: 5천만원 = 50000000)</div>
         <div id="grade-settings-list" style="display:flex;flex-direction:column;gap:8px"></div>
-        <button class="btn-sm btn-ghost" style="margin-top:12px" onclick="addGradeTier()">+ 등급 추가</button>
+        <button class="btn-sm btn-ghost" style="margin-top:12px" data-ui-static-click="s160">+ 등급 추가</button>
       </div>
     </div>
     <!-- 필터 -->
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
       <span style="font-size:12px;font-weight:600;color:var(--text2)">기간</span>
       <div class="drp-wrap" id="drp-grade">
-        <div class="drp-trigger" onclick="drpOpen('grade')">
+        <div class="drp-trigger" data-ui-static-click="s161">
           <span class="drp-trigger-icon">📅</span>
           <span class="drp-trigger-text" id="drp-grade-label">기간 선택</span>
         </div>
         <div class="drp-dropdown" id="drp-grade-dropdown"></div>
       </div>
       <input type="hidden" id="grade-date-from" /><input type="hidden" id="grade-date-to" />
-      <button class="btn-sm btn-primary" onclick="renderGrade()" style="padding:5px 16px">🔍 조회</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s162" style="padding:5px 16px">🔍 조회</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-      <select id="grade-filter-grade" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderGrade()">
+      <select id="grade-filter-grade" class="form-select" style="font-size:12px;padding:6px 10px" data-ui-static-change="s163">
         <option value="all">전체 등급</option>
       </select>
-      <select id="grade-filter-region" class="form-select" style="font-size:12px;padding:6px 10px" onchange="renderGrade()">
+      <select id="grade-filter-region" class="form-select" style="font-size:12px;padding:6px 10px" data-ui-static-change="s164">
         <option value="all">전체 지역</option>
         <option>서울</option><option>경기</option><option>강원</option><option>대전</option>
         <option>충북</option><option>충남</option><option>광주</option><option>전북</option>
         <option>전남</option><option>부산</option><option>경남</option><option>대구</option><option>인천</option>
       </select>
-      <input id="grade-search" class="form-input" style="font-size:12px;padding:6px 10px;width:200px" placeholder="거래처명 검색..." oninput="renderGrade()" />
+      <input id="grade-search" class="form-input" style="font-size:12px;padding:6px 10px;width:200px" placeholder="거래처명 검색..." data-ui-static-input="s165" />
       <span id="grade-count-label" style="margin-left:auto;font-size:12px;color:var(--text3)"></span>
     </div>
     <!-- 등급별 요약 바 -->
@@ -1413,7 +1415,7 @@
     <div class="chart-card" style="padding:0;overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border)">
         <div style="font-size:13px;font-weight:700;color:var(--text)">거래처 등급 리스트</div>
-        <button type="button" class="btn-sm btn-ghost" onclick="downloadGradeListExcel()">↓ 엑셀</button>
+        <button type="button" class="btn-sm btn-ghost" data-ui-static-click="s166">↓ 엑셀</button>
       </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -1442,7 +1444,7 @@
 
 
 <!-- ERP API 연동 모달 -->
-<div class="modal-overlay" id="modal-erp-upload" onclick="if(event.target===this)closeModal('modal-erp-upload')">
+<div class="modal-overlay" id="modal-erp-upload" data-ui-static-click="s167">
   <div class="modal" style="width:760px">
     <div class="modal-title">ERP API 연동</div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:16px">로컬 자동 수집기가 Firebase에 올린 주문현황과 출고현황을 대시보드 데이터로 반영합니다. 아마란스 계정 정보는 브라우저에 저장하지 않습니다.</div>
@@ -1471,26 +1473,26 @@
         </div>
       </div>
       <div class="erp-sync-actions">
-        <button class="btn-sm btn-primary" id="erp-refresh-btn" onclick="erpRunUnifiedRefresh()">새로고침</button>
+        <button class="btn-sm btn-primary" id="erp-refresh-btn" data-ui-static-click="s168">새로고침</button>
       </div>
     </div>
     <details class="erp-manual-fallback">
       <summary>엑셀 파일로 수동 반영</summary>
       <div style="font-size:12px;color:var(--text3);margin:10px 0 12px">API 설정 전이나 장애 상황에서는 기존처럼 주문현황과 출고현황 엑셀(.xlsx)을 업로드할 수 있습니다.</div>
       <div class="erp-upload-grid">
-      <div class="erp-file-card" onclick="document.getElementById('erp-order-file-input').click()">
+      <div class="erp-file-card" data-ui-static-click="s169">
         <div style="font-size:28px;margin-bottom:8px">📄</div>
         <div class="erp-file-title">주문현황 파일</div>
         <div class="erp-file-sub">headerGrid_excel<br>.xlsx 파일</div>
         <div class="erp-file-state" id="erp-order-state">파일 미선택</div>
-        <input type="file" id="erp-order-file-input" accept=".xlsx" style="display:none" onchange="erpHandleFile(this,'order')" />
+        <input type="file" id="erp-order-file-input" accept=".xlsx" style="display:none" data-ui-static-change="s170" />
       </div>
-      <div class="erp-file-card" onclick="document.getElementById('erp-ship-file-input').click()">
+      <div class="erp-file-card" data-ui-static-click="s171">
         <div style="font-size:28px;margin-bottom:8px">📦</div>
         <div class="erp-file-title">출고현황 파일</div>
         <div class="erp-file-sub">grid_excel<br>.xlsx 파일</div>
         <div class="erp-file-state" id="erp-ship-state">파일 미선택</div>
-        <input type="file" id="erp-ship-file-input" accept=".xlsx" style="display:none" onchange="erpHandleFile(this,'ship')" />
+        <input type="file" id="erp-ship-file-input" accept=".xlsx" style="display:none" data-ui-static-change="s172" />
       </div>
       </div>
     </details>
@@ -1500,9 +1502,9 @@
     </div>
     <div class="modal-footer" style="margin-top:20px">
       <div style="font-size:11px;color:var(--text3)" id="erp-total-label"></div>
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-erp-upload')">닫기</button>
-      <button class="btn-sm btn-ghost" id="fb-migrate-btn" onclick="(async()=>{const b=document.getElementById('fb-migrate-btn');b.disabled=true;b.textContent='업로드 중...';const ok=await pushAllToFirebase();b.disabled=false;b.textContent='데이터 Firebase 업로드';alert(ok?'업로드 완료! 다른 브라우저에서 새로고침하면 데이터가 나타납니다.':'업로드 실패. 콘솔을 확인해주세요.');})()">데이터 Firebase 업로드</button>
-      <button class="btn-sm btn-primary" id="erp-confirm-btn" style="display:none" onclick="erpConfirmUpload()">수동 파일 저장 및 반영</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s173">닫기</button>
+      <button class="btn-sm btn-ghost" id="fb-migrate-btn" data-ui-static-click="s174">데이터 Firebase 업로드</button>
+      <button class="btn-sm btn-primary" id="erp-confirm-btn" style="display:none" data-ui-static-click="s175">수동 파일 저장 및 반영</button>
     </div>
   </div>
 </div>
@@ -1510,12 +1512,12 @@
 
 <!-- ══════ MODALS ══════ -->
 <!-- 전역 검색 -->
-<div class="gs-modal" id="gs-modal" onclick="if(event.target===this)closeGlobalSearch()">
+<div class="gs-modal" id="gs-modal" data-ui-static-click="s176">
   <div class="gs-box" role="dialog" aria-label="전체 검색">
     <div class="gs-inputwrap">
       <span>🔍</span>
       <input id="gs-input" type="text" placeholder="거래처, 품목, 기관명, 메뉴 검색…" autocomplete="off"
-             oninput="gsRender(this.value)" onkeydown="gsKeydown(event)" />
+             data-ui-static-input="s177" data-ui-static-keydown="s178" />
       <kbd>ESC</kbd>
     </div>
     <div id="gs-results" class="gs-results"></div>
@@ -1523,40 +1525,40 @@
 </div>
 
 <!-- 거래처 360° -->
-<div class="modal-overlay" id="modal-c360" onclick="if(event.target===this)closeModal('modal-c360')">
+<div class="modal-overlay" id="modal-c360" data-ui-static-click="s179">
   <div class="modal" style="max-width:820px;width:94vw">
     <div class="modal-title" id="c360-title">거래처</div>
     <div id="c360-body" style="max-height:70vh;overflow-y:auto"></div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-c360')">닫기</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s180">닫기</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-login-logs" onclick="if(event.target===this)closeModal('modal-login-logs')">
+<div class="modal-overlay" id="modal-login-logs" data-ui-static-click="s181">
   <div class="modal" style="max-width:560px;width:92vw">
     <div class="modal-title" id="login-logs-title">전체 접속기록</div>
     <div id="login-logs-body" style="max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-login-logs')">닫기</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s182">닫기</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-add-user" onclick="if(event.target===this)closeModal('modal-add-user')">
+<div class="modal-overlay" id="modal-add-user" data-ui-static-click="s183">
   <div class="modal">
     <div class="modal-title">계정 추가</div>
     <div class="form-group" style="margin-bottom:14px"><label class="form-label">이름 <span class="form-required">*</span></label><input class="form-input" id="nu-name" placeholder="이름" /></div>
     <div class="form-group" style="margin-bottom:14px"><label class="form-label">아이디 <span class="form-required">*</span></label><input class="form-input" id="nu-id" placeholder="아이디" /></div>
     <div class="form-group" style="margin-bottom:14px"><label class="form-label">비밀번호 <span class="form-required">*</span></label><input class="form-input" id="nu-pw" type="password" placeholder="초기 비밀번호" autocomplete="new-password" /></div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-add-user')">취소</button>
-      <button class="btn-sm btn-primary" onclick="addUser()">추가</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s184">취소</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s185">추가</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-edit-entry" onclick="if(event.target===this)closeModal('modal-edit-entry')">
+<div class="modal-overlay" id="modal-edit-entry" data-ui-static-click="s186">
   <div class="modal" style="width:520px">
     <div class="modal-title">일지 수정</div>
     <input type="hidden" id="edit-entry-id" />
@@ -1573,14 +1575,14 @@
       <div class="form-group"><label class="form-label">당사 월 구매액 (원)</label><input class="form-input" id="e-sales" type="number" /></div>
     </div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-edit-entry')">취소</button>
-      <button class="btn-sm btn-primary" onclick="saveEditEntry()">저장</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s187">취소</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s188">저장</button>
     </div>
   </div>
 </div>
 
 <!-- 본인 비밀번호 변경 -->
-<div class="modal-overlay" id="modal-change-pw" onclick="if(event.target===this)closeModal('modal-change-pw')">
+<div class="modal-overlay" id="modal-change-pw" data-ui-static-click="s189">
   <div class="modal">
     <div class="modal-title">🔑 비밀번호 변경</div>
     <div class="form-group" style="margin-bottom:14px">
@@ -1597,14 +1599,14 @@
     </div>
     <div id="cpw-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-change-pw')">취소</button>
-      <button class="btn-sm btn-primary" onclick="changeMyPassword()">변경하기</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s190">취소</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s191">변경하기</button>
     </div>
   </div>
 </div>
 
 <!-- 관리자: 특정 계정 비밀번호 초기화 -->
-<div class="modal-overlay" id="modal-reset-pw" onclick="if(event.target===this)closeModal('modal-reset-pw')">
+<div class="modal-overlay" id="modal-reset-pw" data-ui-static-click="s192">
   <div class="modal">
     <div class="modal-title">🔒 비밀번호 초기화</div>
     <input type="hidden" id="reset-pw-uid" />
@@ -1621,8 +1623,8 @@
     </div>
     <div id="rpw-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-reset-pw')">취소</button>
-      <button class="btn-sm btn-primary" onclick="resetUserPassword()">초기화</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s193">취소</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s194">초기화</button>
     </div>
   </div>
 </div>
@@ -1630,7 +1632,7 @@
 
 
 <!-- 거래처 추가/수정 -->
-<div class="modal-overlay" id="modal-client-form" onclick="if(event.target===this)closeModal('modal-client-form')">
+<div class="modal-overlay" id="modal-client-form" data-ui-static-click="s195">
   <div class="modal" style="width:560px;max-height:85vh;overflow-y:auto">
     <div class="modal-title" id="client-form-title">거래처 추가</div>
     <input type="hidden" id="cf-id" />
@@ -1657,7 +1659,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">병행업종</label>
-        <select class="form-select" id="cf-side-sel" onchange="var i=document.getElementById('cf-side');if(this.value==='__other__'){i.style.display='';i.focus();i.value='';}else{i.style.display='none';i.value=this.value;}"><option value="">선택</option><option>재가센터</option><option>의료기기</option><option>장애인보조기기</option><option value="__other__">기타(직접입력)</option></select>
+        <select class="form-select" id="cf-side-sel" data-ui-static-change="s196"><option value="">선택</option><option>재가센터</option><option>의료기기</option><option>장애인보조기기</option><option value="__other__">기타(직접입력)</option></select>
         <input class="form-input" id="cf-side" placeholder="기타 업종 입력" style="margin-top:6px;display:none" />
       </div>
       <div class="form-group">
@@ -1703,31 +1705,31 @@
       <textarea class="form-textarea" id="cf-memo" placeholder="특이사항, 참고 내용..." style="min-height:60px"></textarea>
     </div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-client-form')">취소</button>
-      <button class="btn-sm btn-primary" onclick="saveClient()">저장</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s197">취소</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s198">저장</button>
     </div>
   </div>
 </div>
 
 
 <!-- 거래처 일괄 업로드 -->
-<div class="modal-overlay" id="modal-client-upload" onclick="if(event.target===this)closeModal('modal-client-upload')">
+<div class="modal-overlay" id="modal-client-upload" data-ui-static-click="s199">
   <div class="modal" style="width:580px">
     <div class="modal-title">↑ 거래처 일괄 업로드</div>
     <div style="font-size:12px;color:var(--text2);background:var(--green-subtle);border:1px solid var(--green-mid);border-radius:var(--r2);padding:10px 14px;margin-bottom:16px;line-height:1.8">
       <strong>엑셀/CSV 파일 형식 (첫 행은 헤더)</strong><br>
       <span style="color:var(--text3)">※ 거래처코드가 기존과 같으면 정보가 업데이트됩니다</span><br>
-      <button class="btn-sm btn-primary" onclick="downloadClientSample()" style="margin-top:6px">📥 샘플 파일 다운로드 (.xlsx)</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s200" style="margin-top:6px">📥 샘플 파일 다운로드 (.xlsx)</button>
     </div>
-    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('upload-file-input').click()"
-      ondragover="event.preventDefault();this.classList.add('drag-over')"
-      ondragleave="this.classList.remove('drag-over')"
-      ondrop="handleFileDrop(event)">
+    <div class="upload-zone" id="upload-zone" data-ui-static-click="s201"
+      data-ui-static-dragover="s202"
+      data-ui-static-dragleave="s203"
+      data-ui-static-drop="s204">
       <div class="upload-zone-icon">📂</div>
       <div class="upload-zone-text">파일을 드래그하거나 클릭해서 선택</div>
       <div class="upload-zone-sub">.xlsx, .xls, .csv 파일 지원</div>
     </div>
-    <input type="file" id="upload-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(this)" />
+    <input type="file" id="upload-file-input" accept=".xlsx,.xls,.csv" style="display:none" data-ui-static-change="s205" />
     <div id="upload-preview-wrap" style="display:none;margin-top:14px">
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px" id="upload-preview-title"></div>
       <div class="upload-preview">
@@ -1736,37 +1738,37 @@
     </div>
     <div id="upload-err" style="font-size:12px;color:var(--red);padding:8px 0;display:none"></div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-client-upload')">취소</button>
-      <button class="btn-sm btn-primary" id="upload-confirm-btn" style="display:none" onclick="confirmClientUpload()">업로드 확인</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s206">취소</button>
+      <button class="btn-sm btn-primary" id="upload-confirm-btn" style="display:none" data-ui-static-click="s207">업로드 확인</button>
     </div>
   </div>
 </div>
 
 <!-- 거래처 상세 보기 -->
-<div class="modal-overlay" id="modal-client-detail" onclick="if(event.target===this)closeModal('modal-client-detail')">
+<div class="modal-overlay" id="modal-client-detail" data-ui-static-click="s208">
   <div class="modal" style="width:600px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
       <div style="font-size:12px;font-family:var(--mono);font-weight:700;color:var(--green-dark)" id="cd-code"></div>
       <div class="modal-title" style="margin-bottom:0;flex:1" id="cd-name"></div>
-      <button class="btn-sm btn-ghost" onclick="editClientFromDetail()" style="font-size:11px">수정</button>
-      <button class="btn-sm btn-danger" onclick="deleteClientFromDetail()" style="font-size:11px">삭제</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s209" style="font-size:11px">수정</button>
+      <button class="btn-sm btn-danger" data-ui-static-click="s210" style="font-size:11px">삭제</button>
     </div>
     <div class="client-detail-tabs">
-      <div class="client-detail-tab active" onclick="switchClientTab('info',this)">기본 정보</div>
-      <div class="client-detail-tab" onclick="switchClientTab('erp',this)">ERP 매출</div>
-      <div class="client-detail-tab" onclick="switchClientTab('visits',this)">방문 이력</div>
+      <div class="client-detail-tab active" data-ui-static-click="s211">기본 정보</div>
+      <div class="client-detail-tab" data-ui-static-click="s212">ERP 매출</div>
+      <div class="client-detail-tab" data-ui-static-click="s213">방문 이력</div>
     </div>
     <div class="client-detail-panel active" id="cd-panel-info"></div>
     <div class="client-detail-panel" id="cd-panel-erp"></div>
     <div class="client-detail-panel" id="cd-panel-visits"></div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-client-detail')">닫기</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s214">닫기</button>
     </div>
   </div>
 </div>
 
 <!-- 방문 상세 보기 -->
-<div class="modal-overlay" id="modal-detail" onclick="if(event.target===this)closeModal('modal-detail')">
+<div class="modal-overlay" id="modal-detail" data-ui-static-click="s215">
   <div class="modal" style="width:560px;max-height:80vh;overflow-y:auto">
     <div class="modal-title">방문 상세 정보</div>
     <div class="detail-grid" id="detail-chips"></div>
@@ -1779,13 +1781,13 @@
       <div class="detail-value" id="detail-issues"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-detail')">닫기</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s216">닫기</button>
     </div>
   </div>
 </div>
 
 <!-- 공지사항 작성 -->
-<div class="modal-overlay" id="modal-add-notice" onclick="if(event.target===this)closeModal('modal-add-notice')">
+<div class="modal-overlay" id="modal-add-notice" data-ui-static-click="s217">
   <div class="modal" style="width:500px">
     <div class="modal-title">공지사항 작성</div>
     <input type="hidden" id="notice-edit-id" />
@@ -1803,8 +1805,8 @@
       </label>
     </div>
     <div class="modal-footer">
-      <button class="btn-sm btn-ghost" onclick="closeModal('modal-add-notice')">취소</button>
-      <button class="btn-sm btn-primary" onclick="saveNotice()">저장</button>
+      <button class="btn-sm btn-ghost" data-ui-static-click="s218">취소</button>
+      <button class="btn-sm btn-primary" data-ui-static-click="s219">저장</button>
     </div>
   </div>
 </div>
@@ -1812,33 +1814,34 @@
 <div class="toast" id="toast"></div>
 
 <script src="data/client-seed.js?v=20260511-login"></script>
-<script src="js/security.js?v=20260731-weekly-attachments"></script>
-<script src="js/storage.js?v=20260821-login-log-append"></script>
-<script src="js/state.js?v=20260812-sumhelper"></script>
-<script src="js/ui-utils.js?v=20260927-refactor"></script>
-<script src="js/ui-feedback.js?v=20260927-refactor"></script>
-<script src="js/app-data.js?v=20260927-refactor"></script>
-<script src="js/products-grades-erp.js?v=20260822-prod"></script>
-<script src="js/core-auth-nav.js?v=20260927-cost-title"></script>
-<script src="js/journals-weekly.js?v=20260927-refactor"></script>
-<script src="js/journals-monthly.js?v=20260927-refactor"></script>
-<script src="js/dashboard-sales.js?v=20260927-refactor"></script>
-<script src="js/records.js?v=20260927-refactor"></script>
-<script src="js/users.js?v=20260927-refactor"></script>
-<script src="js/targets.js?v=20260927-refactor"></script>
-<script src="js/account.js?v=20260927-refactor"></script>
-<script src="js/clients.js?v=20260814-features"></script>
-<script src="js/daily-entry.js?v=20260812-deadcode"></script>
-<script src="js/stats-notices.js?v=20260817-viz2"></script>
-<script src="js/bootstrap-datepicker.js?v=20260814-features"></script>
-<script src="js/product-analytics.js?v=20260822-prod2"></script>
-<script src="js/rep-insights.js?v=20260822-rep"></script>
-<script src="js/deep-analytics.js?v=20260822-deep"></script>
-<script src="js/stats-ui.js?v=20260817-viz2"></script>
-<script src="js/channel-analysis.js?v=20260817-viz2"></script>
-<script src="js/compare-field.js?v=20260817-channel"></script>
-<script src="js/features.js?v=20260817-channel"></script>
-<script src="js/cost-analysis.js?v=20260927-cost-title"></script>
-<script src="js/main.js?v=20260721-code-cleanup"></script>
+<script src="js/security.js?v=20260927-security"></script>
+<script src="js/storage.js?v=20260927-security"></script>
+<script src="js/state.js?v=20260927-security"></script>
+<script src="js/ui-utils.js?v=20260927-security"></script>
+<script src="js/ui-feedback.js?v=20260927-security"></script>
+<script src="js/app-data.js?v=20260927-security"></script>
+<script src="js/products-grades-erp.js?v=20260927-security"></script>
+<script src="js/core-auth-nav.js?v=20260927-security"></script>
+<script src="js/journals-weekly.js?v=20260927-security"></script>
+<script src="js/journals-monthly.js?v=20260927-security"></script>
+<script src="js/dashboard-sales.js?v=20260927-security"></script>
+<script src="js/records.js?v=20260927-security"></script>
+<script src="js/users.js?v=20260927-security"></script>
+<script src="js/targets.js?v=20260927-security"></script>
+<script src="js/account.js?v=20260927-security"></script>
+<script src="js/clients.js?v=20260927-security"></script>
+<script src="js/daily-entry.js?v=20260927-security"></script>
+<script src="js/stats-notices.js?v=20260927-security"></script>
+<script src="js/bootstrap-datepicker.js?v=20260927-security"></script>
+<script src="js/product-analytics.js?v=20260927-security"></script>
+<script src="js/rep-insights.js?v=20260927-security"></script>
+<script src="js/deep-analytics.js?v=20260927-security"></script>
+<script src="js/stats-ui.js?v=20260927-filter"></script>
+<script src="js/channel-analysis.js?v=20260927-security"></script>
+<script src="js/compare-field.js?v=20260927-security"></script>
+<script src="js/features.js?v=20260927-security"></script>
+<script src="js/cost-analysis.js?v=20260927-filter"></script>
+<script src="js/ui-static-main.js?v=20260927-security"></script>
+<script src="js/main.js?v=20260927-security"></script>
 </body>
 </html>

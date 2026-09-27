@@ -163,7 +163,7 @@ function updateOrderBasisUI() {
 
 function rerenderOrderBasisPages() {
   const catSel = document.getElementById('prod-filter-category');
-  if (catSel) catSel.innerHTML = '<option value="all">전체</option>';
+  if (catSel) uiSetHtml(catSel, '<option value="all">전체</option>');
   const active = document.querySelector('.page.active');
   if (!active) return;
   const id = active.id;
@@ -891,7 +891,7 @@ function renderOpenPageTabs(activeRoute = pageRouteForName(currentPageName())) {
   bar.ondragleave = event => {
     if (!event.relatedTarget || !bar.contains(event.relatedTarget)) clearPageTabDropMarkers();
   };
-  bar.innerHTML = '';
+  uiSetHtml(bar, '');
   openPageTabs.forEach(route => {
     const state = pageRouteToState(route);
     const tab = document.createElement('div');

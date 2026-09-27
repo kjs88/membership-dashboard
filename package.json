@@ -1,0 +1,15 @@
+{
+  "name": "membership-dashboard",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/test-app-architecture.cjs && node scripts/test-app-data.cjs && node scripts/test-cost-analysis.cjs"
+  },
+  "devDependencies": {
+    "@babel/generator": "8.0.6",
+    "@babel/parser": "7.29.9",
+    "@babel/traverse": "8.0.6",
+    "@babel/types": "8.0.6",
+    "parse5": "8.0.1",
+    "playwright": "1.63.0"
+  }
+}

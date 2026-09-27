@@ -22,7 +22,7 @@ function moPlanInit() {
     const years = new Set([new Date().getFullYear()]);
     allMonthlyReports.forEach(r => years.add(r.year));
     const cur = parseInt(yearSel.value) || new Date().getFullYear();
-    yearSel.innerHTML = [...years].sort((a,b)=>b-a).map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}년</option>`).join('');
+    uiSetHtml(yearSel, [...years].sort((a, b) => b - a).map(y => `<option value="${y}"${y === cur ? ' selected' : ''}>${y}년</option>`).join(''));
   }
   moPlanRenderList();
 }
@@ -35,7 +35,7 @@ function moPlanRenderList() {
   const countEl = document.getElementById('mop-board-count');
   if (!tbody) return;
   const filtered = allMonthlyReports.filter(r=>r.year===fy).sort((a,b)=>b.month-a.month);
-  tbody.innerHTML = '';
+  uiSetHtml(tbody, '');
   if (countEl) countEl.textContent = `총 ${filtered.length}건`;
   if (!filtered.length) { if (empty) empty.style.display=''; return; }
   if (empty) empty.style.display='none';
@@ -43,19 +43,26 @@ function moPlanRenderList() {
     const savedDate = r.savedAt ? r.savedAt.slice(5,10).replace('-','/') : '-';
     const reportId = escInlineJs(r.id);
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="bbs-num">${filtered.length-idx}</td>
+    uiSetHtml(tr, `
+      <td class="bbs-num">${filtered.length - idx}</td>
       <td class="bbs-td-title">${r.year}년 ${r.month}월 영업계획</td>
-      <td>${r.year}/${String(r.month).padStart(2,'0')}</td>
-      <td>${r.targetVisit||'-'}</td>
-      <td>${r.targetSales ? Number(r.targetSales).toLocaleString()+'만' : '-'}</td>
-      <td>${escHtml(r.person||'-')}</td>
+      <td>${r.year}/${String(r.month).padStart(2, '0')}</td>
+      <td>${r.targetVisit || '-'}</td>
+      <td>${r.targetSales ? Number(r.targetSales).toLocaleString() + '만' : '-'}</td>
+      <td>${escHtml(r.person || '-')}</td>
       <td>${escHtml(savedDate)}</td>
-    `;
+    `);
     tr.onclick = () => moPlanOpenForm(r.id);
     const actTd = document.createElement('td');
     actTd.style.whiteSpace='nowrap';
-    actTd.innerHTML = `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();moPlanOpenForm('${reportId}')">수정</button> <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" onclick="event.stopPropagation();moDeleteReport('${reportId}');moPlanRenderList()">삭제</button>`;
+    uiSetHtml(actTd, `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  moPlanOpenForm(String(uiValues[0]));
+}, [r.id])}>수정</button> <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  moDeleteReport(String(uiValues[0]));
+  moPlanRenderList();
+}, [r.id])}>삭제</button>`);
     tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
@@ -75,7 +82,7 @@ function moPlanOpenForm(id) {
     document.getElementById('mo-target-existing').value = r.targetExisting || '';
     moCalcTargetVisit();
     const body = document.getElementById('mo-plan-body');
-    body.innerHTML = ''; _moPlanRowId = 0;
+    uiSetHtml(body, ''); _moPlanRowId = 0;
     if (r.planRows?.length) {
       r.planRows.forEach(row => {
         moAddPlanRow();
@@ -94,7 +101,7 @@ function moPlanOpenForm(id) {
     document.getElementById('mo-target-existing').value = '';
     document.getElementById('mo-target-visit-total').textContent = '0';
     const body = document.getElementById('mo-plan-body');
-    body.innerHTML = ''; _moPlanRowId = 0; moAddPlanRows(3);
+    uiSetHtml(body, ''); _moPlanRowId = 0; moAddPlanRows(3);
   }
   document.getElementById('mop-list-view').style.display = 'none';
   document.getElementById('mop-form-view').style.display = '';
@@ -114,7 +121,7 @@ function moSettleInit() {
     const years = new Set([new Date().getFullYear()]);
     allMonthlyReports.forEach(r => years.add(r.year));
     const cur = parseInt(yearSel.value) || new Date().getFullYear();
-    yearSel.innerHTML = [...years].sort((a,b)=>b-a).map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}년</option>`).join('');
+    uiSetHtml(yearSel, [...years].sort((a, b) => b - a).map(y => `<option value="${y}"${y === cur ? ' selected' : ''}>${y}년</option>`).join(''));
   }
   moSettleRenderList();
 }
@@ -127,7 +134,7 @@ function moSettleRenderList() {
   const countEl = document.getElementById('mos-board-count');
   if (!tbody) return;
   const filtered = allMonthlyReports.filter(r=>r.year===fy).sort((a,b)=>b.month-a.month);
-  tbody.innerHTML = '';
+  uiSetHtml(tbody, '');
   if (countEl) countEl.textContent = `총 ${filtered.length}건`;
   if (!filtered.length) { if (empty) empty.style.display=''; return; }
   if (empty) empty.style.display='none';
@@ -136,20 +143,27 @@ function moSettleRenderList() {
     const savedDate = r.savedAt ? r.savedAt.slice(5,10).replace('-','/') : '-';
     const reportId = escInlineJs(r.id);
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="bbs-num">${filtered.length-idx}</td>
+    uiSetHtml(tr, `
+      <td class="bbs-num">${filtered.length - idx}</td>
       <td class="bbs-td-title">${r.year}년 ${r.month}월 월간결산</td>
-      <td>${r.year}/${String(r.month).padStart(2,'0')}</td>
-      <td>${r.targetVisit||'-'}</td>
-      <td>${r.visitActual||0}</td>
+      <td>${r.year}/${String(r.month).padStart(2, '0')}</td>
+      <td>${r.targetVisit || '-'}</td>
+      <td>${r.visitActual || 0}</td>
       <td style="font-weight:600;color:var(--green-dark)">${visitRate}</td>
-      <td>${escHtml(r.person||'-')}</td>
+      <td>${escHtml(r.person || '-')}</td>
       <td>${escHtml(savedDate)}</td>
-    `;
+    `);
     tr.onclick = () => moSettleOpenForm(r.id);
     const actTd = document.createElement('td');
     actTd.style.whiteSpace='nowrap';
-    actTd.innerHTML = `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();moSettleOpenForm('${reportId}')">수정</button> <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" onclick="event.stopPropagation();moDeleteReport('${reportId}');moSettleRenderList()">삭제</button>`;
+    uiSetHtml(actTd, `<button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  moSettleOpenForm(String(uiValues[0]));
+}, [r.id])}>수정</button> <button class="btn-sm btn-ghost" style="padding:3px 8px;font-size:11px;color:#e53935" ${uiAction("click", function (event, uiValues) {
+  event.stopPropagation();
+  moDeleteReport(String(uiValues[0]));
+  moSettleRenderList();
+}, [r.id])}>삭제</button>`);
     tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
@@ -206,7 +220,7 @@ function moAddPlanRow() {
   const rid = 'mpr'+_moPlanRowId;
   const tr = document.createElement('tr');
   tr.id = rid;
-  tr.innerHTML = `
+  uiSetHtml(tr, `
     <td>${_moPlanRowId}</td>
     <td><input class="ss-input" data-mp="name" placeholder="기관명" /></td>
     <td><input class="ss-input" data-mp="count" type="number" value="1" style="width:40px;text-align:center" /></td>
@@ -217,8 +231,11 @@ function moAddPlanRow() {
     <td style="text-align:center"><input type="checkbox" data-mp="w5" /></td>
     <td><input class="ss-input" data-mp="sales" type="number" placeholder="0" style="font-family:var(--mono)" /></td>
     <td><input class="ss-input" data-mp="purpose" placeholder="방문 목적" /></td>
-    <td><button class="ss-del" onclick="document.getElementById('${rid}').remove();moRenum()">×</button></td>
-  `;
+    <td><button class="ss-del" ${uiAction("click", function (event, uiValues) {
+  document.getElementById(String(uiValues[0])).remove();
+  moRenum();
+}, [rid])}>×</button></td>
+  `);
   document.getElementById('mo-plan-body').appendChild(tr);
   moRenum();
 }
