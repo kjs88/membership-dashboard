@@ -215,16 +215,20 @@ const costAnalysis = (() => {
       <div class="cost-toolbar">
         <div><h2>원가분석현황(마감기준)</h2><p>${escHtml(meta.tab)} · ${escHtml(meta.label)} · ${escHtml(periodLabel)} · 품목군 상품 · 고객분류 도매 전체</p></div>
         <div class="cost-controls">
-          <div class="drp-wrap" id="drp-cost">
-            <div class="drp-trigger" data-cost-action="picker">
-              <span class="drp-trigger-icon">📅</span>
-              <span class="drp-trigger-text" id="drp-cost-label">기간 선택</span>
-            </div>
-            <div class="drp-dropdown" id="drp-cost-dropdown"></div>
-          </div>
-          <input type="hidden" id="cost-date-from"><input type="hidden" id="cost-date-to">
           <button type="button" class="btn-sm" data-cost-action="refresh" title="데이터 새로고침" aria-label="데이터 새로고침" ${state.loading ? 'disabled' : ''}>↻</button>
-        <button type="button" class="btn-sm" data-cost-action="export" ${!hasData || state.loading ? 'disabled' : ''}>엑셀</button></div>
+          <button type="button" class="btn-sm" data-cost-action="export" ${!hasData || state.loading ? 'disabled' : ''}>엑셀</button>
+        </div>
+      </div>
+      <div class="cost-period">
+        <span class="cost-period-l">기간</span>
+        <div class="drp-wrap" id="drp-cost">
+          <div class="drp-trigger" data-cost-action="picker">
+            <span class="drp-trigger-icon">📅</span>
+            <span class="drp-trigger-text" id="drp-cost-label">기간 선택</span>
+          </div>
+          <div class="drp-dropdown" id="drp-cost-dropdown"></div>
+        </div>
+        <input type="hidden" id="cost-date-from"><input type="hidden" id="cost-date-to">
       </div>
       <div class="cost-sync" role="status">${state.loading ? '불러오는 중' : state.error ? escHtml(state.error) : hasData ? `데이터 업데이트 ${escHtml(new Date(rangeInfo.list[rangeInfo.list.length - 1].syncedAt).toLocaleString('ko-KR', {
   timeZone: 'Asia/Seoul'
@@ -299,7 +303,7 @@ const costAnalysis = (() => {
       const action = button.dataset.costAction;
       if (action === 'refresh') return load(true);
       if (action === 'export') return exportExcel(hasData);
-      if (action === 'picker') return drpOpen('cost');
+      if (action === 'picker') { drpOpen('cost'); fitPicker(); return; }
     }));
     root.querySelectorAll('[data-cost-tab]').forEach(button => button.addEventListener('click', () => {
       const nextGroup = VIEW_GROUPS.find(item => item.tab === button.dataset.costTab);
@@ -355,6 +359,20 @@ const costAnalysis = (() => {
       state.sort = state.sort.key === key ? { key, dir: state.sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'name' ? 'asc' : 'desc' };
       draw();
     }));
+  }
+
+  // 달력(620px)이 화면 오른쪽으로 넘칠 때 왼쪽으로 밀어 넣는다.
+  // 원가 화면은 선택기가 본문 안쪽에 있어 기본 left:0으로는 잘린다.
+  function fitPicker() {
+    const dd = document.getElementById('drp-cost-dropdown');
+    if (!dd || !dd.classList.contains('open')) return;
+    dd.style.left = '0px';
+    const vw = document.documentElement.clientWidth;
+    const r = dd.getBoundingClientRect();
+    let shift = 0;
+    if (r.right > vw - 12) shift = -(r.right - (vw - 12));
+    if (r.left + shift < 12) shift = 12 - r.left;
+    dd.style.left = shift + 'px';
   }
 
   // 선택한 날짜 구간을 '월 단위'로 바꿔 상태에 반영한다.

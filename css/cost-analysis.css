@@ -74,3 +74,11 @@
   .cost-f{font-size:11.5px}
   .cost-filters #cost-row-filter{min-width:120px}
 }
+
+/* 기간 선택기 — 달력(620px)이 잘리지 않도록 왼쪽 정렬 줄에 따로 둔다 */
+.cost-period { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; }
+.cost-period-l { font-size: 12px; font-weight: 700; color: var(--text2); }
+#drp-cost .drp-dropdown { max-width: calc(100vw - 48px); overflow-x: auto; }
+@media (max-width: 760px) {
+  #drp-cost .drp-dropdown { min-width: 0; width: calc(100vw - 48px); }
+}
