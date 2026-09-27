@@ -196,7 +196,7 @@ const MENU_ACCESS_ITEMS = [
   { key:'sales',   label:'대시보드',     page:'sales',   nav:'nav-sales' },
   { key:'stats',   label:'실적 분석',    page:'stats',   nav:'nav-stats-group' },
   { key:'products',label:'품목별 분석',  page:'products',nav:'nav-products' },
-  { key:'cost', label:'마감기준 매익 분석', page:'cost', nav:'nav-cost' },
+  { key:'cost', label:'원가분석현황(마감기준)', page:'cost', nav:'nav-cost' },
   { key:'compare', label:'비교 분석',    page:'compare', nav:'nav-compare' },
   { key:'deep',    label:'심화 분석',    page:'deep',    nav:'nav-deep' },
   { key:'field',   label:'현장 모드',    page:'field',   nav:'nav-field' },
@@ -584,7 +584,7 @@ const PAGE_TITLES = {
   'mo-plan':'영업계획', 'mo-settle':'월간결산', records:'방문 기록',
   users:'계정 관리', targets:'목표 설정', stats:'실적 분석', revisit:'재방문 관리',
   notice:'공지사항', 'notice-view':'공지사항', clients:'거래처 관리',
-  products:'품목별 분석', cost:'마감기준 매익 분석', compare:'비교 분석', deep:'심화 분석', field:'현장 모드', project:'프로젝트 관리', grade:'거래처 등급'
+  products:'품목별 분석', cost:'원가분석현황(마감기준)', compare:'비교 분석', deep:'심화 분석', field:'현장 모드', project:'프로젝트 관리', grade:'거래처 등급'
 };
 
 const PAGE_RENDERERS = {

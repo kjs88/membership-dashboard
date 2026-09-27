@@ -124,7 +124,7 @@ const costAnalysis = (() => {
     state.chart = null;
     root.innerHTML = `
       <div class="cost-toolbar">
-        <div><h2>마감기준 매익 분석</h2><p>${escHtml(meta.tab)} · ${escHtml(meta.label)} · 품목군 상품 · 고객분류 도매 전체</p></div>
+        <div><h2>원가분석현황(마감기준)</h2><p>${escHtml(meta.tab)} · ${escHtml(meta.label)} · 품목군 상품 · 고객분류 도매 전체</p></div>
         <div class="cost-controls"><div class="cost-month-nav">
           <button type="button" data-cost-action="previous" aria-label="이전 월" title="이전 월">‹</button>
           <input id="cost-month" type="month" aria-label="조회 월" value="${state.month}" max="${currentMonth()}">
@@ -225,7 +225,7 @@ const costAnalysis = (() => {
     sheet['!cols'] = [{ wch: 28 }, ...Array(4).fill({ wch: 19 })];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, meta.label.slice(0, 31));
-    XLSX.writeFile(workbook, `마감기준_매익분석_${meta.label}_${state.month}.xlsx`);
+    XLSX.writeFile(workbook, `원가분석현황_마감기준_${meta.label}_${state.month}.xlsx`);
   }
 
   function clear() {
