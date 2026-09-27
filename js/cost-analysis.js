@@ -214,11 +214,16 @@ const costAnalysis = (() => {
     uiSetHtml(root, `
       <div class="cost-toolbar">
         <div><h2>원가분석현황(마감기준)</h2><p>${escHtml(meta.tab)} · ${escHtml(meta.label)} · ${escHtml(periodLabel)} · 품목군 상품 · 고객분류 도매 전체</p></div>
-        <div class="cost-controls"><div class="cost-month-nav">
-          <button type="button" data-cost-action="previous" aria-label="이전 월" title="이전 월">‹</button>
-          <input id="cost-month" type="month" aria-label="조회 월" value="${state.month}" max="${currentMonth()}">
-          <button type="button" data-cost-action="next" aria-label="다음 월" title="다음 월" ${state.month >= currentMonth() ? 'disabled' : ''}>›</button>
-        </div><button type="button" class="btn-sm" data-cost-action="refresh" title="데이터 새로고침" aria-label="데이터 새로고침" ${state.loading ? 'disabled' : ''}>↻</button>
+        <div class="cost-controls">
+          <div class="drp-wrap" id="drp-cost">
+            <div class="drp-trigger" data-cost-action="picker">
+              <span class="drp-trigger-icon">📅</span>
+              <span class="drp-trigger-text" id="drp-cost-label">기간 선택</span>
+            </div>
+            <div class="drp-dropdown" id="drp-cost-dropdown"></div>
+          </div>
+          <input type="hidden" id="cost-date-from"><input type="hidden" id="cost-date-to">
+          <button type="button" class="btn-sm" data-cost-action="refresh" title="데이터 새로고침" aria-label="데이터 새로고침" ${state.loading ? 'disabled' : ''}>↻</button>
         <button type="button" class="btn-sm" data-cost-action="export" ${!hasData || state.loading ? 'disabled' : ''}>엑셀</button></div>
       </div>
       <div class="cost-sync" role="status">${state.loading ? '불러오는 중' : state.error ? escHtml(state.error) : hasData ? `데이터 업데이트 ${escHtml(new Date(rangeInfo.list[rangeInfo.list.length - 1].syncedAt).toLocaleString('ko-KR', {
@@ -237,14 +242,6 @@ const costAnalysis = (() => {
       <section class="cost-detail"><div class="cost-table-heading"><h3>${escHtml(periodLabel)} ${escHtml(meta.label)}별 현황</h3><span>${hasData ? `표시 ${rows.length} / 전체 ${viewRows.length}개 · 단위 원` : '단위 원'}</span></div>
         <div class="cost-filters">
           <div class="cost-frow">
-            <label class="cost-f">기간
-              <select id="cf-span">
-                <option value="single"${state.filters.span ? '' : ' selected'}>단월</option>
-                <option value="span"${state.filters.span ? ' selected' : ''}>구간 합산</option>
-              </select>
-            </label>
-            ${state.filters.span ? `<label class="cost-f">시작<input type="month" id="cf-from" value="${escHtml(rangeBounds().from)}" max="${currentMonth()}"></label>
-            <label class="cost-f">끝<input type="month" id="cf-to" value="${escHtml(rangeBounds().to)}" max="${currentMonth()}"></label>` : ''}
             <label class="cost-f">매익
               <select id="cf-profit">
                 <option value="all"${state.filters.profit === 'all' ? ' selected' : ''}>전체</option>
@@ -296,22 +293,13 @@ const costAnalysis = (() => {
         options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { position: 'top', align: 'end' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${money(ctx.parsed.y)}원` } } }, scales: { y: { ticks: { callback: value => `${money(value / 10000)}만` } } } }
       });
     }
-    root.querySelector('#cost-month').addEventListener('change', event => {
-      const month = event.target.value;
-      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || month > currentMonth()) { draw(); return; }
-      state.month = month;
-      load();
-    });
+    // 기간 선택기 — 다른 화면(실적분석·품목별 등)과 같은 달력을 쓴다.
+    syncPicker();
     root.querySelectorAll('[data-cost-action]').forEach(button => button.addEventListener('click', () => {
       const action = button.dataset.costAction;
       if (action === 'refresh') return load(true);
       if (action === 'export') return exportExcel(hasData);
-      const [year, month] = state.month.split('-').map(Number);
-      const date = new Date(Date.UTC(year, month - 1 + (action === 'previous' ? -1 : 1), 1));
-      const next = date.toISOString().slice(0, 7);
-      if (next > currentMonth()) return;
-      state.month = next;
-      load();
+      if (action === 'picker') return drpOpen('cost');
     }));
     root.querySelectorAll('[data-cost-tab]').forEach(button => button.addEventListener('click', () => {
       const nextGroup = VIEW_GROUPS.find(item => item.tab === button.dataset.costTab);
@@ -336,13 +324,6 @@ const costAnalysis = (() => {
       Object.assign(state.filters, patch);
       if (reload) load(); else draw();
     };
-    root.querySelector('#cf-span')?.addEventListener('change', event => {
-      const span = event.target.value === 'span';
-      setF(span ? { span: true, from: state.filters.from || state.month, to: state.filters.to || state.month }
-                : { span: false }, span);
-    });
-    root.querySelector('#cf-from')?.addEventListener('change', event => setF({ from: event.target.value }, true));
-    root.querySelector('#cf-to')?.addEventListener('change', event => setF({ to: event.target.value }, true));
     root.querySelector('#cf-profit')?.addEventListener('change', event => setF({ profit: event.target.value }));
     root.querySelector('#cf-minsales')?.addEventListener('change', event => setF({ minSales: event.target.value }));
     root.querySelector('#cf-limit')?.addEventListener('change', event => setF({ limit: event.target.value }));
@@ -354,9 +335,12 @@ const costAnalysis = (() => {
     });
     root.querySelectorAll('[data-cost-clear]').forEach(button => button.addEventListener('click', () => {
       const key = button.dataset.costClear;
-      if (key === 'all') { state.filters = { ...DEFAULT_FILTERS }; state.query = ''; return load(); }
+      if (key === 'all') {
+        state.filters = { ...DEFAULT_FILTERS }; state.query = '';
+        return applyPeriod(currentMonth() + '-01', currentMonth() + '-28');
+      }
       if (key === 'query') { state.query = ''; return draw(); }
-      if (key === 'span') { state.filters.span = false; return load(); }
+      if (key === 'span') { applyPeriod(currentMonth() + '-01', currentMonth() + '-28'); return; }
       if (key === 'profit') { state.filters.profit = 'all'; return draw(); }
       state.filters[key] = '';
       draw();
@@ -371,6 +355,51 @@ const costAnalysis = (() => {
       state.sort = state.sort.key === key ? { key, dir: state.sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'name' ? 'asc' : 'desc' };
       draw();
     }));
+  }
+
+  // 선택한 날짜 구간을 '월 단위'로 바꿔 상태에 반영한다.
+  // 마감 데이터는 월 단위라 같은 달 안이면 단월, 달을 걸치면 구간 합산으로 본다.
+  function applyPeriod(from, to) {
+    const f = String(from || '').slice(0, 7);
+    const t = String(to || from || '').slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(f)) return;
+    const lo = f <= t ? f : t, hi = f <= t ? t : f;
+    state.month = hi;
+    if (lo === hi) {
+      state.filters.span = false;
+      state.filters.from = ''; state.filters.to = '';
+    } else {
+      state.filters.span = true;
+      state.filters.from = lo; state.filters.to = hi;
+    }
+    load();
+  }
+
+  // draw()가 DOM을 다시 그리므로, 매번 선택기 상태를 새 엘리먼트에 붙여준다.
+  function syncPicker() {
+    if (typeof drpInit !== 'function') return;
+    const b = rangeBounds();
+    const lastDay = ym => {
+      const y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7));
+      return String(new Date(y, m, 0).getDate()).padStart(2, '0');
+    };
+    const from = b.from + '-01';
+    const to = b.to + '-' + lastDay(b.to);
+    if (!_drpState.cost) {
+      drpInit('cost', 'cost-date-from', 'cost-date-to', 'drp-cost-label', (f, t) => applyPeriod(f, t));
+    }
+    const st = _drpState.cost;
+    st.selFrom = from; st.selTo = to;
+    const fd = new Date(from + 'T00:00:00'), td = new Date(to + 'T00:00:00');
+    st.leftY = fd.getFullYear(); st.leftM = fd.getMonth();
+    st.rightY = td.getFullYear(); st.rightM = td.getMonth();
+    const fEl = document.getElementById('cost-date-from');
+    const tEl = document.getElementById('cost-date-to');
+    if (fEl) fEl.value = from;
+    if (tEl) tEl.value = to;
+    const lbl = document.getElementById('drp-cost-label');
+    if (lbl) lbl.textContent = b.from === b.to ? b.from.replace('-', '년 ') + '월'
+      : b.from + ' ~ ' + b.to;
   }
 
   function exportExcel(hasData) {
@@ -397,6 +426,7 @@ const costAnalysis = (() => {
     state.month = '';
     state.query = '';
     state.filters = { ...DEFAULT_FILTERS };
+    try { delete _drpState.cost; } catch (_) {}
     state.loading = false;
     state.error = '';
     document.getElementById('cost-analysis-root')?.replaceChildren();
