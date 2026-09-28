@@ -1111,15 +1111,15 @@ def run_job(page, job, replace_payload=True, override_payload=None):
                 print(f"[4/5] 조회 버튼 클릭 (페이지가 sign 만들어서 API 호출 → 우리가 가로채기)")
                 # 조회 버튼 후보 여러 개 시도
                 for locator in [
-                    page.locator("#tutorial-conditionPanel-search").last,
                     page.get_by_role("button", name="조회").first,
                     page.locator("button").filter(has_text="조회").first,
+                    page.locator("#tutorial-conditionPanel-search").last,
                     page.locator(".OBTConditionPanel_searchButton__fpGKw").last,
-                    page.locator(".OBTButton_root__JCv3f").first,
                     page.locator(".OBTButton_root__1g4ov").first,
+                    page.locator(".OBTButton_root__JCv3f").first,
                 ]:
                     try:
-                        locator.wait_for(state="visible", timeout=2500)
+                        locator.wait_for(state="visible", timeout=8000)
                         locator.click()
                         clicked = True
                         break
