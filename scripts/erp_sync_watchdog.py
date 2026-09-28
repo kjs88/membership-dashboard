@@ -235,6 +235,7 @@ def main():
             "event": runs[0].get("event"),
             "status": runs[0].get("status"),
             "conclusion": runs[0].get("conclusion"),
+            "headSha": runs[0].get("head_sha"),
             "createdAt": runs[0].get("created_at"),
             "url": runs[0].get("html_url"),
         }
@@ -244,8 +245,16 @@ def main():
         result["status"] = "stale-detected"
         result["message"] = "ERP data is stale. Dispatch was not requested for this run."
 
-    latest_status = result.get("latestRun", {}).get("status")
-    if args.dispatch_on_stale and result["stale"] and latest_status in ("queued", "in_progress", "waiting", "requested"):
+    latest_run = result.get("latestRun", {})
+    latest_status = latest_run.get("status")
+    current_sha = os.environ.get("GITHUB_SHA", "")
+    active_run_is_current_sha = not current_sha or latest_run.get("headSha") == current_sha
+    if (
+        args.dispatch_on_stale
+        and result["stale"]
+        and latest_status in ("queued", "in_progress", "waiting", "requested")
+        and active_run_is_current_sha
+    ):
         result["status"] = "stale-sync-already-running"
         result["message"] = "ERP data is stale, but an amarans-sync run is already active."
 
