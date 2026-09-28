@@ -241,18 +241,25 @@ def main():
         }
         result["recentFailures"] = sum(1 for r in runs if r.get("conclusion") == "failure")
 
+    latest_run = result.get("latestRun", {})
+    latest_status = latest_run.get("status")
+    current_sha = os.environ.get("GITHUB_SHA", "")
+    latest_run_is_current_sha = not current_sha or latest_run.get("headSha") == current_sha
+    active_run_is_current_sha = not current_sha or latest_run.get("headSha") == current_sha
+
     if result["stale"] and not args.dispatch_on_stale:
         result["status"] = "stale-detected"
         result["message"] = "ERP data is stale. Dispatch was not requested for this run."
 
-    if args.dispatch_on_stale and result["stale"] and result.get("recentFailures", 0) >= 3 and result["activeWindow"]:
+    if (
+        args.dispatch_on_stale
+        and result["stale"]
+        and result.get("recentFailures", 0) >= 3
+        and result["activeWindow"]
+        and latest_run_is_current_sha
+    ):
         result["status"] = "sync-failing"
-        result["message"] = "Recent amarans-sync runs are failing. Check ERP credentials/login or workflow logs."
-
-    latest_run = result.get("latestRun", {})
-    latest_status = latest_run.get("status")
-    current_sha = os.environ.get("GITHUB_SHA", "")
-    active_run_is_current_sha = not current_sha or latest_run.get("headSha") == current_sha
+        result["message"] = "Recent amarans-sync runs are failing on the current workflow revision. Check ERP credentials/login or workflow logs."
     if (
         args.dispatch_on_stale
         and result["stale"]
