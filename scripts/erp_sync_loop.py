@@ -22,8 +22,8 @@ def now_kst():
 
 
 def in_active_window(dt, include_weekend=False, elapsed_seconds=0):
-    # Weekend 16:00 session intentionally includes the next 00:00 tick.
-    if include_weekend and dt.hour == 0 and elapsed_seconds >= 7 * 60 * 60:
+    # Weekend sessions may intentionally include the next 00:00 tick.
+    if include_weekend and dt.hour == 0:
         return True
     if dt.weekday() >= 5 and not include_weekend:
         return False

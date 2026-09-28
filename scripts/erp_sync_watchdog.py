@@ -24,13 +24,16 @@ WATCHDOG_PATH = os.environ.get("AMARANS_WATCHDOG_PATH", "erp/syncWatchdog").stri
 EXPECTED_SCHEDULE_BLOCK = """  schedule:
     # Session starts. GitHub cron starts the runner; scripts/erp_sync_loop.py
     # keeps the precise interval inside the job.
-    # KST weekdays 08:00, 14:00, 20:00. UTC 23 previous day, 05, 11.
+    # KST weekdays 08:00, 12:00, 16:00, 20:00. UTC 23 previous day, 03, 07, 11.
     - cron: '0 23 * * 0-4'
-    - cron: '0 5 * * 1-5'
+    - cron: '0 3 * * 1-5'
+    - cron: '0 7 * * 1-5'
     - cron: '0 11 * * 1-5'
-    # KST weekends 08:00 and 16:00. The loop runs every 2 hours through 24:00.
+    # KST weekends 08:00, 12:00, 16:00, 20:00. The loop runs every 2 hours through 24:00.
     - cron: '0 23 * * 5,6'
+    - cron: '0 3 * * 6,0'
     - cron: '0 7 * * 6,0'
+    - cron: '0 11 * * 6,0'
 """
 
 

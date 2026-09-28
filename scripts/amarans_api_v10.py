@@ -1383,7 +1383,7 @@ def process_job(page, job, days, save_xlsx=False):
     }
 
 
-def run(playwright: Playwright, days=60, save_xlsx=False, cost_only=False):
+def run(playwright: Playwright, days=60, save_xlsx=False, cost_only=False, include_cost=False):
     username = os.environ.get("AMARANS_USERNAME") or input("Amarans ID: ").strip()
     password = os.environ.get("AMARANS_PASSWORD") or getpass.getpass("Amarans password: ").strip()
     if not username or not password:
@@ -1424,10 +1424,13 @@ def run(playwright: Playwright, days=60, save_xlsx=False, cost_only=False):
                 if r:
                     results[r["slug"]] = r
 
-        try:
-            results["cost-analysis"] = collect_cost_analysis(page, TARGET_YEAR)
-        except Exception as exc:
-            print(f"  ⚠ 원가분석 수집 실패: {exc}")
+        if cost_only or include_cost:
+            try:
+                results["cost-analysis"] = collect_cost_analysis(page, TARGET_YEAR)
+            except Exception as exc:
+                print(f"  ⚠ 원가분석 수집 실패: {exc}")
+        else:
+            print("  원가분석 수집 생략: 기본 주문/출고 동기화 속도를 유지합니다.")
 
         # 대시보드 erp-data.js 생성
         if "ship" in results or "order" in results:
@@ -1533,9 +1536,11 @@ if __name__ == "__main__":
     # --auto : 환경변수 ID/PW + headless (작업 스케줄러용)
     # --with-xlsx : xlsx 양식 매핑도 같이 저장
     # --cost-only : 원가분석현황(마감기준) Firebase 노드만 갱신
+    # --include-cost : 기존 주문/출고 수집 뒤 원가분석까지 함께 갱신
     days = 60
     save_xlsx = "--with-xlsx" in args
     cost_only = "--cost-only" in args
+    include_cost = "--include-cost" in args
     if "--full" in args:
         days = None
         print(f"  모드: 올해 전체 (--full)")
@@ -1551,6 +1556,8 @@ if __name__ == "__main__":
         print(f"  모드: 기본 (최근 {days}일 증분)")
     if cost_only:
         print(f"  모드: 원가분석만 (--cost-only)")
+    elif include_cost:
+        print(f"  모드: 주문/출고 + 원가분석 (--include-cost)")
 
     if "--auto" in args:
         print(f"  AUTO: headless + 환경변수 사용")
@@ -1566,4 +1573,4 @@ if __name__ == "__main__":
 
     print("=" * 60)
     with sync_playwright() as pw:
-        run(pw, days=days, save_xlsx=save_xlsx, cost_only=cost_only)
+        run(pw, days=days, save_xlsx=save_xlsx, cost_only=cost_only, include_cost=include_cost)
