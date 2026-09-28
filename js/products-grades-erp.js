@@ -1196,7 +1196,9 @@ const ERP_AUTO_SYNC_RETRY_MS = 15 * 60 * 1000;
 const ERP_AUTO_SYNC_LOCK_MS = 10 * 60 * 1000;
 const ERP_AUTO_SYNC_META_KEY = 'sj-erp-auto-sync-meta';
 const ERP_AUTO_SYNC_LOCK_KEY = 'sj-erp-auto-sync-lock';
+const ERP_WATCHDOG_ALERT_KEY = 'sj-erp-watchdog-alert-key';
 let erpWatchdogLastFetchAt = 0;
+let erpLatestWatchdogState = null;
 const ERP_AUTO_SYNC_HOLIDAYS = {
   '2026-01-01': '신정',
   '2026-02-16': '설날 연휴',
@@ -1631,11 +1633,18 @@ function erpUpdateSidebarSyncStamp(meta = erpReadSyncMeta()) {
   const el = document.getElementById('erp-sidebar-updated-at');
   if (!el) return;
   const syncedAt = meta?.syncedAt ? erpFormatSidebarUpdatedAt(meta.syncedAt) : '';
+  const watchdog = erpLatestWatchdogState;
+  const hasWarning = !!watchdog?.warn;
   el.textContent = syncedAt ? `마지막 업데이트 ${syncedAt}` : '마지막 업데이트 -';
+  if (hasWarning) el.textContent = `! ${el.textContent}`;
   el.title = syncedAt
     ? `Firebase ERP 기준: ${syncedAt} · ${meta?.syncMode || meta?.source || 'ERP'}`
     : '';
+  if (hasWarning && watchdog?.title) {
+    el.title = `${el.title ? `${el.title}\n` : ''}${watchdog.title}`;
+  }
   el.classList.toggle('is-empty', !syncedAt);
+  el.classList.toggle('is-watchdog-warn', hasWarning);
 }
 
 function erpGetWatchdogUrl() {
@@ -1665,6 +1674,24 @@ function erpDescribeWatchdog(payload) {
   return { text: checked ? `정상 · ${checked}` : '정상', title: baseTitle, warn: false, ok: true };
 }
 
+function erpNotifyWatchdogWarning(payload, state) {
+  if (!state?.warn) return;
+  const key = [
+    payload?.status || 'warn',
+    payload?.checkedAt || '',
+    payload?.syncedAt || '',
+    payload?.ageMinutes ?? '',
+  ].join('|');
+  try {
+    if (sessionStorage.getItem(ERP_WATCHDOG_ALERT_KEY) === key) return;
+    sessionStorage.setItem(ERP_WATCHDOG_ALERT_KEY, key);
+  } catch (_) {}
+  const message = state.text
+    ? `ERP 자동 업데이트 경고: ${state.text}`
+    : 'ERP 자동 업데이트 상태를 확인해 주세요.';
+  if (typeof showToast === 'function') showToast(message, 'error');
+}
+
 async function erpRefreshWatchdogStatus(force = false) {
   const el = document.getElementById('erp-sync-watchdog-state');
   if (!el) return;
@@ -1677,14 +1704,20 @@ async function erpRefreshWatchdogStatus(force = false) {
     const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`, { cache: 'no-store' });
     const payload = res.ok ? await res.json().catch(() => null) : null;
     const state = erpDescribeWatchdog(payload);
+    erpLatestWatchdogState = state;
     el.textContent = state.text;
     el.title = state.title || '';
     el.classList.toggle('is-watchdog-warn', state.warn);
     el.classList.toggle('is-watchdog-ok', state.ok);
+    erpUpdateSidebarSyncStamp();
+    erpNotifyWatchdogWarning(payload, state);
   } catch (_) {
+    erpLatestWatchdogState = { text: '감시 확인 실패', title: 'ERP 자동 업데이트 감시 상태를 불러오지 못했습니다.', warn: true, ok: false };
     el.textContent = '감시 확인 실패';
     el.classList.add('is-watchdog-warn');
     el.classList.remove('is-watchdog-ok');
+    erpUpdateSidebarSyncStamp();
+    erpNotifyWatchdogWarning({ status: 'watchdog-read-failed', checkedAt: new Date().toISOString() }, erpLatestWatchdogState);
   }
 }
 
