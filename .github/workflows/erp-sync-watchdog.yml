@@ -1,6 +1,15 @@
 name: ERP 동기화 감시/복구
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/amarans-sync.yml'
+      - '.github/workflows/erp-sync-watchdog.yml'
+      - 'scripts/amarans_api_v10.py'
+      - 'scripts/erp_sync_loop.py'
+      - 'scripts/erp_sync_watchdog.py'
   workflow_dispatch:
   schedule:
     # Lightweight health check. The script only dispatches collection during
