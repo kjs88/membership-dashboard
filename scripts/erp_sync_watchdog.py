@@ -245,6 +245,10 @@ def main():
         result["status"] = "stale-detected"
         result["message"] = "ERP data is stale. Dispatch was not requested for this run."
 
+    if args.dispatch_on_stale and result["stale"] and result.get("recentFailures", 0) >= 3 and result["activeWindow"]:
+        result["status"] = "sync-failing"
+        result["message"] = "Recent amarans-sync runs are failing. Check ERP credentials/login or workflow logs."
+
     latest_run = result.get("latestRun", {})
     latest_status = latest_run.get("status")
     current_sha = os.environ.get("GITHUB_SHA", "")
@@ -258,7 +262,12 @@ def main():
         result["status"] = "stale-sync-already-running"
         result["message"] = "ERP data is stale, but an amarans-sync run is already active."
 
-    if args.dispatch_on_stale and result["stale"] and not result["dispatched"] and result["status"] != "stale-sync-already-running":
+    if (
+        args.dispatch_on_stale
+        and result["stale"]
+        and not result["dispatched"]
+        and result["status"] not in ("stale-sync-already-running", "sync-failing")
+    ):
         result["enabledWorkflow"] = enable_sync_workflow()
         try:
             dispatch_sync()

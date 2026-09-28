@@ -854,7 +854,22 @@ def login(page, username, password):
 
 def switch_company(page):
     print("[2/5] 회사 전환 → 조아실버케어")
-    page.get_by_text("(주)헥톤프로젝트 멤버십사업팀").click()
+    try:
+        page.get_by_text("(주)헥톤프로젝트 멤버십사업팀").click(timeout=15000)
+    except Exception as exc:
+        body_text = ""
+        try:
+            body_text = page.locator("body").inner_text(timeout=5000)
+        except Exception:
+            pass
+        login_words = ("아이디", "비밀번호", "로그인", "일치하지", "인증")
+        if page.url.endswith("#/login") or any(word in body_text for word in login_words):
+            raise RuntimeError(
+                "Amarans login did not reach the company selector. "
+                "Check AMARANS_USERNAME/AMARANS_PASSWORD GitHub secrets."
+            ) from exc
+        print("  ⚠ 회사 전환 메뉴를 찾지 못했습니다. 현재 로그인된 회사 컨텍스트로 계속 진행합니다.")
+        return
     page.locator("#userInfoPopupBtn").get_by_text("(주)헥톤프로젝트-(주)헥톤프로젝트-비전개발본부-멤버십사업팀").click()
     page.get_by_text("(주)조아실버케어", exact=True).click()
     page.get_by_role("button", name="확인").click()
