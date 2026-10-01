@@ -3,6 +3,7 @@
 // DASHBOARD
 let salesTrendMode = 'amount';
 let salesTrendPayload = null;
+let salesDashboardSharedYm = '';
 const salesSectionMonths = { summary: '', trend: '', office: '', dist: '', person: '' };
 
 function salesDashboardCurrentYm() {
@@ -19,9 +20,10 @@ function salesMonthContext(section) {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const currentYm = salesDashboardCurrentYm();
-  let ym = salesSectionMonths[section] || currentYm;
+  let ym = salesDashboardSharedYm || currentYm;
   if (ym > currentYm) ym = currentYm;
-  salesSectionMonths[section] = ym;
+  salesDashboardSharedYm = ym;
+  Object.keys(salesSectionMonths).forEach(key => { salesSectionMonths[key] = ym; });
   const [year, month] = ym.split('-').map(Number);
   const isCurrentMonth = ym === currentYm;
   const monthEnd = `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
@@ -43,16 +45,14 @@ function salesMonthContext(section) {
 function shiftSalesMonth(section, offset) {
   if (!Object.prototype.hasOwnProperty.call(salesSectionMonths, section)) return;
   const currentYm = salesDashboardCurrentYm();
-  const baseYm = salesSectionMonths[section] || currentYm;
+  const baseYm = salesDashboardSharedYm || currentYm;
   const [year, month] = baseYm.split('-').map(Number);
   const shifted = new Date(year, month - 1 + offset, 1);
   const nextYm = `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
   if (nextYm > currentYm) return;
-  salesSectionMonths[section] = nextYm;
-  if (section === 'summary') renderSalesPage({ refreshIndependentSections: false });
-  else if (section === 'trend') renderSalesTrendMonth();
-  else if (section === 'person') renderSalesPersonMonth();
-  else renderSalesRankMonth(section);
+  salesDashboardSharedYm = nextYm;
+  Object.keys(salesSectionMonths).forEach(key => { salesSectionMonths[key] = nextYm; });
+  renderSalesPage();
 }
 // ════════════════════════════════════
 
@@ -1181,3 +1181,4 @@ function rc(id,type,labels,data,color,horizontal) {
       y:{ticks:{color:'#9AB0AA',font:{size:10,family:'Noto Sans KR'}},grid:{color:'rgba(0,100,60,.06)'},border:{display:false}},
     }:{}},plugins:[doughnutPctPlugin]});
 }
+
