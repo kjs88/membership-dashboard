@@ -85,6 +85,7 @@ const dashboardDom = (() => {
     bindActions(fragment);
     const content = wrapper ? fragment.querySelector(wrapper[2]) : fragment;
     target.replaceChildren(...(content ? Array.from(content.childNodes) : []));
+    target.querySelectorAll('details.su-more').forEach(node => { node.open = true; });
   }
 
   function bindStatic(bindings) {
