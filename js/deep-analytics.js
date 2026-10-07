@@ -432,7 +432,7 @@ function daRenderPrice(rows) {
     + '<td class="r" data-label="건수">' + i.n + '</td></tr>';
 
   const suspectHtml = suspect.length
-    ? '<details class="su-more"><summary>편차 200% 초과 ' + suspect.length + '건 — 수량 단위 확인 필요</summary>'
+    ? '<details class="su-more" open><summary>편차 200% 초과 ' + suspect.length + '건 — 수량 단위 확인 필요</summary>'
       + '<div class="da-note warn">아래 품목은 편차가 지나치게 큽니다. 가격 차이라기보다 <b>낱개와 박스가 같은 품목으로 섞여</b> 있을 가능성이 높습니다. '
       + 'ERP의 관리단위를 확인해 보세요.</div>'
       + '<div class="ca-tablewrap"><table class="ca-table mob-cards"><thead><tr><th>품목</th>'

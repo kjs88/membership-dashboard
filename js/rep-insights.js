@@ -269,7 +269,7 @@ function renderRepInsights() {
 
   // ── 매칭 진단 ──
   const matchCls = a.matchRate >= 80 ? 'ok' : a.matchRate >= 60 ? 'warn' : 'crit';
-  const diagHtml = '<details class="su-more"><summary>데이터 연결 상태 — 일지 기관명 ' + a.matchedCount + '/'
+  const diagHtml = '<details class="su-more" open><summary>데이터 연결 상태 — 일지 기관명 ' + a.matchedCount + '/'
     + a.instCount + '곳이 ERP 거래처와 연결됨 (' + a.matchRate.toFixed(0) + '%)</summary>'
     + '<div class="chart-card" style="margin:12px 0 16px">'
     + '<div class="da-note' + (matchCls === 'ok' ? '' : ' warn') + '">'

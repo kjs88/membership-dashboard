@@ -236,7 +236,7 @@ function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel, da
     + '</div>');
   // 브리핑에는 심각도별 대표 3개만 넣고, 전체 목록은 접어서 함께 둔다.
   put('stats-insights', insights.length
-    ? '<details class="su-more"><summary>자동 인사이트 전체 ' + insights.length + '건</summary>'
+    ? '<details class="su-more" open><summary>자동 인사이트 전체 ' + insights.length + '건</summary>'
       + '<div class="chart-card" style="margin:12px 0 16px"><div class="ca-insights">'
       + insights.map(i => '<div class="ca-ins ' + i.sev + '"><b>' + escHtml(i.title) + '</b><span>'
           + escHtml(i.desc) + '</span></div>').join('')
@@ -323,7 +323,7 @@ function renderChannelAnalysis(scopedRows, allChannelRows, prevRows, channel, da
         + '<td data-label="매출" class="r" title="' + Math.round(m.total).toLocaleString() + '원">' + moneyShort(m.total) + '</td>'
         + cells + '</tr>';
     }).join('');
-    matrixHtml = '<details class="su-more"><summary>' + (isDist ? '거래처 × 품목군 상세표' : '영업사원 × 품목군 상세표') + '</summary>'
+    matrixHtml = '<details class="su-more" open><summary>' + (isDist ? '거래처 × 품목군 상세표' : '영업사원 × 품목군 상세표') + '</summary>'
       + '<div class="chart-card" style="margin:12px 0 16px"><div class="ca-tablewrap">'
       + '<table class="ca-table mob-cards"><thead><tr><th>' + (isDist ? '거래처' : '영업사원') + '</th>'
       + '<th class="r">매출</th>' + head2 + '</tr></thead><tbody>' + body + '</tbody></table></div></div></details>';
