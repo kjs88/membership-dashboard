@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - recent60
+          - loop
           - full
   schedule:
     # Session starts. GitHub cron starts the runner; scripts/erp_sync_loop.py
@@ -82,6 +83,13 @@ jobs:
                   python scripts/erp_sync_loop.py --interval-minutes 5 --duration-minutes 230 --recent 60
                   ;;
               esac
+            elif [ "${{ inputs.mode }}" = "loop" ]; then
+              kst_dow="$(TZ=Asia/Seoul date '+%u')"
+              if [ "$kst_dow" -ge 6 ]; then
+                python scripts/erp_sync_loop.py --interval-minutes 120 --duration-minutes 250 --recent 60 --include-weekend
+              else
+                python scripts/erp_sync_loop.py --interval-minutes 5 --duration-minutes 230 --recent 60
+              fi
             elif [ "${{ inputs.mode }}" = "full" ]; then
               python scripts/amarans_api_v10.py --auto --force --full
             else

@@ -161,7 +161,7 @@ def dispatch_sync():
     github_api(
         "/actions/workflows/amarans-sync.yml/dispatches",
         method="POST",
-        data={"ref": github_ref(), "inputs": {"mode": "recent60"}},
+        data={"ref": github_ref(), "inputs": {"mode": "loop"}},
     )
 
 
@@ -280,7 +280,7 @@ def main():
             dispatch_sync()
             result["dispatched"] = True
             result["status"] = "stale-dispatched"
-            result["message"] = "ERP data is stale; dispatched amarans-sync recent60."
+            result["message"] = "ERP data is stale; dispatched amarans-sync loop session."
         except Exception as exc:
             result["status"] = "dispatch-failed"
             result["message"] = str(exc)
