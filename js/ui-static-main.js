@@ -680,5 +680,8 @@ uiBindStatic([
 }],
 ["click", "s219", function (event, uiValues) {
   saveNotice();
+}],
+["click", "s220", function (event, uiValues) {
+  downloadDailyEntriesExcel();
 }]
 ]);

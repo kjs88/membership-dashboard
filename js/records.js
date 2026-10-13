@@ -93,3 +93,73 @@ async function deleteEntry(id) {
   renderRecords(); renderDashboard(); updateBadge();
   showToast('삭제되었습니다.', 'success');
 }
+function downloadDailyEntriesExcel() {
+  const isAdmin = isAdminUser(currentUser);
+  const rowsSource = isAdmin
+    ? [...(allEntries || [])]
+    : (allEntries || []).filter(entry => entry.personId === currentUser?.id);
+
+  if (!rowsSource.length) {
+    showToast('다운로드할 일간일지 기록이 없습니다.', 'error');
+    return;
+  }
+  if (typeof XLSX === 'undefined') {
+    showToast('엑셀 라이브러리를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+    return;
+  }
+
+  const rows = rowsSource
+    .slice()
+    .sort((a, b) => {
+      const dateDiff = String(b.date || '').localeCompare(String(a.date || ''));
+      if (dateDiff) return dateDiff;
+      return String(b.ts || '').localeCompare(String(a.ts || ''));
+    })
+    .map((entry, index) => ({
+      '번호': index + 1,
+      '날짜': entry.date || '',
+      '영업사원': entry.person || '',
+      '기관명': entry.institution || '',
+      '거래처코드': entry.clientCode || '',
+      '거래처유형': entry.clientType || '',
+      '참석자': entry.attendee || '',
+      '거래가능성': entry.dealPossibility || '',
+      '미팅내용': entry.meeting || '',
+      '이슈사항': entry.issues || '',
+      '연락처': entry.contact || '',
+      '겸업/부업': entry.sideBusiness || '',
+      '지역': entry.region || '',
+      '성별': entry.gender || '',
+      '나이': entry.age || '',
+      '층수': entry.floor || '',
+      '면적': entry.area || '',
+      '경력': entry.experience || '',
+      '구매액': Number(entry.ourPurchase || 0),
+      '작성일시': entry.ts || '',
+      '기록ID': entry.id || '',
+    }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet['!cols'] = [
+    { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 28 }, { wch: 14 },
+    { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 46 }, { wch: 46 },
+    { wch: 16 }, { wch: 18 }, { wch: 12 }, { wch: 8 }, { wch: 8 },
+    { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 22 },
+    { wch: 24 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, '일간일지 전체기록');
+  const now = new Date();
+  const stamp = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('') + '_' + [
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0'),
+  ].join('');
+  XLSX.writeFile(workbook, `일간일지_전체기록_${stamp}.xlsx`);
+  showToast('일간일지 전체 기록 엑셀 파일이 다운로드됩니다.', 'success');
+}
